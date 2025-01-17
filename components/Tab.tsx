@@ -7,14 +7,13 @@ type Tab = {
 };
 
 interface TabProps {
-  key: string;
   tab: Tab;
   handleClick: () => void;
   isFilterTab?: boolean;
   isActiveTab?: string;
 }
 
-const Tab = ({ key, tab, handleClick, isFilterTab, isActiveTab }: TabProps) => {
+const Tab = ({ tab, handleClick, isFilterTab, isActiveTab }: TabProps) => {
   return <div>Tab</div>;
 };
 
