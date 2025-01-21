@@ -13,7 +13,7 @@ interface TabProps {
   tab: Tab;
   handleClick: () => void;
   isFilterTab?: boolean;
-  isActiveTab?: string;
+  isActiveTab?: string | boolean;
 }
 
 const Tab = ({ tab, handleClick, isFilterTab, isActiveTab }: TabProps) => {
@@ -28,7 +28,8 @@ const Tab = ({ tab, handleClick, isFilterTab, isActiveTab }: TabProps) => {
     <div
       key={tab.name}
       className={`tab-btn ${isFilterTab ? 'rounded-full glassmorphism' : 'rounded-4'}`}
-      onClick={handleClick}>
+      onClick={handleClick}
+      style={activeStyles}>
       <Image
         src={tab.icon}
         alt={tab.name}
