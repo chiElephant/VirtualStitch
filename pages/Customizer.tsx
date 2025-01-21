@@ -3,10 +3,10 @@
 
 import { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useSnapshot } from 'valtio';
+import { proxy, useSnapshot } from 'valtio';
 
 import config from '@/config/config';
-import state from '@/store';
+import state, { State } from '@/store';
 import { download } from '@/public/assets';
 import { downloadCanvasToImage, reader } from '../config/helpers';
 import { EditorTabs, FilterTabs, DecalTypes } from '@/config/constants';
@@ -19,8 +19,78 @@ import {
   Tab,
 } from '@/components';
 
+interface FilterTab {
+  logoShirt: boolean;
+  stylishShirt: boolean;
+  [key: string]: boolean;
+}
+
 const Customizer = () => {
   const snap = useSnapshot(state);
+
+  const [file, setFile] = useState<File | null>(null);
+  const [prompt, setPrompt] = useState('');
+  const [generatingImg, setGeneratingImg] = useState(false);
+  const [activeEditorTab, setActiveEditorTab] = useState('');
+  const [activeFilterTab, setActiveFilterTab] = useState<FilterTab>({
+    logoShirt: false,
+    stylishShirt: false,
+  });
+  const generateTabContent = () => {
+    switch (activeEditorTab) {
+      case 'colorpicker':
+        return <ColorPicker />;
+      case 'filepicker':
+        return (
+          <FilePicker
+            file={file}
+            setFile={setFile}
+            readFile={readFile}
+          />
+        );
+      case 'aipicker':
+        return <AIPicker />;
+      default:
+        return null;
+    }
+  };
+
+  const handleDecals = (type: string, result: string) => {
+    const decalType = DecalTypes[type];
+
+    (state[decalType.stateProperty as keyof State] as string) = result;
+    handleActiveFilterTab(decalType.filterTab);
+  };
+
+  const handleActiveFilterTab = (tabName: string) => {
+    switch (tabName) {
+      case 'logoShirt':
+        state.isLogoTexture = !activeFilterTab[tabName];
+        setActiveFilterTab((prev) => ({
+          ...prev,
+          [tabName]: !prev[tabName],
+        }));
+        break;
+      case 'stylishShirt':
+        state.isFullTexture = !activeFilterTab[tabName];
+        setActiveFilterTab((prev) => ({
+          ...prev,
+          [tabName]: !prev[tabName],
+        }));
+        break;
+      default:
+        state.isLogoTexture = false;
+        state.isFullTexture = false;
+    }
+  };
+
+  const readFile = async (type: 'logo' | 'full') => {
+    if (!file) return;
+    const result = (await reader(file)) as string;
+    handleDecals(type, result);
+    setActiveEditorTab('');
+  };
+
   return (
     <AnimatePresence>
       {!snap.intro && (
@@ -35,9 +105,10 @@ const Customizer = () => {
                   <Tab
                     key={tab.name}
                     tab={tab}
-                    handleClick={() => {}}
+                    handleClick={() => setActiveEditorTab(tab.name)}
                   />
                 ))}
+                {generateTabContent()}
               </div>
             </div>
           </motion.div>

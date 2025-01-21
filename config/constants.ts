@@ -1,38 +1,46 @@
-import { swatch, fileIcon, ai, logoShirt, stylishShirt } from "../public/assets";
+import {
+  swatch,
+  fileIcon,
+  ai,
+  logoShirt,
+  stylishShirt,
+} from '../public/assets';
 
 export const EditorTabs = [
   {
-    name: "colorpicker",
+    name: 'colorpicker',
     icon: swatch,
   },
   {
-    name: "filepicker",
+    name: 'filepicker',
     icon: fileIcon,
   },
   {
-    name: "aipicker",
+    name: 'aipicker',
     icon: ai,
   },
 ];
 
 export const FilterTabs = [
   {
-    name: "logoShirt",
+    name: 'logoShirt',
     icon: logoShirt,
   },
   {
-    name: "stylishShirt",
+    name: 'stylishShirt',
     icon: stylishShirt,
   },
 ];
 
-export const DecalTypes = {
+export const DecalTypes: {
+  [key: string]: { stateProperty: string; filterTab: string };
+} = {
   logo: {
-    stateProperty: "logoDecal",
-    filterTab: "logoShirt",
+    stateProperty: 'logoDecal',
+    filterTab: 'logoShirt',
   },
   full: {
-    stateProperty: "fullDecal",
-    filterTab: "stylishShirt",
+    stateProperty: 'fullDecal',
+    filterTab: 'stylishShirt',
   },
 };

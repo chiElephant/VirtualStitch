@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-'use client';
 import { easing } from 'maath';
 import { useSnapshot } from 'valtio';
 import { useFrame } from '@react-three/fiber';
@@ -44,7 +42,6 @@ const Shirt = () => {
             rotation={[0, 0, 0]}
             scale={0.15}
             map={logoTexture}
-            map-aniostropy={16}
             depthTest={false}
             depthWrite={true}
           />
