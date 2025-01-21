@@ -49,9 +49,44 @@ const Customizer = () => {
           />
         );
       case 'aipicker':
-        return <AIPicker />;
+        return (
+          <AIPicker
+            prompt={prompt}
+            setPrompt={setPrompt}
+            generatingImg={generatingImg}
+            handleSubmit={handleSubmit}
+          />
+        );
       default:
         return null;
+    }
+  };
+
+  const handleSubmit = async (type: 'logo' | 'full') => {
+    if (!prompt) return alert('Please enter a prompt');
+
+    try {
+      setGeneratingImg(true);
+
+      const response = await fetch(config.development.backendUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt,
+        }),
+      });
+
+      const data = await response.json();
+      console.log(data);
+
+      // handleDecals(type, `data:image/png;base64,${data.photo}`);
+    } catch (error) {
+      alert(error);
+    } finally {
+      setGeneratingImg(false);
+      setActiveEditorTab('');
     }
   };
 
@@ -66,7 +101,6 @@ const Customizer = () => {
     switch (tabName) {
       case 'logoShirt':
         state.isLogoTexture = !activeFilterTab[tabName];
-
         break;
       case 'stylishShirt':
         state.isFullTexture = !activeFilterTab[tabName];
