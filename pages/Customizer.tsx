@@ -69,23 +69,60 @@ const Customizer = () => {
       });
 
       if (!response.ok) {
-        toast.error('Failed to fetch image 📸 ', {
-          position: 'bottom-right',
-          autoClose: 5000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: false,
-          draggable: true,
-          progress: undefined,
-          theme: 'colored',
-          transition: Flip,
-        });
+        if (response.status === 429) {
+          toast.error('You are making requests too quickly 🚫. Please wait a minute.', {
+            position: 'bottom-right',
+            autoClose: 5000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: false,
+            draggable: true,
+            progress: undefined,
+            theme: 'colored',
+            transition: Flip,
+          });
+        } else if (response.status === 500) {
+          toast.error('Server error while generating the image ⚠️.', {
+            position: 'bottom-right',
+            autoClose: 5000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: false,
+            draggable: true,
+            progress: undefined,
+            theme: 'colored',
+            transition: Flip,
+          });
+        } else {
+          toast.error('Unexpected error occurred ❌.', {
+            position: 'bottom-right',
+            autoClose: 5000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: false,
+            draggable: true,
+            progress: undefined,
+            theme: 'colored',
+            transition: Flip,
+          });
+        }
         return;
       }
 
       const data = await response.json();
-
       handleDecals(type, `data:image/png;base64,${data.photo}`);
+
+      toast.success('Image applied successfully ✅', {
+        position: 'bottom-right',
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: 'colored',
+        transition: Flip,
+      });
     } catch (error) {
       toast.error('Failed to fetch image 📸 ', {
         position: 'bottom-right',
@@ -141,7 +178,26 @@ const Customizer = () => {
     const decalType = DecalTypes[type];
 
     (state[decalType.stateProperty as keyof State] as string) = result;
-    handleActiveFilterTab(decalType.filterTab);
+
+    // Automatically activate the correct filter tab
+    setActiveFilterTab((prev) => {
+      const updated = { ...prev };
+
+      Object.keys(updated).forEach((key) => {
+        updated[key] = key === decalType.filterTab;
+      });
+
+      // Set state (e.g., isLogoTexture or isFullTexture) accordingly
+      if (decalType.filterTab === 'logoShirt') {
+        state.isLogoTexture = true;
+        state.isFullTexture = false;
+      } else if (decalType.filterTab === 'stylishShirt') {
+        state.isLogoTexture = false;
+        state.isFullTexture = true;
+      }
+
+      return updated;
+    });
   };
 
   const handleActiveFilterTab = (tabName: string) => {
@@ -175,9 +231,11 @@ const Customizer = () => {
                     <Tab
                       key={`${tab.name}-editortab`}
                       tab={tab}
-                      handleClick={() =>
-                        setActiveEditorTab(tab.name as EditorTab)
-                      }
+                      handleClick={() => {
+                        setActiveEditorTab((prev) =>
+                          prev === (tab.name as EditorTab) ? '' : (tab.name as EditorTab)
+                        );
+                      }}
                     />
                   ))}
                   {generateTabContent()}
