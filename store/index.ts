@@ -14,8 +14,8 @@ const state = proxy({
   color: '#EFBD4E',
   isLogoTexture: false,
   isFullTexture: false,
-  logoDecal: './icons/emblem.png',
-  fullDecal: './icons/emblem.png',
+  logoDecal: './icons/logo.png',
+  fullDecal: './icons/pattern.png',
 });
 
 export default state;

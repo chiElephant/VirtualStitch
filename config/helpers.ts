@@ -1,5 +1,8 @@
 import state from '@/store';
 
+const DEFAULT_LOGO = './icons/logo.png';
+const DEFAULT_FULL = './icons/emblem.png';
+
 export const downloadImageToFile = (
   fileName: string = 'image',
   activeTab: string
@@ -8,11 +11,17 @@ export const downloadImageToFile = (
 
   if (activeTab === 'logoShirt') {
     decalUrl = state.logoDecal;
+    // Prevent downloading if it's still the default image
+    if (!decalUrl || decalUrl === DEFAULT_LOGO) {
+      return false;
+    }
   } else if (activeTab === 'stylishShirt') {
     decalUrl = state.fullDecal;
-  }
-
-  if (!decalUrl || activeTab === '') {
+    // Prevent downloading if it's still the default image
+    if (!decalUrl || decalUrl === DEFAULT_FULL) {
+      return false;
+    }
+  } else {
     return false;
   }
 

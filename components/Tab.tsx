@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import Image, { StaticImageData } from 'next/image';
 import { useSnapshot } from 'valtio';
 

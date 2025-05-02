@@ -1,9 +1,8 @@
 import { AccumulativeShadows, RandomizedLight } from '@react-three/drei';
 import { useRef } from 'react';
-import { Mesh } from 'three';
 
 const Backdrop = () => {
-  const shadows = useRef<Mesh>(null!);
+  const shadows = useRef(null);
   return (
     <AccumulativeShadows
       ref={shadows}
