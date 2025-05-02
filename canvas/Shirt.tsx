@@ -32,7 +32,7 @@ const Shirt = () => {
           <Decal
             position={[0, 0, 0]}
             rotation={[0, 0, 0]}
-            scale={1}
+            scale={0.85}
             map={fullTexture}
           />
         )}
@@ -43,7 +43,6 @@ const Shirt = () => {
             scale={0.15}
             map={logoTexture}
             depthTest={false}
-            depthWrite={true}
           />
         )}
       </mesh>

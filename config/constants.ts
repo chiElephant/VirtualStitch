@@ -4,20 +4,25 @@ import {
   ai,
   logoShirt,
   stylishShirt,
+  download,
 } from '../public/assets';
 
 export const EditorTabs = [
   {
-    name: 'colorpicker',
+    name: 'colorPicker',
     icon: swatch,
   },
   {
-    name: 'filepicker',
+    name: 'filePicker',
     icon: fileIcon,
   },
   {
-    name: 'aipicker',
+    name: 'aiPicker',
     icon: ai,
+  },
+  {
+    name: 'imageDownload',
+    icon: download,
   },
 ];
 

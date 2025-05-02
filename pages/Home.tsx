@@ -24,7 +24,7 @@ const Home = () => {
           {...slideAnimation('left')}>
           <motion.header {...slideAnimation('down')}>
             <Image
-              src={'/icons/threejs.png'}
+              src={'/icons/emblem.png'}
               alt={'logo'}
               width={32}
               height={32}

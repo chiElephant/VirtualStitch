@@ -11,11 +11,11 @@ export interface State {
 
 const state = proxy({
   intro: true,
-  color: '#EFBD48',
+  color: '#EFBD4E',
   isLogoTexture: false,
   isFullTexture: false,
-  logoDecal: './icons/threejs.png',
-  fullDecal: './icons/threejs.png',
+  logoDecal: './icons/emblem.png',
+  fullDecal: './icons/emblem.png',
 });
 
 export default state;
