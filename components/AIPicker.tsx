@@ -17,6 +17,7 @@ const AIPicker = ({
   return (
     <div className='aipicker-container'>
       <textarea
+        data-testid='ai-prompt-input'
         placeholder='Ask AI...'
         rows={5}
         value={prompt}
@@ -34,6 +35,7 @@ const AIPicker = ({
             <CustomButton
               type={'outline'}
               title={'AI Logo'}
+              data-testid='ai-logo-button'
               handleClick={() => handleSubmit('logo')}
               customStyles={'text-xs'}
             />

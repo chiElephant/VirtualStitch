@@ -15,6 +15,7 @@ const FilePicker = ({ file, setFile, readFile }: FilePickerProps) => {
           id='file-upload'
           type='file'
           accept='image/*'
+          data-testid='file-picker-input'
           onChange={(e) => {
             if (e.target.files && e.target.files.length > 0) {
               setFile(e.target.files[0]);

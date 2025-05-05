@@ -15,7 +15,13 @@ interface TabProps {
   isActiveTab?: string | boolean;
 }
 
-const Tab = ({ tab, handleClick, isFilterTab, isActiveTab }: TabProps) => {
+const Tab = ({
+  tab,
+  handleClick,
+  isFilterTab,
+  isActiveTab,
+  ...props
+}: TabProps) => {
   const snap = useSnapshot(state);
 
   const activeStyles =
@@ -28,7 +34,8 @@ const Tab = ({ tab, handleClick, isFilterTab, isActiveTab }: TabProps) => {
       key={tab.name}
       className={`tab-btn ${isFilterTab ? 'rounded-full glassmorphism' : 'rounded-4'}`}
       onClick={handleClick}
-      style={activeStyles}>
+      style={activeStyles}
+      {...props}>
       <Image
         src={tab.icon}
         alt={tab.name}

@@ -1,6 +1,6 @@
 {
-  "prettier.configPath": "./client/.prettierrc",
-  "prettier.ignorePath": "./client/.prettierignore",
-  "prettier.prettierPath": "./client/node_modules/prettier",
+  "prettier.configPath": ".prettierrc",
+  "prettier.ignorePath": ".prettierignore",
+  "prettier.prettierPath": "node_modules/prettier",
   "editor.tabSize": 2
 }

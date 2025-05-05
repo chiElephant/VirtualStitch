@@ -1,0 +1,24 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Shirt matches snapshot 1`] = `
+<DocumentFragment>
+  <div
+    data-testid="canvas-container"
+  >
+    <group>
+      <mesh
+        geometry="[object Object]"
+        material="[object Object]"
+        material-roughness="1"
+      >
+        <div
+          data-testid="decal-mocked texture for /full.png"
+        />
+        <div
+          data-testid="decal-mocked texture for /logo.png"
+        />
+      </mesh>
+    </group>
+  </div>
+</DocumentFragment>
+`;

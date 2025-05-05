@@ -6,7 +6,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useSnapshot } from 'valtio';
 
 import state, { State } from '@/store';
-import { downloadCanvasToImage, reader } from '../config/helpers';
+import { reader } from '@/config/helpers';
 import { EditorTabs, FilterTabs, DecalTypes } from '@/config/constants';
 import { fadeAnimation, slideAnimation } from '@/config/motion';
 import {
@@ -27,7 +27,8 @@ interface FilterTab {
   [key: string]: boolean;
 }
 
-const Customizer = () => {
+type CustomizerProps = React.HTMLAttributes<HTMLDivElement>;
+const Customizer = (props: CustomizerProps) => {
   const snap = useSnapshot(state);
 
   const [file, setFile] = useState<File | null>(null);
@@ -70,17 +71,20 @@ const Customizer = () => {
 
       if (!response.ok) {
         if (response.status === 429) {
-          toast.error('You are making requests too quickly 🚫. Please wait a minute.', {
-            position: 'bottom-right',
-            autoClose: 5000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: false,
-            draggable: true,
-            progress: undefined,
-            theme: 'colored',
-            transition: Flip,
-          });
+          toast.error(
+            'You are making requests too quickly 🚫. Please wait a minute.',
+            {
+              position: 'bottom-right',
+              autoClose: 5000,
+              hideProgressBar: false,
+              closeOnClick: true,
+              pauseOnHover: false,
+              draggable: true,
+              progress: undefined,
+              theme: 'colored',
+              transition: Flip,
+            }
+          );
         } else if (response.status === 500) {
           toast.error('Server error while generating the image ⚠️.', {
             position: 'bottom-right',
@@ -216,59 +220,69 @@ const Customizer = () => {
   };
 
   return (
-    <>
+    <div data-testid='customizer'>
       <ToastContainer />
       {!snap.intro && (
-        <AnimatePresence>
-          <>
-            <motion.div
-              key='customizer-motion'
-              className='absolute top-0 left-0 z-10'
-              {...slideAnimation('left')}>
-              <div className='flex items-center min-h-screen'>
-                <div className='editortabs-container tabs'>
-                  {EditorTabs.map((tab) => (
-                    <Tab
-                      key={`${tab.name}-editortab`}
-                      tab={tab}
-                      handleClick={() => {
-                        setActiveEditorTab((prev) =>
-                          prev === (tab.name as EditorTab) ? '' : (tab.name as EditorTab)
-                        );
-                      }}
-                    />
-                  ))}
-                  {generateTabContent()}
+        <div data-testid='customizer-main'>
+          <AnimatePresence {...props}>
+            <>
+              <motion.div
+                key='customizer-motion'
+                className='absolute top-0 left-0 z-10'
+                {...slideAnimation('left')}>
+                <div className='flex items-center min-h-screen'>
+                  <div
+                    data-testid='editor-tabs-container'
+                    className='editortabs-container tabs'>
+                    {EditorTabs.map((tab) => (
+                      <Tab
+                        key={`${tab.name}-editortab`}
+                        tab={tab}
+                        data-testid={`editor-tab-${tab.name}`}
+                        handleClick={() => {
+                          setActiveEditorTab((prev) =>
+                            prev === (tab.name as EditorTab) ?
+                              ''
+                            : (tab.name as EditorTab)
+                          );
+                        }}
+                      />
+                    ))}
+                    {generateTabContent()}
+                  </div>
                 </div>
-              </div>
-            </motion.div>
-            <motion.div
-              className='absolute z-10 top-5 right-5'
-              {...fadeAnimation}>
-              <CustomButton
-                type={'filled'}
-                title={'Go Back'}
-                handleClick={() => (state.intro = true)}
-                customStyles={'w-fit px-4 py-2.5 font-bold text-sm'}
-              />
-            </motion.div>
-            <motion.div
-              className='filtertabs-container'
-              {...slideAnimation('up')}>
-              {FilterTabs.map((tab) => (
-                <Tab
-                  key={`${tab.name}-filtertab`}
-                  tab={tab}
-                  isFilterTab
-                  isActiveTab={activeFilterTab[tab.name]}
-                  handleClick={() => handleActiveFilterTab(tab.name)}
+              </motion.div>
+              <motion.div
+                className='absolute z-10 top-5 right-5'
+                {...fadeAnimation}>
+                <CustomButton
+                  type={'filled'}
+                  title={'Go Back'}
+                  data-testid='go-back-button'
+                  handleClick={() => (state.intro = true)}
+                  customStyles={'w-fit px-4 py-2.5 font-bold text-sm'}
                 />
-              ))}
-            </motion.div>
-          </>
-        </AnimatePresence>
+              </motion.div>
+              <motion.div
+                data-testid='filter-tabs-container'
+                className='filtertabs-container'
+                {...slideAnimation('up')}>
+                {FilterTabs.map((tab) => (
+                  <Tab
+                    key={`${tab.name}-filtertab`}
+                    tab={tab}
+                    data-testid={`filter-tab-${tab.name}`}
+                    isFilterTab
+                    isActiveTab={activeFilterTab[tab.name]}
+                    handleClick={() => handleActiveFilterTab(tab.name)}
+                  />
+                ))}
+              </motion.div>
+            </>
+          </AnimatePresence>
+        </div>
       )}
-    </>
+    </div>
   );
 };
 

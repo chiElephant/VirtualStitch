@@ -4,11 +4,12 @@ import state from '@/store';
 import { getContrastingColor } from '@/config/helpers';
 
 export interface CustomButtonProps {
-  type: string;
-  title: string;
-  handleClick?: () => void;
-  customStyles: string;
-  disabled?: boolean;
+  'type': string;
+  'title': string;
+  'handleClick'?: () => void;
+  'customStyles': string;
+  'disabled'?: boolean;
+  'data-testid'?: string;
 }
 
 const CustomButton = ({
@@ -17,6 +18,7 @@ const CustomButton = ({
   handleClick,
   customStyles,
   disabled = false,
+  'data-testid': dataTestId,
 }: CustomButtonProps) => {
   const snap = useSnapshot(state);
   const generateStyle = (type: string) => {
@@ -40,7 +42,9 @@ const CustomButton = ({
       }`}
       style={generateStyle(type)}
       onClick={handleClick}
-      disabled={disabled}>
+      disabled={disabled}
+      aria-label={title}
+      data-testid={dataTestId}>
       {title}
     </button>
   );

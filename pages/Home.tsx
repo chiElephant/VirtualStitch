@@ -13,7 +13,7 @@ import {
 } from '../config/motion';
 import { CustomButton } from '../components';
 
-const Home = () => {
+const Home = (props: React.ComponentProps<typeof motion.section>) => {
   const snap = useSnapshot(state);
 
   return (
@@ -21,7 +21,8 @@ const Home = () => {
       {snap.intro && (
         <motion.section
           className='home'
-          {...slideAnimation('left')}>
+          {...slideAnimation('left')}
+          {...props}>
           <motion.header {...slideAnimation('down')}>
             <Image
               src={'/icons/emblem.png'}

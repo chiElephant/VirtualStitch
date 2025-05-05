@@ -1,5 +1,13 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## 📊 Badges
+
+![Coverage](https://img.shields.io/badge/Coverage-100%25-brightgreen)
+![Next.js](https://img.shields.io/badge/Built%20With-Next.js-blue)
+![License](https://img.shields.io/badge/License-MIT-yellow)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.x-38B2AC?logo=tailwindcss&logoColor=white)
+![Three.js](https://img.shields.io/badge/Three.js-0.159-black?logo=three.js&logoColor=white)
+
 ## Getting Started
 
 First, run the development server:
@@ -63,7 +71,7 @@ Virtual Stitch is a fully interactive 3D t-shirt customization platform built wi
 ### 1️⃣ Clone the Repository
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/VirtualStitch.git
+git clone https://github.com/chiElephant/VirtualStitch.git
 cd VirtualStitch
 ```
 
@@ -95,7 +103,17 @@ Visit [http://localhost:3000](http://localhost:3000).
 
 ## ✅ Testing
 
-_Test suite is planned and will include unit and integration tests for all key components and API routes._
+All components and API routes are covered by unit and integration tests. We aim for 100% coverage across statements, branches, functions, and lines. Run tests with:
+
+```bash
+npm run test
+# or with coverage
+npm run test:coverage
+```
+
+Example coverage report:
+
+![Coverage Report](/images/coverage_report.png)
 
 ## 🚀 Deployment
 
@@ -122,6 +140,10 @@ The app is designed for seamless deployment to [Vercel](https://vercel.com). Pus
 ### 📥 Download Functionality
 
 ![Download Feature](/images/screenshot_5.png)
+
+### 🧪 Test Coverage Report
+
+![Coverage Report](/images/coverage_report.png)
 
 ## 📂 Project Structure
 

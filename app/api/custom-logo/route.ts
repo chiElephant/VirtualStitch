@@ -17,6 +17,12 @@ const openai = new OpenAI({
 export async function POST(req: NextRequest) {
   try {
     const { prompt } = await req.json();
+    if (!prompt) {
+      return NextResponse.json(
+        { message: 'Prompt is required.' },
+        { status: 500 }
+      );
+    }
 
     const ip = req.headers.get('x-forwarded-for') || 'unknown';
     const key = `rate_limit:${ip}`;

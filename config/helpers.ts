@@ -1,69 +1,70 @@
-import state from '@/store';
+import { toast } from 'react-toastify';
+import { downloadCanvasToImage, downloadImageToFile } from './downloaders';
 
-const DEFAULT_LOGO = './icons/logo.png';
-const DEFAULT_FULL = './icons/emblem.png';
+export const handleImageDownload = (
+  type: 'canvas' | 'image',
+  fileName: string,
+  activeFilterTab: string,
+  resetFileName: () => void
+) => {
+  let success = false;
 
-export const downloadImageToFile = (
-  fileName: string = 'image',
-  activeTab: string
-): boolean => {
-  let decalUrl: string | null = null;
-
-  if (activeTab === 'logoShirt') {
-    decalUrl = state.logoDecal;
-    // Prevent downloading if it's still the default image
-    if (!decalUrl || decalUrl === DEFAULT_LOGO) {
-      return false;
+  if (type === 'canvas') {
+    success = downloadCanvasToImage(fileName.trim() || 'canvas');
+    if (!success) {
+      toast.error('No canvas found to download.', {
+        position: 'top-center',
+        autoClose: 4000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        theme: 'colored',
+      });
     }
-  } else if (activeTab === 'stylishShirt') {
-    decalUrl = state.fullDecal;
-    // Prevent downloading if it's still the default image
-    if (!decalUrl || decalUrl === DEFAULT_FULL) {
-      return false;
+  } else if (type === 'image') {
+    success = downloadImageToFile(fileName.trim() || 'image', activeFilterTab);
+    if (!success) {
+      toast.error(
+        'No decal found to download. Please generate or upload an image first.',
+        {
+          position: 'top-center',
+          autoClose: 4000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          theme: 'colored',
+        }
+      );
     }
-  } else {
-    return false;
   }
 
-  const link = document.createElement('a');
-  link.href = decalUrl;
-  const safeFileName = fileName.trim() ? `${fileName.trim()}.png` : 'image.png';
-  link.download = safeFileName;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  return true;
-};
-
-export const downloadCanvasToImage = (fileName: string = 'canvas'): boolean => {
-  const canvas = document.querySelector('canvas');
-  if (!canvas) {
-    return false;
+  if (success) {
+    resetFileName();
   }
-  const dataURL = canvas.toDataURL();
-  const link = document.createElement('a');
-
-  const safeFileName =
-    fileName.trim() ? `${fileName.trim()}.png` : 'canvas.png';
-
-  link.href = dataURL || '';
-  link.download = safeFileName;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  return true;
 };
 
 export const reader = (file: Blob) =>
-  new Promise((resolve) => {
+  new Promise((resolve, reject) => {
     const fileReader = new FileReader();
     fileReader.onload = () => resolve(fileReader.result);
-    fileReader.readAsDataURL(file);
+    fileReader.onerror = () => reject(new Error('File reading failed.'));
+    try {
+      fileReader.readAsDataURL(file);
+    } catch (error) {
+      reject(error);
+    }
   });
 
 export const getContrastingColor = (color: string) => {
   // Remove the '#' character if it exists
   const hex = color.replace('#', '');
+
+  // Basic validation: must be 6 hex digits
+  if (!/^[0-9A-Fa-f]{6}$/.test(hex)) {
+    return 'black';
+  }
 
   // Convert the hex string to RGB values
   const r = parseInt(hex.substring(0, 2), 16);

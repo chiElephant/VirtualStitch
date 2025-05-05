@@ -49,3 +49,6 @@ export const DecalTypes: {
     filterTab: 'stylishShirt',
   },
 };
+
+export const DEFAULT_LOGO = './icons/logo.png';
+export const DEFAULT_FULL = './icons/pattern.png';
