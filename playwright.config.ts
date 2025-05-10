@@ -52,15 +52,4 @@ export default defineConfig({
       use: { ...devices['Desktop Safari'] },
     },
   ],
-
-  // 🌎 Web server: optional, runs before tests
-  webServer:
-    process.env.START_SERVER === 'true' ?
-      {
-        command: 'npm run start', // or 'next start', etc.
-        url: process.env.BASE_URL || 'http://localhost:3000',
-        reuseExistingServer: !process.env.CI,
-        timeout: 120 * 1000, // 2 minutes
-      }
-    : undefined,
 });
