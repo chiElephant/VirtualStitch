@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
 import type { Page, Route } from '@playwright/test';
+import fs from 'fs';
+import path from 'path';
 
 async function mockSuccessfulAiResponse(page: Page, photo = 'fakebase64image') {
   await page.route('/api/custom-logo', (route: Route) => {
@@ -37,56 +39,56 @@ test.describe('AI picker', () => {
     await expect(page.getByTestId('ai-picker')).toBeVisible();
   });
 
-  // NOTE: This test is skipped due to API rate limits and long run time. Enable when full E2E verification is needed.
-  test('should fetch an ai image and apply it to the shirt', async ({
+  test('should fetch an ai image and apply it to the shirt (mocked)', async ({
     page,
-    browserName,
   }) => {
-    test.setTimeout(240_000); // full timeout for the test
-    const timeout = browserName === 'webkit' ? 120_000 : 45_000;
+    // ✅ Set up the mock JUST for this test
+    const imagePath = path.resolve(__dirname, './fixtures/emblem.png');
+    const imageBuffer = fs.readFileSync(imagePath);
+    const base64Image = imageBuffer.toString('base64');
 
-    await test.step('should apply the image as a logo', async () => {
-      await expect(page.getByTestId('logo-texture')).toHaveCount(0);
+    await page.route(
+      '**/api/custom-logo',
+      (route) => {
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ photo: base64Image }),
+        });
+      },
+      { times: Infinity } // ensures it works every time
+    );
 
-      await page.getByTestId('ai-prompt-input').fill('Make me a logo.');
-      await page.getByTestId('ai-logo-button').click();
+    // ✅ Apply as logo
+    await expect(page.getByTestId('logo-texture')).toHaveCount(0);
+    await page.getByTestId('ai-prompt-input').fill('Make me a logo.');
+    await page.getByTestId('ai-logo-button').click();
+    await expect(page.getByText(/image applied successfully/i)).toBeVisible();
+    await expect(page.getByTestId('logo-texture')).toHaveCount(1);
 
-      await expect(
-        page.getByRole('button', { name: 'Asking AI...' })
-      ).toBeVisible();
+    // ✅ Apply as full shirt
+    await page.getByRole('img', { name: 'aiPicker' }).click();
+    await expect(page.getByTestId('full-texture')).toHaveCount(0);
 
-      await page.waitForResponse(
-        (resp) =>
-          resp.url().includes('/api/custom-logo') && resp.status() === 200,
-        { timeout }
-      );
+    // 👀 Count existing toasts before clicking
+    const existingToastCount = await page
+      .locator('[role="alert"] >> text=/image applied successfully/i')
+      .count();
 
-      await expect(page.getByTestId('logo-texture')).toHaveCount(1);
-    });
+    // Fill and click
+    await page
+      .getByTestId('ai-prompt-input')
+      .fill('Make me a full shirt design.');
+    await page.getByTestId('ai-full-button').click();
 
-    await test.step('should apply the image as a fullLogo', async () => {
-      await page.waitForTimeout(60_000); // API rate limit buffer
-      await expect(page.getByTestId('full-texture')).toHaveCount(0);
+    // 🕒 Wait for the new toast to appear
+    await page.waitForSelector(
+      `[role="alert"]:nth-of-type(${existingToastCount + 1}) >> text=/image applied successfully/i`,
+      { state: 'visible' }
+    );
 
-      await page.getByRole('img', { name: 'aiPicker' }).click();
-      await page
-        .getByTestId('ai-prompt-input')
-        .fill('Make me a full shirt design.');
-
-      await page.getByRole('button', { name: 'AI Full' }).click();
-
-      await expect(
-        page.getByRole('button', { name: 'Asking AI...' })
-      ).toBeVisible();
-
-      await page.waitForResponse(
-        (resp) =>
-          resp.url().includes('/api/custom-logo') && resp.status() === 200,
-        { timeout }
-      );
-
-      await expect(page.getByTestId('full-texture')).toHaveCount(1);
-    });
+    // ✅ Assert full texture applied
+    await expect(page.getByTestId('full-texture')).toHaveCount(1);
   });
 
   test.describe('Error Handling', () => {

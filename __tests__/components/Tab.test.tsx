@@ -1,10 +1,11 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react';
-import { Tab } from '../index';
+import { Tab } from '@/components';
+import type { StaticImageData } from 'next/image';
 
 // Mock valtio state
 const mockColor = '#ff0000';
-jest.mock('../../store', () => ({
+jest.mock('@/store', () => ({
   __esModule: true,
   default: {},
 }));
@@ -20,7 +21,6 @@ jest.mock('next/image', () => ({
   ),
 }));
 
-import type { StaticImageData } from 'next/image';
 describe('Tab Component', () => {
   const tabObj = {
     name: 'TestTab',

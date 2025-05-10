@@ -44,6 +44,7 @@ const AIPicker = ({
             <CustomButton
               type={'filled'}
               title={'AI Full'}
+              data-testid='ai-full-button'
               handleClick={() => handleSubmit('full')}
               customStyles={'text-xs'}
             />

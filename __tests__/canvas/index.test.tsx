@@ -1,7 +1,7 @@
 import React from 'react';
 import { render } from '@testing-library/react';
 import { Canvas } from '@react-three/fiber';
-import CanvasModel from '../index';
+import CanvasModel from '@/canvas/index';
 
 jest.mock('@react-three/fiber', () => {
   const actual = jest.requireActual('@react-three/fiber');
@@ -19,13 +19,15 @@ jest.mock('@react-three/drei', () => ({
     <div data-testid='mock-center'>{children}</div>
   )),
 }));
-jest.mock('../CameraRig', () =>
+jest.mock('@/canvas/CameraRig', () =>
   jest.fn(({ children }) => <div data-testid='mock-camera-rig'>{children}</div>)
 );
-jest.mock('../Backdrop', () =>
+jest.mock('@/canvas/Backdrop', () =>
   jest.fn(() => <div data-testid='mock-backdrop' />)
 );
-jest.mock('../Shirt', () => jest.fn(() => <div data-testid='mock-shirt' />));
+jest.mock('@/canvas/Shirt', () =>
+  jest.fn(() => <div data-testid='mock-shirt' />)
+);
 
 describe('CanvasModel', () => {
   beforeEach(() => {

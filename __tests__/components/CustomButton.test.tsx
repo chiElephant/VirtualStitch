@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { CustomButton } from '../index';
+import { CustomButton } from '@/components';
 import state from '@/store';
 import { getContrastingColor } from '@/config/helpers';
 

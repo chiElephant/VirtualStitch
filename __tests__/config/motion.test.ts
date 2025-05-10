@@ -5,7 +5,7 @@ import {
   headTextAnimation,
   headContentAnimation,
   headContainerAnimation,
-} from '../motion';
+} from '@/config/motion';
 
 describe('motion constants', () => {
   it('should define transition with correct properties', () => {

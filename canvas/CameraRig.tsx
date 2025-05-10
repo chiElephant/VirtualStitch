@@ -3,7 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import { easing } from 'maath';
 import { useSnapshot } from 'valtio';
 
-import state from '../store';
+import state from '@/store';
 import { Group } from 'three';
 
 const CameraRig = ({ children }: { children: React.ReactNode }) => {

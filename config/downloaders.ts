@@ -1,5 +1,5 @@
 import state from '@/store';
-import { DEFAULT_LOGO, DEFAULT_FULL } from '../config/constants';
+import { DEFAULT_LOGO, DEFAULT_FULL } from '@/config/constants';
 
 export const downloadImageToFile = (
   fileName: string = 'image',

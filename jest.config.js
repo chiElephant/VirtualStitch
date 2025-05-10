@@ -8,6 +8,7 @@ const createJestConfig = nextJest({
 const customJestConfig = {
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   testEnvironment: 'jest-environment-jsdom',
+  testMatch: ['**/__tests__/**/*.[jt]s?(x)'],
   collectCoverage: true,
   collectCoverageFrom: [
     '<rootDir>/app/**/*.{ts,tsx}',
@@ -17,10 +18,15 @@ const customJestConfig = {
     '<rootDir>/config/**/*.{ts,tsx}',
     '<rootDir>/pages/**/*.{ts,tsx}',
   ],
-  coverageReporters: ['text', 'lcov'],
+  coverageReporters: ['text', 'lcov', 'html'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
   },
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    '/tests/', // ✅ ignore Playwright folder
+  ],
+  verbose: true,
 };
 
 export default createJestConfig(customJestConfig);

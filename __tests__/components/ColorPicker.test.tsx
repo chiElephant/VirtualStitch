@@ -1,8 +1,8 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react';
 import { act } from 'react';
-import { ColorPicker } from '../index';
-import state from '../../store';
+import { ColorPicker } from '@/components';
+import state from '@/store';
 
 interface SketchPickerProps {
   color: string;

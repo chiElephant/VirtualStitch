@@ -1,3 +1,10 @@
+import React from 'react';
+import state from '@/store';
+import { render, fireEvent, waitFor } from '@testing-library/react';
+import { DEFAULT_LOGO, DEFAULT_FULL } from '@/config/constants';
+import { ImageDownload } from '@/components';
+import { toast } from 'react-toastify';
+
 jest.mock('@/store', () => {
   const { proxy } = jest.requireActual('valtio');
   return {
@@ -12,12 +19,6 @@ jest.mock('@/store', () => {
     }),
   };
 });
-import React from 'react';
-import state from '@/store';
-import { render, fireEvent, waitFor } from '@testing-library/react';
-import { DEFAULT_LOGO, DEFAULT_FULL } from '@/config/constants';
-import { ImageDownload } from '../index';
-import { toast } from 'react-toastify';
 
 jest.mock('react-toastify', () => ({
   toast: {

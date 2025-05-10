@@ -12,10 +12,10 @@ import { render } from '@testing-library/react';
 import { useFrame } from '@react-three/fiber';
 import { easing } from 'maath';
 import { useSnapshot } from 'valtio';
-import CameraRig from '../CameraRig';
+import CameraRig from '@/canvas/CameraRig';
 import type { RootState } from '@react-three/fiber';
 
-jest.mock('../../store', () => ({
+jest.mock('@/store', () => ({
   __esModule: true,
   default: {
     camera: { position: { x: 0, y: 0, z: 0 } },

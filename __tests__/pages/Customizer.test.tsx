@@ -1,11 +1,11 @@
-import * as Helpers from '../../config/helpers';
+import * as Helpers from '@/config/helpers';
 import { render, fireEvent, waitFor, act } from '@testing-library/react';
-import Customizer from '../Customizer';
-import state from '../../store';
+import Customizer from '@/pages/Customizer';
+import state from '@/store';
 
 // Mock getContrastingColor if needed
-jest.mock('../../config/helpers', () => ({
-  ...jest.requireActual('../../config/helpers'),
+jest.mock('@/config/helpers', () => ({
+  ...jest.requireActual('@/config/helpers'),
   getContrastingColor: () => '#ffffff',
   reader: jest.fn(),
 }));

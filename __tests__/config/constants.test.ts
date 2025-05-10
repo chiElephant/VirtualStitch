@@ -1,4 +1,4 @@
-import * as constants from '../constants';
+import * as constants from '@/config/constants';
 
 describe('constants', () => {
   it('should have EditorTabs defined with expected items', () => {

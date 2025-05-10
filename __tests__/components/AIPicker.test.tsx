@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import { AIPicker } from '../index';
+import { AIPicker } from '@/components';
 
 describe('AIPicker', () => {
   const setPromptMock = jest.fn();

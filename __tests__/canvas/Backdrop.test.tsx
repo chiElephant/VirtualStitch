@@ -1,7 +1,7 @@
 import React from 'react';
 import { render } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import Backdrop from '../Backdrop';
+import Backdrop from '@/canvas/Backdrop';
 
 // Mock @react-three/drei components
 jest.mock('@react-three/drei', () => ({

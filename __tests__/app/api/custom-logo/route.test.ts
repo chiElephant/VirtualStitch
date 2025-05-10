@@ -1,4 +1,4 @@
-import { POST } from '../route';
+import { POST } from '@/app/api/custom-logo/route';
 import { NextRequest } from 'next/server';
 
 jest.mock('@upstash/redis', () => {

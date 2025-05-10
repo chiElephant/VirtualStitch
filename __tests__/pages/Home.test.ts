@@ -1,8 +1,9 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import React from 'react';
+import React, { act } from 'react';
 import { proxy } from 'valtio';
-
-import { act } from 'react';
+import { render, fireEvent } from '@testing-library/react';
+import Home from '@/pages/Home';
+import state from '@/store';
 
 jest.mock('next/image', () => ({
   __esModule: true,
@@ -86,11 +87,8 @@ jest.mock('framer-motion', () => {
     },
   };
 });
-import { render, fireEvent } from '@testing-library/react';
-import Home from '../Home';
-import state from '../../store';
 
-jest.mock('../../store', () => {
+jest.mock('@/store', () => {
   return {
     __esModule: true,
     default: proxy({

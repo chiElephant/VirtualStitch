@@ -1,4 +1,11 @@
 import { Canvas } from '@react-three/fiber';
+import * as THREE from 'three';
+import React from 'react';
+import { render } from '@testing-library/react';
+import Shirt from '@/canvas/Shirt';
+import * as valtio from 'valtio';
+import { useFrame } from '@react-three/fiber';
+
 const MockMesh = ({ children }: { children?: React.ReactNode }) => (
   <div data-testid='mock-mesh'>{children}</div>
 );
@@ -6,12 +13,6 @@ const MockGroup = ({ children }: { children?: React.ReactNode }) => (
   <div data-testid='mock-group'>{children}</div>
 );
 // Tests have been simplified to verify Shirt renders and mounts within a container. We avoid asserting on R3F internals or mocked Decals because they are not directly testable with jsdom.
-import * as THREE from 'three';
-import React from 'react';
-import { render } from '@testing-library/react';
-import Shirt from '../Shirt';
-import * as valtio from 'valtio';
-import { useFrame } from '@react-three/fiber';
 
 beforeAll(() => {
   jest.spyOn(console, 'error').mockImplementation((message) => {

@@ -2,13 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { Redis } from '@upstash/redis';
 
-const {
-  UPSTASH_REDIS_REST_TOKEN,
-  UPSTASH_REDIS_REST_URL,
-  OPENAI_API_KEY,
-  API_RATE_LIMIT,
-  NODE_ENV,
-} = process.env;
+const { UPSTASH_REDIS_REST_TOKEN, UPSTASH_REDIS_REST_URL, OPENAI_API_KEY } =
+  process.env;
 
 const redis = new Redis({
   url: UPSTASH_REDIS_REST_URL!,
@@ -32,22 +27,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (API_RATE_LIMIT === 'true' && NODE_ENV === 'production') {
-      console.log('API_RATE_LIMIT', API_RATE_LIMIT);
-      const ip = req.headers.get('x-forwarded-for') || 'unknown';
-      const key = `rate_limit:${ip}`;
+    const ip = req.headers.get('x-forwarded-for') || 'unknown';
+    const key = `rate_limit:${ip}`;
 
-      const reqCount = await redis.incr(key);
-      if (reqCount === 1) {
-        await redis.expire(key, WINDOW_SECONDS);
-      }
+    const reqCount = await redis.incr(key);
+    if (reqCount === 1) {
+      await redis.expire(key, WINDOW_SECONDS);
+    }
 
-      if (reqCount > MAX_REQUESTS) {
-        return NextResponse.json(
-          { message: 'Too many requests. Please try again later.' },
-          { status: 429 }
-        );
-      }
+    if (reqCount > MAX_REQUESTS) {
+      return NextResponse.json(
+        { message: 'Too many requests. Please try again later.' },
+        { status: 429 }
+      );
     }
 
     const response = await openai.images.generate({

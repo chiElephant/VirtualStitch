@@ -4,7 +4,7 @@ import { useFrame } from '@react-three/fiber';
 import { Decal, useGLTF, useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 
-import state from '../store';
+import state from '@/store';
 const Shirt = () => {
   const snap = useSnapshot(state);
   const { nodes, materials } = useGLTF('/icons/shirt_baked.glb');

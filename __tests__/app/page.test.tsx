@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import App from '../page';
+import App from '@/app/page';
 
 describe('App Page', () => {
   it('renders the Home, CanvasModel, and Customizer components correctly', () => {

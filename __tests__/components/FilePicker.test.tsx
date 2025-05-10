@@ -1,5 +1,5 @@
 import { render, fireEvent } from '@testing-library/react';
-import { FilePicker } from '../index';
+import { FilePicker } from '@/components';
 import React from 'react';
 
 describe('FilePicker', () => {

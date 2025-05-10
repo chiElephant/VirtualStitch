@@ -1,6 +1,6 @@
-import { metadata } from '../layout';
+import { metadata } from '@/app/layout';
 import React from 'react';
-import RootLayout from '../layout';
+import RootLayout from '@/app/layout';
 import { render } from '@testing-library/react';
 
 beforeEach(() => {

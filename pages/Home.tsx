@@ -4,14 +4,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useSnapshot } from 'valtio';
 import Image from 'next/image';
 
-import state from '../store';
+import state from '@/store';
 import {
   headContainerAnimation,
   headContentAnimation,
   headTextAnimation,
   slideAnimation,
-} from '../config/motion';
-import { CustomButton } from '../components';
+} from '@/config/motion';
+import { CustomButton } from '@/components';
 
 const Home = (props: React.ComponentProps<typeof motion.section>) => {
   const snap = useSnapshot(state);

@@ -5,7 +5,7 @@ import {
   logoShirt,
   stylishShirt,
   download,
-} from '../public/assets';
+} from '@/public/assets';
 
 export const EditorTabs = [
   {

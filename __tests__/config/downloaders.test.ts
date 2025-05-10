@@ -2,8 +2,8 @@
  * @jest-environment jsdom
  */
 import state from '@/store';
-import * as downloaders from '../downloaders';
-import { DEFAULT_LOGO, DEFAULT_FULL } from '../../config/constants';
+import * as downloaders from '@/config/downloaders';
+import { DEFAULT_LOGO, DEFAULT_FULL } from '@/config/constants';
 
 describe('downloadCanvasToImage', () => {
   beforeEach(() => {

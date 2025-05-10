@@ -1,10 +1,15 @@
+import * as downloaders from '@/config/downloaders';
+import {
+  handleImageDownload,
+  getContrastingColor,
+  reader,
+} from '@/config/helpers';
+import { toast } from 'react-toastify';
+
 // Mock to silence HTMLCanvasElement.prototype.toDataURL errors in tests
 (HTMLCanvasElement.prototype.toDataURL as unknown as () => string) = jest.fn(
   () => 'data:image/png;base64,mocked'
 );
-import * as downloaders from '../downloaders';
-import { handleImageDownload, getContrastingColor, reader } from '../helpers';
-import { toast } from 'react-toastify';
 
 class MockFileReader implements Partial<FileReader> {
   result: string | null = null;
@@ -32,7 +37,7 @@ jest.mock('react-toastify', () => ({
   },
 }));
 
-jest.mock('../downloaders', () => ({
+jest.mock('@/config/downloaders', () => ({
   downloadCanvasToImage: jest.fn(),
   downloadImageToFile: jest.fn(),
 }));
