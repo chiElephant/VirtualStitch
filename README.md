@@ -1,4 +1,6 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🧵 VirtualStitch
+
+VirtualStitch is an interactive 3D t-shirt customization platform built with Next.js, Three.js, Tailwind CSS, and OpenAI integration. Users can upload images, generate designs using AI, customize colors and patterns in real-time, and download their creations—all within a fully responsive and performant UI.
 
 ## 📊 Badges
 
@@ -7,6 +9,7 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.x-38B2AC?logo=tailwindcss&logoColor=white)
 ![Three.js](https://img.shields.io/badge/Three.js-0.159-black?logo=three.js&logoColor=white)
+![CI](https://github.com/ChiElephant/VirtualStitch/actions/workflows/ci.yml/badge.svg)
 
 ## Getting Started
 
@@ -65,6 +68,7 @@ Virtual Stitch is a fully interactive 3D t-shirt customization platform built wi
 - **AI Integration**: [OpenAI API](https://platform.openai.com/)
 - **Database & Rate Limiting**: [Upstash Redis](https://upstash.com/)
 - **Hosting**: [Vercel](https://vercel.com)
+- **Testing**: [Jest](https://jestjs.io), [Playwright](https://playwright.dev)
 
 ## 🖥 Setup & Development
 
@@ -85,13 +89,17 @@ yarn install
 
 ### 3️⃣ Configure Environment Variables
 
-Create a `.env.local` file at the root and add:
+Create a `.env.local` file at the root with the following keys:
 
-```env
-OPENAI_API_KEY=your_openai_key
-UPSTASH_REDIS_REST_URL=your_redis_url
-UPSTASH_REDIS_REST_TOKEN=your_redis_token
-```
+| Key                        | Description                                       | Required |
+| -------------------------- | ------------------------------------------------- | -------- |
+| `OPENAI_API_KEY`           | Your OpenAI API key                               | ✅ Yes   |
+| `UPSTASH_REDIS_REST_URL`   | Upstash Redis REST API URL                        | ✅ Yes   |
+| `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis API token                           | ✅ Yes   |
+| `API_RATE_LIMIT`           | Max requests allowed per period                   | ✅ Yes   |
+| `CI`                       | Set to true for CI environments                   | ❌ No    |
+| `BASE_URL`                 | Base URL override for tests                       | ❌ No    |
+| `START_SERVER`             | Start server automatically (for Playwright tests) | ❌ No    |
 
 ### 4️⃣ Run the App
 
@@ -103,12 +111,16 @@ Visit [http://localhost:3000](http://localhost:3000).
 
 ## ✅ Testing
 
-All components and API routes are covered by unit and integration tests. We aim for 100% coverage across statements, branches, functions, and lines. Run tests with:
+We use [Jest](https://jestjs.io) for unit/integration tests and [Playwright](https://playwright.dev) for end-to-end tests.
+
+All components and API routes are covered by unit and integration tests. We aim for 100% coverage across components, API routes, and logic. Run tests with:
 
 ```bash
 npm run test
 # or with coverage
 npm run test:coverage
+# or E3E
+npm run test:e2e
 ```
 
 Example coverage report:
@@ -119,47 +131,45 @@ Example coverage report:
 
 The app is designed for seamless deployment to [Vercel](https://vercel.com). Push your main branch and connect your repository to Vercel for continuous deployment.
 
+This repository includes a CI/CD pipeline via GitHub Actions that runs tests automatically before deployment. Vercel handles continuous deployment from the `main` branch.
+
 ## 🖼 Screenshots
 
 ### 🏠 Home Page
 
 ![Home Screenshot](/images/screenshot_1.png)
 
+_Home page with main call-to-action and 3D canvas._
+
 ### 🎨 Customizer - Color Picker
 
 ![Customizer Color Picker](/images/screenshot_2.png)
+
+_Color picker interface for customizing t-shirt colors._
 
 ### 🤖 Customizer - AI Picker
 
 ![Customizer AI Picker](/images/screenshot_3.png)
 
+_AI design generation interface for creating unique logos and patterns._
+
 ### 📂 Customizer - File Upload
 
 ![Customizer File Upload](/images/screenshot_4.png)
+
+_Upload custom images to apply as decals or full-shirt textures._
 
 ### 📥 Download Functionality
 
 ![Download Feature](/images/screenshot_5.png)
 
+_Options to download the full 3D canvas or applied designs._
+
 ### 🧪 Test Coverage Report
 
 ![Coverage Report](/images/coverage_report.png)
 
-## 📂 Project Structure
-
-```
-├── app/
-├── components/
-├── canvas/
-├── config/
-├── pages/
-├── public/
-├── store/
-├── styles/
-├── .env.local
-├── package.json
-└── README.md
-```
+_Test coverage report showing 100% coverage._
 
 ## 🤝 Contributing
 
