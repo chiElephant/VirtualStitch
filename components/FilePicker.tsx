@@ -9,7 +9,9 @@ interface FilePickerProps {
 
 const FilePicker = ({ file, setFile, readFile }: FilePickerProps) => {
   return (
-    <div className='filepicker-container'>
+    <div
+      className='filepicker-container'
+      data-testid='file-picker'>
       <div className='flex-1 flex flex-col'>
         <input
           id='file-upload'

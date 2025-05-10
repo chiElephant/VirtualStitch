@@ -24,14 +24,14 @@ const CustomButton = ({
   const generateStyle = (type: string) => {
     if (type === 'filled') {
       return {
-        backgroundColor: snap.color,
+        backgroundColor: snap.color.toLowerCase(),
         color: getContrastingColor(snap.color),
       };
     } else if (type === 'outlined') {
       return {
         borderWidth: '1px',
-        borderColor: snap.color,
-        color: snap.color,
+        borderColor: snap.color.toLowerCase(),
+        color: snap.color.toLowerCase(),
       };
     }
   };

@@ -15,7 +15,9 @@ const AIPicker = ({
   handleSubmit,
 }: AIPickerProps) => {
   return (
-    <div className='aipicker-container'>
+    <div
+      className='aipicker-container'
+      data-testid='ai-picker'>
       <textarea
         data-testid='ai-prompt-input'
         placeholder='Ask AI...'

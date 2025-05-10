@@ -42,7 +42,14 @@ const ImageDownload = ({ activeFilterTab }: ImageDownloadProps) => {
               setFileName('')
             )
           }
-          disabled={!fileName.trim()}
+          disabled={
+            !fileName.trim() ||
+            !activeFilterTab ||
+            (activeFilterTab === 'logoShirt' &&
+              state.logoDecal === DEFAULT_LOGO) ||
+            (activeFilterTab === 'stylishShirt' &&
+              state.fullDecal === DEFAULT_FULL)
+          }
           customStyles='w-fit px-4 py-2.5 font-bold text-sm'
         />
         <CustomButton
@@ -59,6 +66,7 @@ const ImageDownload = ({ activeFilterTab }: ImageDownloadProps) => {
           }
           disabled={
             !fileName.trim() ||
+            !activeFilterTab ||
             (activeFilterTab === 'logoShirt' &&
               state.logoDecal === DEFAULT_LOGO) ||
             (activeFilterTab === 'stylishShirt' &&
