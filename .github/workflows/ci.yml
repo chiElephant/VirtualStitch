@@ -54,7 +54,7 @@ jobs:
             libxrandr2 \
             libgbm1 \
             libgtk-3-0 \
-            libasound2 \
+            libasound2t64 \
             fonts-liberation
 
       - name: 🔎 Lint code
