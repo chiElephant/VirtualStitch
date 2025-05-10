@@ -31,7 +31,7 @@ jobs:
             ${{ runner.os }}-node-
 
       - name: 📦 Install all dependencies (including dev)
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: 🔨 Build the project
         run: npm run build
