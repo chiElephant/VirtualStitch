@@ -13,6 +13,7 @@ on:
 jobs:
   ci-pipeline:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       matrix:
         shard: [1, 2, 3, 4, 5]
@@ -46,7 +47,7 @@ jobs:
         run: npm run build
 
       - name: 🧪 Run Playwright tests
-        run: npx playwright test --shard=${{ matrix.shard }}/5
+        run: npx playwright test --shard=${{ matrix.shard }}/5 --reporter=list
         env:
           PLAYWRIGHT_TRACE: on
           PLAYWRIGHT_VIDEO: on
