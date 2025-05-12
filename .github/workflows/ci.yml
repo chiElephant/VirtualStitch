@@ -33,9 +33,6 @@ jobs:
           node-version: 18.x
           cache: 'npm'
 
-      - name: 📦 Install dependencies + Playwright browsers
-        run: npm ci --legacy-peer-deps && npx playwright install --with-deps
-
       - name: 🔎 Lint code
         run: npm run lint
 
@@ -45,10 +42,10 @@ jobs:
       - name: 🔨 Build the project
         run: npm run build
 
-      # Playwright webServer will handle starting the server
-
-      - name: 🧭 Run Playwright tests (shard ${{ matrix.shard }}/5)
-        run: npx playwright test --shard=${{ matrix.shard }}/5 --config=playwright.config.ts
+      - name: 🧪 Run Playwright tests via GitHub Action
+        uses: microsoft/playwright-github-action@v1
+        with:
+          shard: ${{ matrix.shard }}/5
         env:
           PLAYWRIGHT_TRACE: on
           PLAYWRIGHT_VIDEO: on

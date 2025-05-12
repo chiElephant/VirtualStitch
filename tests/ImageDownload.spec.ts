@@ -34,7 +34,7 @@ async function triggerAndWaitForDownload(
   return download;
 }
 
-test.describe.only('ImageDownload Component', () => {
+test.describe('ImageDownload Component', () => {
   test.describe('Rendering', () => {
     test('should display the image download container', async ({ page }) => {
       await expect(page.getByTestId('image-download')).toBeVisible();
