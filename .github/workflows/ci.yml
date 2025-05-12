@@ -34,7 +34,7 @@ jobs:
           cache: 'npm'
 
       - name: 📦 Install dependencies + Playwright browsers
-        run: npm ci && npx playwright install --with-deps
+        run: npm ci --legacy-peer-deps && npx playwright install --with-deps
 
       - name: 🔎 Lint code
         run: npm run lint
