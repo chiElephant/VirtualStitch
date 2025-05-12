@@ -33,6 +33,9 @@ jobs:
           node-version: 18.x
           cache: 'npm'
 
+      - name: 📦 Install dependencies + Playwright browsers
+        run: npm ci --legacy-peer-deps && npx playwright install --with-deps
+
       - name: 🔎 Lint code
         run: npm run lint
 
@@ -41,9 +44,6 @@ jobs:
 
       - name: 🔨 Build the project
         run: npm run build
-
-      - name: 📦 Install dependencies + Playwright browsers
-        run: npm ci --legacy-peer-deps && npx playwright install --with-deps
 
       - name: 🧪 Run Playwright tests via GitHub Action
         uses: microsoft/playwright-github-action@v1
