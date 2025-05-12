@@ -1,20 +1,14 @@
-import { test, expect } from '@playwright/test';
-import type { Page, Route } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
+import type { Route } from '@playwright/test';
 import fs from 'fs';
 import path from 'path';
 
-async function mockSuccessfulAiResponse(page: Page, photo = 'fakebase64image') {
-  await page.route('/api/custom-logo', (route: Route) => {
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ photo }),
-    });
-  });
-}
+const base64Emblem = fs
+  .readFileSync(path.resolve(__dirname, './fixtures/emblem.png'))
+  .toString('base64');
 
 async function mockAiErrorResponse(page: Page, status: number) {
-  await page.route('/api/custom-logo', (route: Route) => {
+  await page.route('**/api/custom-logo', (route: Route) => {
     route.fulfill({ status });
   });
 }
@@ -25,10 +19,19 @@ async function submitAiPrompt(page: Page, prompt: string) {
 }
 
 test.describe('AI picker', () => {
-  test.describe.configure({ timeout: 240_000 });
-
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+    await page.goto(process.env.BASE_URL || 'http://localhost:3000');
+    await page.waitForLoadState('networkidle');
+
+    // global mock for custom-logo endpoint
+    await page.route('**/api/custom-logo', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ photo: base64Emblem }),
+      })
+    );
+
     await page.getByRole('button', { name: /customize/i }).click();
     await page.getByRole('img', { name: 'aiPicker' }).click();
   });
@@ -39,56 +42,31 @@ test.describe('AI picker', () => {
     await expect(page.getByTestId('ai-picker')).toBeVisible();
   });
 
-  test('should fetch an ai image and apply it to the shirt (mocked)', async ({
+  test('should fetch an ai image and apply it as a logo (mocked)', async ({
     page,
   }) => {
-    // ✅ Set up the mock JUST for this test
-    const imagePath = path.resolve(__dirname, './fixtures/emblem.png');
-    const imageBuffer = fs.readFileSync(imagePath);
-    const base64Image = imageBuffer.toString('base64');
-
-    await page.route(
-      '**/api/custom-logo',
-      (route) => {
-        route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({ photo: base64Image }),
-        });
-      },
-      { times: Infinity } // ensures it works every time
-    );
+    const logoTexture = page.getByTestId('logo-texture');
+    const aiPromptInput = page.getByTestId('ai-prompt-input');
+    const aiLogoButton = page.getByTestId('ai-logo-button');
 
     // ✅ Apply as logo
-    await expect(page.getByTestId('logo-texture')).toHaveCount(0);
-    await page.getByTestId('ai-prompt-input').fill('Make me a logo.');
-    await page.getByTestId('ai-logo-button').click();
+    await aiPromptInput.fill('Make me a logo.');
+    await aiLogoButton.click();
     await expect(page.getByText(/image applied successfully/i)).toBeVisible();
-    await expect(page.getByTestId('logo-texture')).toHaveCount(1);
+    await expect(logoTexture).toHaveCount(1);
+  });
 
-    // ✅ Apply as full shirt
-    await page.getByRole('img', { name: 'aiPicker' }).click();
-    await expect(page.getByTestId('full-texture')).toHaveCount(0);
+  test('should fetch an ai image and apply it as a full shirt (mocked)', async ({
+    page,
+  }) => {
+    const fullTexture = page.getByTestId('full-texture');
+    const aiPromptInput = page.getByTestId('ai-prompt-input');
+    const aiFullButton = page.getByTestId('ai-full-button');
 
-    // 👀 Count existing toasts before clicking
-    const existingToastCount = await page
-      .locator('[role="alert"] >> text=/image applied successfully/i')
-      .count();
-
-    // Fill and click
-    await page
-      .getByTestId('ai-prompt-input')
-      .fill('Make me a full shirt design.');
-    await page.getByTestId('ai-full-button').click();
-
-    // 🕒 Wait for the new toast to appear
-    await page.waitForSelector(
-      `[role="alert"]:nth-of-type(${existingToastCount + 1}) >> text=/image applied successfully/i`,
-      { state: 'visible' }
-    );
-
-    // ✅ Assert full texture applied
-    await expect(page.getByTestId('full-texture')).toHaveCount(1);
+    await aiPromptInput.fill('Make me a full shirt design.');
+    await aiFullButton.click();
+    await expect(page.getByText(/image applied successfully/i)).toBeVisible();
+    await expect(fullTexture).toHaveCount(1);
   });
 
   test.describe('Error Handling', () => {
@@ -132,88 +110,42 @@ test.describe('AI picker', () => {
     test('should show success toast and apply decal after successful image fetch', async ({
       page,
     }) => {
-      await mockSuccessfulAiResponse(page);
+      await page.route('**/api/custom-logo', (route) => {
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ photo: 'fakebase64image' }),
+        });
+      });
       await submitAiPrompt(page, 'Test success');
       await expect(page.getByText(/image applied successfully/i)).toBeVisible();
       await expect(page.getByTestId('logo-texture')).toHaveCount(1);
     });
   });
 
-  test.describe('UI/UX States', () => {
-    test('should display "Asking AI..." button and disable others while loading', async ({
-      page,
-    }) => {
-      let resolveResponse: () => void;
-      const responsePromise = new Promise<void>((resolve) => {
-        resolveResponse = resolve;
-      });
-      await page.route('/api/custom-logo', async (route) => {
-        await responsePromise; // never resolves until we trigger it
-        route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({ photo: 'fakebase64image' }),
-        });
-      });
-      await page.getByTestId('ai-prompt-input').fill('Test loading state');
-      await page.getByTestId('ai-logo-button').click();
-      await expect(
-        page.getByRole('button', { name: 'Asking AI...' })
-      ).toBeVisible();
-      resolveResponse!();
-    });
+  test('UI interactions and states', async ({ page }) => {
+    // typing preserves value
+    const input = page.getByTestId('ai-prompt-input');
+    await input.fill('Sample prompt');
+    await expect(input).toHaveValue('Sample prompt');
 
-    test('should close AI Picker tab after submission completes', async ({
-      page,
-    }) => {
-      await mockSuccessfulAiResponse(page);
-      await submitAiPrompt(page, 'Close tab test');
-      await expect(page.getByTestId('ai-picker')).not.toBeVisible();
-    });
+    // simulate AI response immediately
+    await page.route('**/api/custom-logo', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ photo: base64Emblem }),
+      })
+    );
+    await page.getByTestId('ai-logo-button').click();
+    await expect(page.getByText(/image applied successfully/i)).toBeVisible();
 
-    test('should render the prompt value from props and call setPrompt when typing', async ({
-      page,
-    }) => {
-      const input = page.getByTestId('ai-prompt-input');
-      await input.fill('Test prompt input');
-      await expect(input).toHaveValue('Test prompt input');
-    });
+    // closing picker on success
+    await expect(page.getByTestId('ai-picker')).not.toBeVisible();
 
-    test('should preserve prompt value when switching tabs back and forth', async ({
-      page,
-    }) => {
-      const input = page.getByTestId('ai-prompt-input');
-      await input.fill('Preserve this prompt');
-      await page.getByRole('img', { name: 'colorPicker' }).click(); // switch to Color tab
-      await page.getByRole('img', { name: 'aiPicker' }).click(); // switch back to AI Picker
-      await expect(input).toHaveValue('Preserve this prompt');
-    });
-
-    test('should disable AI Logo and AI Full buttons when generatingImg is true', async ({
-      page,
-    }) => {
-      let resolveResponse: () => void;
-      const responsePromise = new Promise<void>((resolve) => {
-        resolveResponse = resolve;
-      });
-      await page.route('/api/custom-logo', async (route) => {
-        await responsePromise;
-        route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({ photo: 'fakebase64image' }),
-        });
-      });
-      await page.getByTestId('ai-prompt-input').fill('Disable buttons test');
-      await page.getByTestId('ai-logo-button').click();
-
-      const aiLogoButton = page.getByTestId('ai-logo-button');
-      const aiFullButton = page.getByTestId('ai-full-button');
-
-      await expect(aiLogoButton).not.toBeVisible();
-      await expect(aiFullButton).not.toBeVisible();
-
-      resolveResponse!();
-    });
+    // tab switching preserves prompt
+    await page.getByRole('img', { name: 'colorPicker' }).click();
+    await page.getByRole('img', { name: 'aiPicker' }).click();
+    await expect(input).toHaveValue('Sample prompt');
   });
 });

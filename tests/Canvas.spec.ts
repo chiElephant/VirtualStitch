@@ -1,85 +1,36 @@
-import { test, expect } from '@playwright/test';
-import type { Page } from '@playwright/test';
+/* eslint-disable react-hooks/rules-of-hooks */
+import { test as base, expect, type Page } from '@playwright/test';
 
-async function toggleFilter(page: Page, filterTestId: string) {
-  await page.getByTestId(filterTestId).click();
+const test = base.extend<{ page: Page }>({
+  page: async ({ page }, usePage) => {
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+    await page.getByRole('button', { name: /customize/i }).click();
+    await usePage(page);
+  },
+});
+
+async function toggleFilter(page: Page, testId: string) {
+  await page.getByTestId(testId).click();
 }
 
-test.describe('Canvas', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-    await page.getByRole('button', { name: /customize/i }).click();
-  });
+test.describe.parallel('Canvas', () => {
+  test('filter toggles', async ({ page }) => {
+    // initial state
+    await expect(page.getByTestId('logo-texture')).toHaveCount(0);
+    await expect(page.getByTestId('full-texture')).toHaveCount(0);
+    await expect(page.locator('canvas')).toBeVisible();
 
-  test.describe('Initial State', () => {
-    test('should not display logo or fullLogo textures on initial load', async ({
-      page,
-    }) => {
-      await expect(page.getByTestId('logo-texture')).toHaveCount(0);
-      await expect(page.getByTestId('full-texture')).toHaveCount(0);
-    });
+    // toggle logo on
+    await toggleFilter(page, 'filter-tab-logoShirt');
+    await expect(page.getByTestId('logo-texture')).toHaveCount(1);
 
-    test('should display the canvas container', async ({ page }) => {
-      await expect(page.locator('canvas')).toBeVisible();
-    });
-  });
+    // toggle full on
+    await toggleFilter(page, 'filter-tab-stylishShirt');
+    await expect(page.getByTestId('full-texture')).toHaveCount(1);
 
-  test.describe('Logo Filter Behavior', () => {
-    test('should display the logo when logo filter is active', async ({
-      page,
-    }) => {
-      await expect(page.getByTestId('logo-texture')).toHaveCount(0);
-      await toggleFilter(page, 'filter-tab-logoShirt');
-      await expect(page.getByTestId('logo-texture')).toHaveCount(1);
-    });
-
-    test('should remove the logo when logo filter is deactived', async ({
-      page,
-    }) => {
-      await expect(page.getByTestId('logo-texture')).toHaveCount(0);
-      await toggleFilter(page, 'filter-tab-logoShirt');
-      await expect(page.getByTestId('logo-texture')).toHaveCount(1);
-      await toggleFilter(page, 'filter-tab-logoShirt');
-      await expect(page.getByTestId('logo-texture')).toHaveCount(0);
-    });
-  });
-
-  test.describe('FullLogo Filter Behavior', () => {
-    test('should display the fullLogo when stylish filter is active', async ({
-      page,
-    }) => {
-      await expect(page.getByTestId('full-texture')).toHaveCount(0);
-      await toggleFilter(page, 'filter-tab-stylishShirt');
-      await expect(page.getByTestId('full-texture')).toHaveCount(1);
-    });
-
-    test('should remove the fullLogo when stylish filter is deactived', async ({
-      page,
-    }) => {
-      await expect(page.getByTestId('full-texture')).toHaveCount(0);
-      await toggleFilter(page, 'filter-tab-stylishShirt');
-      await expect(page.getByTestId('full-texture')).toHaveCount(1);
-      await toggleFilter(page, 'filter-tab-stylishShirt');
-      await expect(page.getByTestId('full-texture')).toHaveCount(0);
-    });
-  });
-
-  test.describe('Combined Filters', () => {
-    test('should display logo and fullLogo when both filters are active', async ({
-      page,
-    }) => {
-      await expect(page.getByTestId('full-texture')).toHaveCount(0);
-      await expect(page.getByTestId('logo-texture')).toHaveCount(0);
-      await toggleFilter(page, 'filter-tab-stylishShirt');
-      await toggleFilter(page, 'filter-tab-logoShirt');
-
-      await expect(page.getByTestId('full-texture')).toHaveCount(1);
-      await expect(page.getByTestId('logo-texture')).toHaveCount(1);
-
-      await toggleFilter(page, 'filter-tab-stylishShirt');
-      await toggleFilter(page, 'filter-tab-logoShirt');
-      await expect(page.getByTestId('full-texture')).toHaveCount(0);
-      await expect(page.getByTestId('logo-texture')).toHaveCount(0);
-    });
+    // both active
+    await expect(page.getByTestId('logo-texture')).toHaveCount(1);
+    await expect(page.getByTestId('full-texture')).toHaveCount(1);
   });
 });

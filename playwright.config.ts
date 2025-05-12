@@ -29,12 +29,19 @@ export default defineConfig({
     headless: true, // set false if you want to watch tests locally
 
     screenshot: 'only-on-failure', // full-page screenshots on failures
-    video: 'retain-on-failure', // keep video only if test fails
+    video: 'off', // disable video recordings to reduce I/O overhead
     trace: 'on-first-retry', // full trace on first retry
 
     viewport: { width: 1280, height: 720 },
 
     // Extra: you can also set storageState, userAgent, etc.
+  },
+
+  // 🚧 Start built app (reuse existing in CI)
+  webServer: {
+    command: 'npm run start',
+    url: process.env.BASE_URL || 'http://localhost:3000',
+    reuseExistingServer: true,
   },
 
   // ✅ Multi-browser setup

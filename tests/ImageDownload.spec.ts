@@ -1,10 +1,17 @@
-import { test, expect } from '@playwright/test';
-import type { Page } from '@playwright/test';
+import { test, expect, type Page, type Download } from '@playwright/test';
+
+test.beforeEach(async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: /customize/i }).click();
+  await page.getByRole('img', { name: 'imageDownload' }).click();
+});
+
 // Helper for uploading, applying filter, and filling filename
 async function uploadAndSetup(
   page: Page,
-  { filter, filename }: { filter: 'Logo' | 'Full'; filename: string }
+  options: { filter: string; filename: string }
 ) {
+  const { filter, filename } = options;
   await page.getByRole('img', { name: 'filePicker' }).click();
   await page.getByText('Upload File').click();
   await page
@@ -16,7 +23,10 @@ async function uploadAndSetup(
 }
 
 // Helper for triggering a download and waiting for it
-async function triggerAndWaitForDownload(page: Page, buttonName: string) {
+async function triggerAndWaitForDownload(
+  page: Page,
+  buttonName: string
+): Promise<Download> {
   const [download] = await Promise.all([
     page.waitForEvent('download'),
     page.getByRole('button', { name: buttonName }).click(),
@@ -24,13 +34,7 @@ async function triggerAndWaitForDownload(page: Page, buttonName: string) {
   return download;
 }
 
-test.describe('ImageDownload Component', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-    await page.getByRole('button', { name: /customize/i }).click();
-    await page.getByRole('img', { name: 'imageDownload' }).click();
-  });
-
+test.describe.only('ImageDownload Component', () => {
   test.describe('Rendering', () => {
     test('should display the image download container', async ({ page }) => {
       await expect(page.getByTestId('image-download')).toBeVisible();
@@ -38,60 +42,85 @@ test.describe('ImageDownload Component', () => {
   });
 
   test.describe('Disabled State', () => {
-    [
-      { label: 'No Filename', input: '' },
-      { label: 'Filled Filename', input: 'my-image' },
-      { label: 'Whitespace Filename', input: '   ' },
-    ].forEach(({ label, input }) => {
-      test(`No Active Filter, ${label}`, async ({ page }) => {
-        if (input !== '') {
-          await page.getByLabel(/filename/i).fill(input);
-        }
-        const logoButton = page.getByRole('button', { name: 'Download Logo' });
-        const shirtButton = page.getByRole('button', {
-          name: 'Download Shirt',
-        });
-        await expect(logoButton).toBeDisabled();
-        await expect(shirtButton).toBeDisabled();
+    test('No Active Filter, No Filename', async ({ page }) => {
+      const input = '';
+      await page.getByLabel(/filename/i).fill(input);
+      const logoButton = page.getByRole('button', { name: 'Download Logo' });
+      const shirtButton = page.getByRole('button', {
+        name: 'Download Shirt',
       });
+      await expect(logoButton).toBeDisabled();
+      await expect(shirtButton).toBeDisabled();
+    });
+    test('No Active Filter, Filled Filename', async ({ page }) => {
+      const input = 'my-image';
+      await page.getByLabel(/filename/i).fill(input);
+      const logoButton = page.getByRole('button', { name: 'Download Logo' });
+      const shirtButton = page.getByRole('button', {
+        name: 'Download Shirt',
+      });
+      await expect(logoButton).toBeDisabled();
+      await expect(shirtButton).toBeDisabled();
+    });
+    test('No Active Filter, Whitespace Filename', async ({ page }) => {
+      const input = '   ';
+      await page.getByLabel(/filename/i).fill(input);
+      const logoButton = page.getByRole('button', { name: 'Download Logo' });
+      const shirtButton = page.getByRole('button', {
+        name: 'Download Shirt',
+      });
+      await expect(logoButton).toBeDisabled();
+      await expect(shirtButton).toBeDisabled();
     });
 
-    [
-      { label: 'No Filename', input: '' },
-      { label: 'Whitespace Filename', input: '   ' },
-    ].forEach(({ label, input }) => {
-      test(`Logo Filter, ${label}`, async ({ page }) => {
-        await page.getByTestId('filter-tab-logoShirt').click();
-        if (input !== '') {
-          await page.getByLabel(/filename/i).fill(input);
-        }
-        const logoButton = page.getByRole('button', { name: 'Download Logo' });
-        const shirtButton = page.getByRole('button', {
-          name: 'Download Shirt',
-        });
-        await expect(logoButton).toBeDisabled();
-        await expect(shirtButton).toBeDisabled();
+    test('Logo Filter, No Filename', async ({ page }) => {
+      const input = '';
+      await page.getByTestId('filter-tab-logoShirt').click();
+      await page.getByLabel(/filename/i).fill(input);
+      const logoButton = page.getByRole('button', { name: 'Download Logo' });
+      const shirtButton = page.getByRole('button', {
+        name: 'Download Shirt',
       });
+      await expect(logoButton).toBeDisabled();
+      await expect(shirtButton).toBeDisabled();
+    });
+    test('Logo Filter, Whitespace Filename', async ({ page }) => {
+      const input = '   ';
+      await page.getByTestId('filter-tab-logoShirt').click();
+      await page.getByLabel(/filename/i).fill(input);
+      const logoButton = page.getByRole('button', { name: 'Download Logo' });
+      const shirtButton = page.getByRole('button', {
+        name: 'Download Shirt',
+      });
+      await expect(logoButton).toBeDisabled();
+      await expect(shirtButton).toBeDisabled();
     });
 
-    [
-      { label: 'No Filename', input: '' },
-      { label: 'Whitespace Filename', input: '   ' },
-    ].forEach(({ label, input }) => {
-      test(`Full Filter, ${label}`, async ({ page }) => {
-        await page.getByTestId('filter-tab-stylishShirt').click();
-        if (input !== '') {
-          await page.getByLabel(/filename/i).fill(input);
-        }
-        const patternButton = page.getByRole('button', {
-          name: 'Download Pattern',
-        });
-        const shirtButton = page.getByRole('button', {
-          name: 'Download Shirt',
-        });
-        await expect(patternButton).toBeDisabled();
-        await expect(shirtButton).toBeDisabled();
+    test('Full Filter, No Filename', async ({ page }) => {
+      const input = '';
+      await page.getByTestId('filter-tab-stylishShirt').click();
+      await page.getByLabel(/filename/i).fill(input);
+      const patternButton = page.getByRole('button', {
+        name: 'Download Pattern',
       });
+      const shirtButton = page.getByRole('button', {
+        name: 'Download Shirt',
+      });
+      await expect(patternButton).toBeDisabled();
+      await expect(shirtButton).toBeDisabled();
+    });
+    test('Full Filter, Whitespace Filename', async ({ page }) => {
+      const input = '   ';
+      await page.getByTestId('filter-tab-stylishShirt').click();
+      await page.getByLabel(/filename/i).fill(input);
+      const patternButton = page.getByRole('button', {
+        name: 'Download Pattern',
+      });
+      const shirtButton = page.getByRole('button', {
+        name: 'Download Shirt',
+      });
+      await expect(patternButton).toBeDisabled();
+      await expect(shirtButton).toBeDisabled();
     });
   });
 

@@ -1,5 +1,9 @@
 name: CI
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [main]
@@ -29,54 +33,26 @@ jobs:
           node-version: 18.x
           cache: 'npm'
 
-      - name: ♻️ Cache node_modules
-        uses: actions/cache@v4
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-
       - name: 📦 Install dependencies + Playwright browsers
-        run: |
-          npm install --legacy-peer-deps
-          npx playwright install --with-deps
-
-      - name: 🛠️ Install Chromium dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libnss3 \
-            libatk-bridge2.0-0 \
-            libx11-xcb1 \
-            libxcomposite1 \
-            libxdamage1 \
-            libxrandr2 \
-            libgbm1 \
-            libgtk-3-0 \
-            libasound2t64 \
-            fonts-liberation
+        run: npm ci && npx playwright install --with-deps
 
       - name: 🔎 Lint code
         run: npm run lint
 
+      - name: 🧪 Run unit tests
+        run: npm test
+
       - name: 🔨 Build the project
         run: npm run build
 
-      - name: 🚀 Start Next.js server
-        run: |
-          npm run start &
-          npx wait-on http://localhost:3000
+      # Playwright webServer will handle starting the server
 
       - name: 🧭 Run Playwright tests (shard ${{ matrix.shard }}/5)
         run: npx playwright test --shard=${{ matrix.shard }}/5 --config=playwright.config.ts
         env:
           PLAYWRIGHT_TRACE: on
           PLAYWRIGHT_VIDEO: on
-
-      - name: 🛑 Stop Next.js server
-        if: always()
-        run: kill $(lsof -t -i:3000) || true
+          CI: 'true'
 
       - name: 📤 Upload Playwright artifacts (screenshots, traces, videos)
         if: failure()

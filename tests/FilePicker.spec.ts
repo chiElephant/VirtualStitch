@@ -1,9 +1,12 @@
 import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
+import type { BrowserContext } from '@playwright/test';
 
 const sampleImagePath1 = './tests/fixtures/emblem.png';
-const sampleImagePath2 = './tests/fixtures/emblem2.png';
 const invalidFilePath = './tests/fixtures/sample.txt';
+
+let context: BrowserContext;
+let page: Page;
 
 async function uploadFile(page: Page, filePath: string) {
   await page.getByText('Upload File').click();
@@ -11,34 +14,37 @@ async function uploadFile(page: Page, filePath: string) {
 }
 
 test.describe('File Picker', () => {
-  test.beforeEach(async ({ page }) => {
+  test.beforeAll(async ({ browser }) => {
+    context = await browser.newContext();
+    page = await context.newPage();
     await page.goto('/');
     await page.getByRole('button', { name: /customize/i }).click();
     await page.getByRole('img', { name: 'filePicker' }).click();
   });
 
+  test.afterAll(async () => {
+    await context.close();
+  });
+
   test.describe('Initial State', () => {
-    test('should display "No file selected" initially', async ({ page }) => {
+    test('should display "No file selected" initially', async () => {
       await expect(page.getByText('No file selected')).toBeVisible();
     });
   });
 
-  test.describe('File Replacement', () => {
-    test('should replace previous file name when a new file is uploaded', async ({
-      page,
-    }) => {
-      await uploadFile(page, sampleImagePath1);
-      await expect(page.getByText('emblem.png')).toBeVisible();
-
-      await uploadFile(page, sampleImagePath2);
-      await expect(page.getByText('emblem2.png')).toBeVisible();
+  const uploads: [string, string][] = [
+    ['./tests/fixtures/emblem.png', 'emblem.png'],
+    ['./tests/fixtures/emblem2.png', 'emblem2.png'],
+  ];
+  uploads.forEach(([filePath, label]: [string, string]) => {
+    test(`uploading ${label} displays ${label}`, async () => {
+      await uploadFile(page, filePath);
+      await expect(page.getByText(label)).toBeVisible();
     });
   });
 
   test.describe('Button States', () => {
-    test('should have Logo and Full buttons enabled even when no file is selected', async ({
-      page,
-    }) => {
+    test('should have Logo and Full buttons enabled even when no file is selected', async () => {
       const logoButton = page.getByRole('button', { name: 'Logo' });
       const fullButton = page.getByRole('button', { name: 'Full' });
 
@@ -48,7 +54,7 @@ test.describe('File Picker', () => {
   });
 
   test.describe('Invalid File Handling', () => {
-    test('should not accept non-image files', async ({ page }) => {
+    test('should not accept non-image files', async () => {
       await page.getByText('Upload File').click();
       await page
         .getByTestId('file-picker-input')
@@ -61,9 +67,7 @@ test.describe('File Picker', () => {
   });
 
   test.describe('Persistence', () => {
-    test('should keep uploaded file name after applying as logo and reopening picker', async ({
-      page,
-    }) => {
+    test('should keep uploaded file name after applying as logo and reopening picker', async () => {
       await uploadFile(page, sampleImagePath1);
       await expect(page.getByText('emblem.png')).toBeVisible();
 
@@ -76,9 +80,7 @@ test.describe('File Picker', () => {
       await expect(page.getByText('emblem.png')).toBeVisible();
     });
 
-    test('should keep uploaded file name after applying as full and reopening picker', async ({
-      page,
-    }) => {
+    test('should keep uploaded file name after applying as full and reopening picker', async () => {
       await uploadFile(page, sampleImagePath1);
       await expect(page.getByText('emblem.png')).toBeVisible();
 
@@ -93,20 +95,16 @@ test.describe('File Picker', () => {
   });
 
   test.describe('Core Functionality', () => {
-    test('should display the file picker when file picker tab is clicked', async ({
-      page,
-    }) => {
+    test('should display the file picker when file picker tab is clicked', async () => {
       await expect(page.getByTestId('file-picker')).toBeVisible();
     });
 
-    test('should upload a file and display its name', async ({ page }) => {
+    test('should upload a file and display its name', async () => {
       await uploadFile(page, sampleImagePath1);
       await expect(page.getByText('emblem.png')).toBeVisible();
     });
 
-    test('should display uploaded image as logo when logo button is clicked', async ({
-      page,
-    }) => {
+    test('should display uploaded image as logo when logo button is clicked', async () => {
       await expect(page.getByTestId('logo-texture')).toHaveCount(0);
 
       await uploadFile(page, sampleImagePath1);
@@ -116,9 +114,7 @@ test.describe('File Picker', () => {
       await expect(page.getByTestId('logo-texture')).toHaveCount(1);
     });
 
-    test('should display uploaded image as fullLogo when full button is clicked', async ({
-      page,
-    }) => {
+    test('should display uploaded image as fullLogo when full button is clicked', async () => {
       await expect(page.getByTestId('full-texture')).toHaveCount(0);
 
       await uploadFile(page, sampleImagePath1);
