@@ -45,10 +45,8 @@ jobs:
       - name: 🔨 Build the project
         run: npm run build
 
-      - name: 🧪 Run Playwright tests via GitHub Action
-        uses: microsoft/playwright-github-action@v1
-        with:
-          shard: ${{ matrix.shard }}/5
+      - name: 🧪 Run Playwright tests
+        run: npx playwright test --shard=${{ matrix.shard }}/5
         env:
           PLAYWRIGHT_TRACE: on
           PLAYWRIGHT_VIDEO: on
