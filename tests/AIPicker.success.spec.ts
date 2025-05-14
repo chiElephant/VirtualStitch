@@ -6,8 +6,13 @@ test.describe('AI picker success handling', () => {
     await page.goto(process.env.BASE_URL || 'http://localhost:3000');
     await page.waitForLoadState('networkidle');
 
-    await page.getByRole('button', { name: /customize/i }).click();
-    await page.getByRole('img', { name: 'aiPicker' }).click();
+    const customizeBtn = page.getByRole('button', { name: /customize/i });
+    await expect(customizeBtn).toBeVisible();
+    await customizeBtn.click();
+
+    const aiPickerTab = page.getByRole('img', { name: 'aiPicker' });
+    await expect(aiPickerTab).toBeVisible();
+    await aiPickerTab.click();
   });
 
   test('should show success toast and apply decal after successful image fetch', async ({

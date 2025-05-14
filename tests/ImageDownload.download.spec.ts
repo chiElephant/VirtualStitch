@@ -3,8 +3,15 @@ import { test, expect, type Page, type Download } from '@playwright/test';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: /customize/i }).click();
-  await page.getByRole('img', { name: 'imageDownload' }).click();
+  await page.waitForLoadState('networkidle');
+
+  const customizeBtn = page.getByRole('button', { name: /customize/i });
+  await expect(customizeBtn).toBeVisible();
+  await customizeBtn.click();
+
+  const imageDownloadTab = page.getByRole('img', { name: 'imageDownload' });
+  await expect(imageDownloadTab).toBeVisible();
+  await imageDownloadTab.click();
 });
 
 // Helper for uploading, applying filter, and filling filename

@@ -15,6 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
+      fail-fast: true
       matrix:
         shard: [1, 2, 3, 4, 5]
     env:
@@ -35,6 +36,7 @@ jobs:
           cache: 'npm'
 
       - name: 📦 Install dependencies + Playwright browsers
+        id: install
         run: npm ci --legacy-peer-deps && npx playwright install --with-deps
 
       - name: 🔎 Lint code
@@ -55,7 +57,15 @@ jobs:
 
       - name: 📤 Upload Playwright artifacts (screenshots, traces, videos)
         if: failure()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: playwright-results
           path: test-results/
+
+      - name: 📤 Upload Playwright HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-html-report
+          path: playwright-report

@@ -15,7 +15,7 @@ export default defineConfig({
   // ⏱ Global timeouts
   timeout: 30 * 1000, // 30s per test
   expect: {
-    timeout: 5000, // 5s max per expect()
+    timeout: process.env.CI ? 10000 : 5000, // longer expect timeout in CI
   },
 
   // 🔄 Auto-retries if tests fail (great for CI)
@@ -27,14 +27,14 @@ export default defineConfig({
   // 🌐 Global settings (can be overridden per project)
   use: {
     baseURL: process.env.BASE_URL || 'http://localhost:3000',
-    headless: true, // set false if you want to watch tests locally
-
+    headless: process.env.HEADLESS !== 'false', // allow visual debug by setting HEADLESS=false
+    launchOptions: {
+      slowMo: process.env.CI ? 100 : 0, // slight delay to stabilize CI tests
+    },
     screenshot: 'only-on-failure', // full-page screenshots on failures
     video: 'off', // disable video recordings to reduce I/O overhead
     trace: 'on-first-retry', // full trace on first retry
-
     viewport: { width: 1280, height: 720 },
-
     // Extra: you can also set storageState, userAgent, etc.
   },
 

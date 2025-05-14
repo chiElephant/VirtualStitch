@@ -14,8 +14,15 @@ async function uploadFile(page: Page, filePath: string) {
 test.describe('File Picker - Uploads', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: /customize/i }).click();
-    await page.getByRole('img', { name: 'filePicker' }).click();
+    await page.waitForLoadState('networkidle');
+
+    const customizeBtn = page.getByRole('button', { name: /customize/i });
+    await expect(customizeBtn).toBeVisible();
+    await customizeBtn.click();
+
+    const filePickerTab = page.getByRole('img', { name: 'filePicker' });
+    await expect(filePickerTab).toBeVisible();
+    await filePickerTab.click();
   });
 
   uploads.forEach(([filePath, label]: [string, string]) => {

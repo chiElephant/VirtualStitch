@@ -20,8 +20,13 @@ test.describe('AI picker rendering', () => {
       })
     );
 
-    await page.getByRole('button', { name: /customize/i }).click();
-    await page.getByRole('img', { name: 'aiPicker' }).click();
+    const customizeBtn = page.getByRole('button', { name: /customize/i });
+    await expect(customizeBtn).toBeVisible();
+    await customizeBtn.click();
+
+    const aiPickerTab = page.getByRole('img', { name: 'aiPicker' });
+    await expect(aiPickerTab).toBeVisible();
+    await aiPickerTab.click();
   });
 
   test('should display the ai picker when ai picker tab is clicked', async ({

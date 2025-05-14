@@ -23,6 +23,14 @@ test.describe('AI picker error handling', () => {
     await page.goto(process.env.BASE_URL || 'http://localhost:3000');
     await page.waitForLoadState('networkidle');
 
+    const customizeBtn = page.getByRole('button', { name: /customize/i });
+    await expect(customizeBtn).toBeVisible();
+    await customizeBtn.click();
+
+    const aiPickerTab = page.getByRole('img', { name: 'aiPicker' });
+    await expect(aiPickerTab).toBeVisible();
+    await aiPickerTab.click();
+
     // global mock for custom-logo endpoint
     await page.route('**/api/custom-logo', (route) =>
       route.fulfill({
@@ -31,9 +39,6 @@ test.describe('AI picker error handling', () => {
         body: JSON.stringify({ photo: base64Emblem }),
       })
     );
-
-    await page.getByRole('button', { name: /customize/i }).click();
-    await page.getByRole('img', { name: 'aiPicker' }).click();
   });
 
   test('should show a warning toast if trying to submit an empty prompt', async ({
