@@ -10,6 +10,7 @@ export default defineConfig({
 
   // 🚀 Run tests in parallel across files
   fullyParallel: true,
+  forbidOnly: !!process.env.CI,
   globalTimeout: 10 * 60 * 1000, // ⏱ Limit total test run to 10 min
 
   // ⏱ Global timeouts
@@ -40,10 +41,10 @@ export default defineConfig({
 
   // 🚧 Start built app (always fresh server in CI, longer timeout)
   webServer: {
-    command: 'npm run start',
+    command: 'npm run build && npm run start',
     url: process.env.BASE_URL || 'http://localhost:3000',
     timeout: 120 * 1000, // wait up to 2 minutes for server to be ready
-    reuseExistingServer: false,
+    reuseExistingServer: !process.env.CI,
   },
 
   // ✅ Multi-browser setup

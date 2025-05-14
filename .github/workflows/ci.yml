@@ -29,6 +29,14 @@ jobs:
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
 
+      - name: Cache Playwright browsers
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-browsers-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-browsers-
+
       - name: 🔧 Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -44,9 +52,6 @@ jobs:
 
       - name: 🧪 Run unit tests
         run: npm test
-
-      - name: 🔨 Build the project
-        run: npm run build
 
       - name: 🧪 Run Playwright tests
         run: npx playwright test --shard=${{ matrix.shard }}/5 --reporter=list
