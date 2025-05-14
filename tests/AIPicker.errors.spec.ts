@@ -7,6 +7,24 @@ const base64Emblem = fs
   .readFileSync(path.resolve(__dirname, './fixtures/emblem.png'))
   .toString('base64');
 
+test.beforeEach(async ({ page }) => {
+  await page.goto('/');
+  await page.click('button:has-text("Customize")');
+  await page.click('img[alt="aiPicker"]');
+  await page.waitForSelector('[data-testid="ai-prompt-input"]', {
+    state: 'visible',
+    timeout: 10000,
+  });
+  // global mock for custom-logo endpoint
+  await page.route('**/api/custom-logo', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ photo: base64Emblem }),
+    })
+  );
+});
+
 async function mockAiErrorResponse(page: Page, status: number) {
   await page.route('**/api/custom-logo', (route: Route) => {
     route.fulfill({ status });
@@ -20,42 +38,6 @@ async function submitAiPrompt(page: Page, prompt: string) {
 
 test.describe('AI picker error handling', () => {
   test.describe.configure({ retries: 2, timeout: 60_000 });
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-    await page.waitForLoadState('domcontentloaded');
-    const customizeBtn = page.getByRole('button', { name: /customize/i });
-    await customizeBtn.waitFor({ state: 'visible', timeout: 10_000 });
-    await customizeBtn.click();
-
-    await page.waitForSelector('img[alt="aiPicker"]', {
-      state: 'visible',
-      timeout: 10_000,
-    });
-    const aiPickerTab = page.locator('img[alt="aiPicker"]');
-    await aiPickerTab.scrollIntoViewIfNeeded();
-    let clicked = false;
-    for (let i = 0; i < 3; i++) {
-      try {
-        await aiPickerTab.click();
-        clicked = true;
-        break;
-      } catch {
-        console.warn(`aiPickerTab click attempt ${i + 1} failed`);
-        await page.waitForTimeout(200);
-      }
-    }
-    if (!clicked)
-      throw new Error('aiPickerTab could not be clicked after 3 attempts');
-
-    // global mock for custom-logo endpoint
-    await page.route('**/api/custom-logo', (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ photo: base64Emblem }),
-      })
-    );
-  });
 
   test('should show a warning toast if trying to submit an empty prompt', async ({
     page,

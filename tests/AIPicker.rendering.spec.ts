@@ -1,39 +1,19 @@
 import { test, expect } from '@playwright/test';
-test.beforeAll(() => {
-  test.setTimeout(60_000);
-});
-test.describe.configure({ retries: 2, timeout: 60_000 });
 import fs from 'fs';
 import path from 'path';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
-  await page.waitForLoadState('domcontentloaded');
-  const customizeBtn = page.getByRole('button', { name: /customize/i });
-  await customizeBtn.waitFor({ state: 'visible', timeout: 10_000 });
-  await customizeBtn.click();
-  await page.waitForSelector('img[alt="aiPicker"]', {
+  await page.click('button:has-text("Customize")');
+  await page.click('img[alt="aiPicker"]');
+  await page.waitForSelector('[data-testid="ai-picker"]', {
     state: 'visible',
-    timeout: 10_000,
+    timeout: 10000,
   });
-  const aiPickerTab = page.locator('img[alt="aiPicker"]');
-  await aiPickerTab.scrollIntoViewIfNeeded();
-  let clicked = false;
-  for (let i = 0; i < 3; i++) {
-    try {
-      await aiPickerTab.click();
-      clicked = true;
-      break;
-    } catch {
-      await page.waitForTimeout(200);
-    }
-  }
-  if (!clicked)
-    throw new Error('aiPickerTab could not be clicked after 3 attempts');
+  // global mock for custom-logo endpoint
   const base64Emblem = fs
     .readFileSync(path.resolve(__dirname, './fixtures/emblem.png'))
     .toString('base64');
-  // global mock for custom-logo endpoint
   await page.route('**/api/custom-logo', (route) =>
     route.fulfill({
       status: 200,
@@ -42,6 +22,8 @@ test.beforeEach(async ({ page }) => {
     })
   );
 });
+
+test.describe.configure({ retries: 2, timeout: 60_000 });
 
 test('should display the ai picker when ai picker tab is clicked', async ({
   page,
