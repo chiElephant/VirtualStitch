@@ -1,6 +1,5 @@
 // File: ImageDownload.disabledState.spec.ts
 import { test, expect } from '@playwright/test';
-test.setTimeout(60 * 1000);
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');

@@ -7,7 +7,7 @@ import fs from 'fs';
 import path from 'path';
 
 test.beforeEach(async ({ page }) => {
-  await page.goto(process.env.BASE_URL || 'http://localhost:3000');
+  await page.goto('/');
   await page.waitForLoadState('domcontentloaded');
   const base64Emblem = fs
     .readFileSync(path.resolve(__dirname, './fixtures/emblem.png'))

@@ -21,7 +21,7 @@ async function submitAiPrompt(page: Page, prompt: string) {
 test.describe('AI picker error handling', () => {
   test.describe.configure({ retries: 2, timeout: 60_000 });
   test.beforeEach(async ({ page }) => {
-    await page.goto(process.env.BASE_URL || 'http://localhost:3000');
+    await page.goto('/');
     await page.waitForLoadState('domcontentloaded');
     const customizeBtn = page.getByRole('button', { name: /customize/i });
     await customizeBtn.waitFor({ state: 'visible', timeout: 10_000 });

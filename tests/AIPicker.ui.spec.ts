@@ -9,7 +9,7 @@ import path from 'path';
 
 test.describe('AI picker UI interactions and states', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto(process.env.BASE_URL || 'http://localhost:3000');
+    await page.goto('/');
     await page.waitForLoadState('domcontentloaded');
     const customizeBtn = page.getByRole('button', { name: /customize/i });
     await customizeBtn.waitFor({ state: 'visible', timeout: 10_000 });
