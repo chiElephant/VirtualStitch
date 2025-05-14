@@ -9,8 +9,9 @@ const base64Emblem = fs
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
+  await page.waitForLoadState('domcontentloaded');
   await page.click('button:has-text("Customize")');
-  await page.click('img[alt="aiPicker"]');
+  await page.getByTestId('editor-tab-aiPicker').click();
   await page.waitForSelector('[data-testid="ai-prompt-input"]', {
     state: 'visible',
     timeout: 10000,
@@ -50,7 +51,7 @@ test.describe('AI picker UI interactions and states', () => {
 
     // tab switching preserves prompt
     await page.getByRole('img', { name: 'colorPicker' }).click();
-    await page.getByRole('img', { name: 'aiPicker' }).click();
+    await page.getByTestId('editor-tab-aiPicker').click();
     await expect(input).toHaveValue('Sample prompt');
   });
 });

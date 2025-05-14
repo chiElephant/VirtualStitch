@@ -23,7 +23,7 @@ test.beforeEach(async ({ page }) => {
   const customizeBtn = page.getByRole('button', { name: /customize/i });
   await customizeBtn.waitFor({ state: 'visible', timeout: 10_000 });
   await customizeBtn.click();
-  const aiPickerTab = page.getByRole('img', { name: 'aiPicker' });
+  const aiPickerTab = page.getByTestId('editor-tab-aiPicker');
   await aiPickerTab.waitFor({ state: 'visible', timeout: 10_000 });
   await aiPickerTab.scrollIntoViewIfNeeded();
   let clicked = false;

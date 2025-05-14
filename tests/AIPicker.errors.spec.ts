@@ -9,8 +9,9 @@ const base64Emblem = fs
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
+  await page.waitForLoadState('domcontentloaded');
   await page.click('button:has-text("Customize")');
-  await page.click('img[alt="aiPicker"]');
+  await page.click('[data-testid="editor-tab-aiPicker"]');
   await page.waitForSelector('[data-testid="ai-prompt-input"]', {
     state: 'visible',
     timeout: 10000,

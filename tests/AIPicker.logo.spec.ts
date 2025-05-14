@@ -12,11 +12,8 @@ test.beforeEach(async ({ page }) => {
   const customizeBtn = page.getByRole('button', { name: /customize/i });
   await customizeBtn.waitFor({ state: 'visible', timeout: 10_000 });
   await customizeBtn.click();
-  await page.waitForSelector('img[alt="aiPicker"]', {
-    state: 'visible',
-    timeout: 10_000,
-  });
-  const aiPickerTab = page.locator('img[alt="aiPicker"]');
+  const aiPickerTab = page.getByTestId('editor-tab-aiPicker');
+  await aiPickerTab.waitFor({ state: 'visible', timeout: 10_000 });
   await aiPickerTab.scrollIntoViewIfNeeded();
   let clicked = false;
   for (let i = 0; i < 3; i++) {

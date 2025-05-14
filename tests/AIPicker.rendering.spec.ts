@@ -4,8 +4,9 @@ import path from 'path';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
+  await page.waitForLoadState('domcontentloaded');
   await page.click('button:has-text("Customize")');
-  await page.click('img[alt="aiPicker"]');
+  await page.getByTestId('editor-tab-aiPicker').click();
   await page.waitForSelector('[data-testid="ai-picker"]', {
     state: 'visible',
     timeout: 10000,
