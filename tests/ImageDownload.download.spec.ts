@@ -3,15 +3,13 @@ import { test, expect, type Page, type Download } from '@playwright/test';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
-  await page.waitForLoadState('networkidle');
-
-  const customizeBtn = page.getByRole('button', { name: /customize/i });
-  await expect(customizeBtn).toBeVisible();
-  await customizeBtn.click();
-
-  const imageDownloadTab = page.getByRole('img', { name: 'imageDownload' });
-  await expect(imageDownloadTab).toBeVisible();
-  await imageDownloadTab.click();
+  await page.click('button:has-text("Customize")');
+  // Open the download tab
+  await page.click('img[alt="imageDownload"]');
+  // Wait for a representative download button to ensure the tab is ready
+  await expect(
+    page.getByRole('button', { name: 'Download Logo' })
+  ).toBeVisible();
 });
 
 // Helper for uploading, applying filter, and filling filename
@@ -19,12 +17,15 @@ async function uploadAndSetup(
   page: Page,
   options: { filter: string; filename: string }
 ) {
+  await page.waitForSelector('img[alt="filePicker"]', { state: 'visible' });
   const { filter, filename } = options;
   await page.getByRole('img', { name: 'filePicker' }).click();
   await page.getByText('Upload File').click();
   await page
     .getByTestId('file-picker-input')
     .setInputFiles('tests/fixtures/emblem.png');
+  // Wait for the uploaded file name to appear in the picker UI
+  await expect(page.getByText('emblem.png')).toBeVisible();
   await page.getByRole('button', { name: filter }).click();
   await page.getByRole('img', { name: 'imageDownload' }).click();
   await page.getByLabel(/filename/i).fill(filename);
@@ -35,9 +36,13 @@ async function triggerAndWaitForDownload(
   page: Page,
   buttonName: string
 ): Promise<Download> {
+  const btn = page.getByRole('button', { name: buttonName });
+  // Ensure the download button is visible and enabled
+  await expect(btn).toBeVisible();
+  await expect(btn).toBeEnabled();
   const [download] = await Promise.all([
     page.waitForEvent('download'),
-    page.getByRole('button', { name: buttonName }).click(),
+    btn.click(),
   ]);
   return download;
 }

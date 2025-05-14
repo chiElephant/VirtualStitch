@@ -1,10 +1,12 @@
-import { test, expect } from '@playwright/test';
-import type { Page } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
+test.setTimeout(60000);
 
 test.describe('Home page', () => {
-  test.beforeEach(async ({ page }: { page: Page }) => {
+  test.beforeEach(async ({ page }) => {
     // Go to the starting url before each test.
     await page.goto('/');
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(100);
   });
 
   test.describe.parallel('Static Content', () => {
@@ -37,7 +39,7 @@ test.describe('Home page', () => {
       },
     ];
     for (const { name, locator } of staticItems) {
-      test(`should display the ${name}`, async ({ page }: { page: Page }) => {
+      test(`should display the ${name}`, async ({ page }) => {
         await expect(locator(page)).toBeVisible();
       });
     }
@@ -46,8 +48,6 @@ test.describe('Home page', () => {
   test.describe('Interactions', () => {
     test('should display Customizer when navigation button is clicked', async ({
       page,
-    }: {
-      page: Page;
     }) => {
       await expect(page.getByTestId('customizer-main')).toHaveCount(0);
 

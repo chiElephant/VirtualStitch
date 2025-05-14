@@ -60,12 +60,12 @@ jobs:
         continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-results-shard-${{ matrix.shard }}
+          name: ${{ github.job }}-playwright-results-shard-${{ matrix.shard }}
           path: test-results/
 
       - name: 📤 Upload Playwright HTML report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-html-report-shard-${{ matrix.shard }}
+          name: ${{ github.job }}-playwright-html-report-shard-${{ matrix.shard }}
           path: playwright-report

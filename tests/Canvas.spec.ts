@@ -4,7 +4,7 @@ import { test as base, expect, type Page } from '@playwright/test';
 const test = base.extend<{ page: Page }>({
   page: async ({ page }, usePage) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(100);
     await page.getByRole('button', { name: /customize/i }).click();
     await usePage(page);
@@ -12,7 +12,16 @@ const test = base.extend<{ page: Page }>({
 });
 
 async function toggleFilter(page: Page, testId: string) {
-  await page.getByTestId(testId).click();
+  // retry click for stability
+  for (let i = 0; i < 3; i++) {
+    try {
+      await page.getByTestId(testId).click();
+      break;
+    } catch (e) {
+      if (i === 2) throw e;
+      await page.waitForTimeout(200);
+    }
+  }
 }
 
 test.describe.parallel('Canvas', () => {

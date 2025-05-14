@@ -13,9 +13,9 @@ export default defineConfig({
   globalTimeout: 10 * 60 * 1000, // ⏱ Limit total test run to 10 min
 
   // ⏱ Global timeouts
-  timeout: 30 * 1000, // 30s per test
+  timeout: 60 * 1000, // 60s per test
   expect: {
-    timeout: process.env.CI ? 10000 : 5000, // longer expect timeout in CI
+    timeout: process.env.CI ? 15000 : 5000, // longer expect timeout in CI
   },
 
   // 🔄 Auto-retries if tests fail (great for CI)

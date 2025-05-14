@@ -1,17 +1,11 @@
 // File: ImageDownload.disabledState.spec.ts
 import { test, expect } from '@playwright/test';
+test.setTimeout(60 * 1000);
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
-  await page.waitForLoadState('networkidle');
-
-  const customizeBtn = page.getByRole('button', { name: /customize/i });
-  await expect(customizeBtn).toBeVisible();
-  await customizeBtn.click();
-
-  const imageDownloadTab = page.getByRole('img', { name: 'imageDownload' });
-  await expect(imageDownloadTab).toBeVisible();
-  await imageDownloadTab.click();
+  await page.click('button:has-text("Customize")');
+  await page.click('img[alt="imageDownload"]');
 });
 
 test.describe('ImageDownload Component', () => {

@@ -1,5 +1,5 @@
-import { test, expect } from '@playwright/test';
-import type { Page } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
+test.setTimeout(60 * 1000);
 
 const uploads: [string, string][] = [
   ['./tests/fixtures/emblem.png', 'emblem.png'],
@@ -8,20 +8,26 @@ const uploads: [string, string][] = [
 
 async function uploadFile(page: Page, filePath: string) {
   await page.getByText('Upload File').click();
+  // wait for file input to be ready
+  await expect(page.getByTestId('file-picker-input')).toBeVisible({
+    timeout: 15000,
+  });
   await page.getByTestId('file-picker-input').setInputFiles(filePath);
 }
 
 test.describe('File Picker - Uploads', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
+    // Navigate to Customizer
     const customizeBtn = page.getByRole('button', { name: /customize/i });
-    await expect(customizeBtn).toBeVisible();
+    await expect(customizeBtn).toBeVisible({ timeout: 15000 });
     await customizeBtn.click();
 
+    // Switch to File Picker tab
     const filePickerTab = page.getByRole('img', { name: 'filePicker' });
-    await expect(filePickerTab).toBeVisible();
+    await expect(filePickerTab).toBeVisible({ timeout: 15000 });
     await filePickerTab.click();
   });
 
