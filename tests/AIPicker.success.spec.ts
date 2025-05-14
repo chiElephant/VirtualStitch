@@ -5,6 +5,7 @@ test.describe('AI picker success handling', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(process.env.BASE_URL || 'http://localhost:3000');
     await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(100);
 
     const customizeBtn = page.getByRole('button', { name: /customize/i });
     await expect(customizeBtn).toBeVisible();
@@ -12,7 +13,12 @@ test.describe('AI picker success handling', () => {
 
     const aiPickerTab = page.getByRole('img', { name: 'aiPicker' });
     await expect(aiPickerTab).toBeVisible();
-    await aiPickerTab.click();
+    try {
+      await aiPickerTab.click();
+    } catch (err) {
+      console.error('aiPickerTab click failed');
+      throw err;
+    }
   });
 
   test('should show success toast and apply decal after successful image fetch', async ({

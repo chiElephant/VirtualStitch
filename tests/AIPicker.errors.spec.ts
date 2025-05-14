@@ -22,6 +22,7 @@ test.describe('AI picker error handling', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(process.env.BASE_URL || 'http://localhost:3000');
     await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(100);
 
     const customizeBtn = page.getByRole('button', { name: /customize/i });
     await expect(customizeBtn).toBeVisible();
@@ -29,7 +30,12 @@ test.describe('AI picker error handling', () => {
 
     const aiPickerTab = page.getByRole('img', { name: 'aiPicker' });
     await expect(aiPickerTab).toBeVisible();
-    await aiPickerTab.click();
+    try {
+      await aiPickerTab.click();
+    } catch (err) {
+      console.error('aiPickerTab click failed');
+      throw err;
+    }
 
     // global mock for custom-logo endpoint
     await page.route('**/api/custom-logo', (route) =>

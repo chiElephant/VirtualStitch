@@ -5,6 +5,7 @@ const test = base.extend<{ page: Page }>({
   page: async ({ page }, usePage) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(100);
     await page.getByRole('button', { name: /customize/i }).click();
     await usePage(page);
   },
