@@ -10,13 +10,11 @@ export default defineConfig({
 
   // 🚀 Run tests in parallel across files
   fullyParallel: true,
-  forbidOnly: !!process.env.CI,
-  globalTimeout: 10 * 60 * 1000, // ⏱ Limit total test run to 10 min
 
   // ⏱ Global timeouts
-  timeout: 60 * 1000, // 60s per test
+  timeout: 30 * 1000, // 30s per test
   expect: {
-    timeout: process.env.CI ? 15000 : 5000, // longer expect timeout in CI
+    timeout: 5000, // 5s max per expect()
   },
 
   // 🔄 Auto-retries if tests fail (great for CI)
@@ -28,23 +26,15 @@ export default defineConfig({
   // 🌐 Global settings (can be overridden per project)
   use: {
     baseURL: process.env.BASE_URL || 'http://localhost:3000',
-    headless: process.env.HEADLESS !== 'false', // allow visual debug by setting HEADLESS=false
-    launchOptions: {
-      slowMo: process.env.CI ? 100 : 0, // slight delay to stabilize CI tests
-    },
-    screenshot: 'only-on-failure', // full-page screenshots on failures
-    video: 'off', // disable video recordings to reduce I/O overhead
-    trace: 'on-first-retry', // full trace on first retry
-    viewport: { width: 1280, height: 720 },
-    // Extra: you can also set storageState, userAgent, etc.
-  },
+    headless: true, // set false if you want to watch tests locally
 
-  // 🚧 Start built app (always fresh server in CI, longer timeout)
-  webServer: {
-    command: 'npm run build && npm run start',
-    url: process.env.BASE_URL || 'http://localhost:3000',
-    timeout: 120 * 1000, // wait up to 2 minutes for server to be ready
-    reuseExistingServer: !process.env.CI,
+    screenshot: 'only-on-failure', // full-page screenshots on failures
+    video: 'retain-on-failure', // keep video only if test fails
+    trace: 'on-first-retry', // full trace on first retry
+
+    viewport: { width: 1280, height: 720 },
+
+    // Extra: you can also set storageState, userAgent, etc.
   },
 
   // ✅ Multi-browser setup
@@ -62,8 +52,4 @@ export default defineConfig({
       use: { ...devices['Desktop Safari'] },
     },
   ],
-
-  reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'html',
-  workers: process.env.CI ? 2 : undefined,
-  reportSlowTests: { max: 0, threshold: 15000 },
 });

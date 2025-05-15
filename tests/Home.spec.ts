@@ -1,48 +1,41 @@
-import { test, expect, type Page } from '@playwright/test';
-test.setTimeout(60000);
+import { test, expect } from '@playwright/test';
 
 test.describe('Home page', () => {
   test.beforeEach(async ({ page }) => {
     // Go to the starting url before each test.
     await page.goto('/');
-    await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(100);
   });
 
-  test.describe.parallel('Static Content', () => {
-    const staticItems = [
-      {
-        name: 'heading',
-        locator: (page: Page) =>
-          page.getByRole('heading', { name: /LET'S DO IT\./ }),
-      },
-      {
-        name: 'logo',
-        locator: (page: Page) => page.getByRole('img', { name: 'logo' }),
-      },
-      {
-        name: 'paragraph',
-        locator: (page: Page) =>
-          page.getByText(
-            'Create your unique and exclusive shirt with our 3D customization tool. Unleash your Imagination and define your style.',
-            { exact: false }
-          ),
-      },
-      {
-        name: 'canvas',
-        locator: (page: Page) => page.locator('canvas'),
-      },
-      {
-        name: 'navigation button',
-        locator: (page: Page) =>
-          page.getByRole('button', { name: 'Customize It' }),
-      },
-    ];
-    for (const { name, locator } of staticItems) {
-      test(`should display the ${name}`, async ({ page }) => {
-        await expect(locator(page)).toBeVisible();
-      });
-    }
+  test.describe('Static Content', () => {
+    test('should display the heading', async ({ page }) => {
+      await expect(
+        page.getByRole('heading', { name: /LET'S DO IT\./ })
+      ).toBeVisible();
+    });
+
+    test('should display the logo', async ({ page }) => {
+      await expect(page.getByRole('img', { name: 'logo' })).toBeVisible();
+    });
+
+    test('should display the paragraph with expected text', async ({
+      page,
+    }) => {
+      const expectedText =
+        'Create your unique and exclusive shirt with our 3D customization tool. Unleash your Imagination and define your style.';
+      await expect(
+        page.getByText(expectedText, { exact: false })
+      ).toBeVisible();
+    });
+
+    test('should display the canvas', async ({ page }) => {
+      await expect(page.locator('canvas')).toBeVisible();
+    });
+
+    test('should display a navigation button', async ({ page }) => {
+      await expect(
+        page.getByRole('button', { name: 'Customize It' })
+      ).toBeVisible();
+    });
   });
 
   test.describe('Interactions', () => {
