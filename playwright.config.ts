@@ -1,43 +1,40 @@
 import { defineConfig, devices } from '@playwright/test';
 import dotenv from 'dotenv';
 
-// ✅ Load environment variables from .env
 dotenv.config();
 
 export default defineConfig({
-  // 🔍 Where your tests live
   testDir: './tests',
 
-  // 🚀 Run tests in parallel across files
   fullyParallel: true,
+  forbidOnly: !!process.env.CI,
+  globalTimeout: 30 * 60 * 1000,
 
-  // ⏱ Global timeouts
-  timeout: 30 * 1000, // 30s per test
+  timeout: 90 * 1000,
   expect: {
-    timeout: 5000, // 5s max per expect()
+    timeout: process.env.CI ? 15000 : 5000,
   },
 
-  // 🔄 Auto-retries if tests fail (great for CI)
   retries: process.env.CI ? 2 : 0,
 
-  // 💾 Output folder for screenshots, videos, traces
   outputDir: 'test-results/',
 
-  // 🌐 Global settings (can be overridden per project)
   use: {
     baseURL: process.env.BASE_URL || 'http://localhost:3000',
-    headless: true, // set false if you want to watch tests locally
-
-    screenshot: 'only-on-failure', // full-page screenshots on failures
-    video: 'retain-on-failure', // keep video only if test fails
-    trace: 'on-first-retry', // full trace on first retry
+    headless: true,
+    launchOptions: {
+      slowMo: process.env.CI ? 100 : 0,
+    },
+    screenshot: 'only-on-failure',
+    video: 'retain-on-failure',
+    trace: 'on-first-retry',
 
     viewport: { width: 1280, height: 720 },
-
-    // Extra: you can also set storageState, userAgent, etc.
   },
 
-  // ✅ Multi-browser setup
+  workers: process.env.CI ? 2 : undefined,
+  reportSlowTests: { max: 0, threshold: 15000 },
+
   projects: [
     {
       name: 'Chromium',
@@ -52,4 +49,11 @@ export default defineConfig({
       use: { ...devices['Desktop Safari'] },
     },
   ],
+
+  webServer: {
+    command: 'npm run build && npm run start',
+    url: process.env.BASE_URL || 'http://localhost:3000',
+    timeout: 120 * 1000,
+    reuseExistingServer: !process.env.CI,
+  },
 });
