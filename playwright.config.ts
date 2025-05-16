@@ -8,14 +8,14 @@ export default defineConfig({
 
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  globalTimeout: 30 * 60 * 1000,
+  globalTimeout: 60 * 60 * 1000,
 
   timeout: 90 * 1000,
   expect: {
     timeout: process.env.CI ? 15000 : 5000,
   },
 
-  retries: process.env.CI ? 4 : 0,
+  retries: process.env.CI ? 2 : 0,
 
   outputDir: 'test-results/',
 
@@ -25,9 +25,8 @@ export default defineConfig({
     launchOptions: {
       slowMo: process.env.CI ? 100 : 0,
     },
-    trace: 'retain-on-failure', // Only save trace when a test fails
-    video: 'retain-on-failure', // Only save video when a test fails
-    screenshot: 'only-on-failure', // O
+    trace: 'on-first-retry',
+    video: 'on-first-retry',
 
     viewport: { width: 1280, height: 720 },
   },
