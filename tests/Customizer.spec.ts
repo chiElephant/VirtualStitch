@@ -9,10 +9,9 @@ async function toggleFilterTab(page: Page, tabTestId: string) {
 }
 
 test.describe('Customizer', () => {
-  // Open Customizer
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: /customize/i }).click();
+    await page.getByRole('button', { name: 'Customize It' }).click();
   });
 
   test.describe('Filter tabs', () => {
@@ -101,6 +100,7 @@ test.describe('Customizer', () => {
         await expect(page.getByTestId(testId)).toBeVisible();
         // Close after checking
         await toggleEditorTab(page, tab);
+        await expect(page.getByTestId(testId)).toHaveCount(0);
       }
     });
   });

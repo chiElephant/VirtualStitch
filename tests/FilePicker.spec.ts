@@ -6,15 +6,15 @@ const sampleImagePath2 = './tests/fixtures/emblem2.png';
 const invalidFilePath = './tests/fixtures/sample.txt';
 
 async function uploadFile(page: Page, filePath: string) {
-  await page.getByText('Upload File').click();
+  // await page.getByText('Upload File').click();
   await page.getByTestId('file-picker-input').setInputFiles(filePath);
 }
 
 test.describe('File Picker', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: /customize/i }).click();
-    await page.getByRole('img', { name: 'filePicker' }).click();
+    await page.getByRole('button', { name: 'Customize It' }).click();
+    await page.getByTestId('editor-tab-filePicker').click();
   });
 
   test.describe('Initial State', () => {
@@ -49,7 +49,7 @@ test.describe('File Picker', () => {
 
   test.describe('Invalid File Handling', () => {
     test('should not accept non-image files', async ({ page }) => {
-      await page.getByText('Upload File').click();
+      // await page.getByText('Upload File').click();
       await page
         .getByTestId('file-picker-input')
         .setInputFiles(invalidFilePath);

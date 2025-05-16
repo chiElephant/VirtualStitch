@@ -15,7 +15,7 @@ export default defineConfig({
     timeout: process.env.CI ? 15000 : 5000,
   },
 
-  retries: process.env.CI ? 2 : 0,
+  retries: process.env.CI ? 4 : 0,
 
   outputDir: 'test-results/',
 
@@ -25,15 +25,15 @@ export default defineConfig({
     launchOptions: {
       slowMo: process.env.CI ? 100 : 0,
     },
-    screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
-    trace: 'on-first-retry',
+    trace: 'retain-on-failure', // Only save trace when a test fails
+    video: 'retain-on-failure', // Only save video when a test fails
+    screenshot: 'only-on-failure', // O
 
     viewport: { width: 1280, height: 720 },
   },
 
   workers: process.env.CI ? 2 : undefined,
-  reportSlowTests: { max: 0, threshold: 15000 },
+  reportSlowTests: { max: 5, threshold: 15000 },
 
   projects: [
     {

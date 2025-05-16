@@ -1,14 +1,9 @@
 import { test, expect } from '@playwright/test';
-import type { Page } from '@playwright/test';
-
-async function toggleFilter(page: Page, filterTestId: string) {
-  await page.getByTestId(filterTestId).click();
-}
 
 test.describe('Canvas', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: /customize/i }).click();
+    await page.getByRole('button', { name: 'Customize It' }).click();
   });
 
   test.describe('Initial State', () => {
@@ -29,7 +24,7 @@ test.describe('Canvas', () => {
       page,
     }) => {
       await expect(page.getByTestId('logo-texture')).toHaveCount(0);
-      await toggleFilter(page, 'filter-tab-logoShirt');
+      await page.getByTestId('filter-tab-logoShirt').click();
       await expect(page.getByTestId('logo-texture')).toHaveCount(1);
     });
 
@@ -37,9 +32,9 @@ test.describe('Canvas', () => {
       page,
     }) => {
       await expect(page.getByTestId('logo-texture')).toHaveCount(0);
-      await toggleFilter(page, 'filter-tab-logoShirt');
+      await page.getByTestId('filter-tab-logoShirt').click();
       await expect(page.getByTestId('logo-texture')).toHaveCount(1);
-      await toggleFilter(page, 'filter-tab-logoShirt');
+      await page.getByTestId('filter-tab-logoShirt').click();
       await expect(page.getByTestId('logo-texture')).toHaveCount(0);
     });
   });
@@ -49,7 +44,7 @@ test.describe('Canvas', () => {
       page,
     }) => {
       await expect(page.getByTestId('full-texture')).toHaveCount(0);
-      await toggleFilter(page, 'filter-tab-stylishShirt');
+      await page.getByTestId('filter-tab-stylishShirt').click();
       await expect(page.getByTestId('full-texture')).toHaveCount(1);
     });
 
@@ -57,9 +52,9 @@ test.describe('Canvas', () => {
       page,
     }) => {
       await expect(page.getByTestId('full-texture')).toHaveCount(0);
-      await toggleFilter(page, 'filter-tab-stylishShirt');
+      await page.getByTestId('filter-tab-stylishShirt').click();
       await expect(page.getByTestId('full-texture')).toHaveCount(1);
-      await toggleFilter(page, 'filter-tab-stylishShirt');
+      await page.getByTestId('filter-tab-stylishShirt').click();
       await expect(page.getByTestId('full-texture')).toHaveCount(0);
     });
   });
@@ -70,14 +65,14 @@ test.describe('Canvas', () => {
     }) => {
       await expect(page.getByTestId('full-texture')).toHaveCount(0);
       await expect(page.getByTestId('logo-texture')).toHaveCount(0);
-      await toggleFilter(page, 'filter-tab-stylishShirt');
-      await toggleFilter(page, 'filter-tab-logoShirt');
+      await page.getByTestId('filter-tab-logoShirt').click();
+      await page.getByTestId('filter-tab-stylishShirt').click();
 
       await expect(page.getByTestId('full-texture')).toHaveCount(1);
       await expect(page.getByTestId('logo-texture')).toHaveCount(1);
 
-      await toggleFilter(page, 'filter-tab-stylishShirt');
-      await toggleFilter(page, 'filter-tab-logoShirt');
+      await page.getByTestId('filter-tab-logoShirt').click();
+      await page.getByTestId('filter-tab-stylishShirt').click();
       await expect(page.getByTestId('full-texture')).toHaveCount(0);
       await expect(page.getByTestId('logo-texture')).toHaveCount(0);
     });

@@ -1,20 +1,20 @@
 import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
-const presetColors = [
-  '#cccccc',
-  '#EFBD4E',
-  '#80C670',
-  '#726DE8',
-  '#353934',
-  '#2CCCE4',
-  '#ff8a65',
-  '#7098DA',
-  '#C19277',
-  '#FF96AD',
-  '#512314',
-  '#5F123D',
-];
+const colorMap = {
+  '#cccccc': 'rgb(204, 204, 204)',
+  '#EFBD4E': 'rgb(239, 189, 78)',
+  '#80C670': 'rgb(128, 198, 112)',
+  '#726DE8': 'rgb(114, 109, 232)',
+  '#353934': 'rgb(53, 57, 52)',
+  '#2CCCE4': 'rgb(44, 204, 228)',
+  '#ff8a65': 'rgb(255, 138, 101)',
+  '#7098DA': 'rgb(112, 152, 218)',
+  '#C19277': 'rgb(193, 146, 119)',
+  '#FF96AD': 'rgb(255, 150, 173)',
+  '#512314': 'rgb(81, 35, 20)',
+  '#5F123D': 'rgb(95, 18, 61)',
+};
 
 async function clickColor(page: Page, color: string) {
   await page.getByTitle(color.toUpperCase()).click();
@@ -23,8 +23,8 @@ async function clickColor(page: Page, color: string) {
 test.describe('Color picker', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: /customize/i }).click();
-    await page.getByRole('img', { name: 'colorPicker' }).click();
+    await page.getByRole('button', { name: 'Customize It' }).click();
+    await page.getByTestId('editor-tab-colorPicker').click();
   });
 
   test.describe('Initial State', () => {
@@ -78,15 +78,15 @@ test.describe('Color picker', () => {
     test('should update the shirt and back button color for each preset color', async ({
       page,
     }) => {
-      for (const color of presetColors) {
-        await clickColor(page, color);
-        const lowerHex = color.toLowerCase();
+      for (const [hex, rgb] of Object.entries(colorMap)) {
+        await clickColor(page, hex);
+        const lowerHex = hex.toLowerCase();
         await expect(page.getByTestId(lowerHex)).toHaveCount(1);
 
         const backButtonColor = await page
           .getByTestId('go-back-button')
           .evaluate((el) => window.getComputedStyle(el).backgroundColor);
-        expect(backButtonColor).not.toBe('');
+        expect(backButtonColor).toBe(rgb);
       }
     });
 
@@ -129,8 +129,8 @@ test.describe('Color picker', () => {
       page,
     }) => {
       await clickColor(page, '#2CCCE4');
-      await page.getByRole('img', { name: 'aiPicker' }).click(); // switch tab
-      await page.getByRole('img', { name: 'colorPicker' }).click(); // switch back
+      await page.getByTestId('editor-tab-aiPicker').click(); // switch tab
+      await page.getByTestId('editor-tab-colorPicker').click(); // switch back
       await expect(page.getByTestId('#2ccce4')).toHaveCount(1);
     });
   });

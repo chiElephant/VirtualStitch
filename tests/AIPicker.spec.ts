@@ -3,14 +3,22 @@ import type { Page, Route } from '@playwright/test';
 import fs from 'fs';
 import path from 'path';
 
-async function mockSuccessfulAiResponse(page: Page, photo = 'fakebase64image') {
-  await page.route('/api/custom-logo', (route: Route) => {
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ photo }),
-    });
-  });
+async function mockSuccessfulAiResponse(page: Page) {
+  const imagePath = path.resolve(__dirname, './fixtures/emblem.png');
+  const imageBuffer = fs.readFileSync(imagePath);
+  const base64Image = imageBuffer.toString('base64');
+
+  await page.route(
+    '**/api/custom-logo',
+    (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ photo: base64Image }),
+      });
+    },
+    { times: Infinity } // ensures it works every time
+  );
 }
 
 async function mockAiErrorResponse(page: Page, status: number) {
@@ -29,66 +37,8 @@ test.describe('AI picker', () => {
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: /customize/i }).click();
-    await page.getByRole('img', { name: 'aiPicker' }).click();
-  });
-
-  test('should display the ai picker when ai picker tab is clicked', async ({
-    page,
-  }) => {
-    await expect(page.getByTestId('ai-picker')).toBeVisible();
-  });
-
-  test('should fetch an ai image and apply it to the shirt (mocked)', async ({
-    page,
-  }) => {
-    // ✅ Set up the mock JUST for this test
-    const imagePath = path.resolve(__dirname, './fixtures/emblem.png');
-    const imageBuffer = fs.readFileSync(imagePath);
-    const base64Image = imageBuffer.toString('base64');
-
-    await page.route(
-      '**/api/custom-logo',
-      (route) => {
-        route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({ photo: base64Image }),
-        });
-      },
-      { times: Infinity } // ensures it works every time
-    );
-
-    // ✅ Apply as logo
-    await expect(page.getByTestId('logo-texture')).toHaveCount(0);
-    await page.getByTestId('ai-prompt-input').fill('Make me a logo.');
-    await page.getByTestId('ai-logo-button').click();
-    await expect(page.getByText(/image applied successfully/i)).toBeVisible();
-    await expect(page.getByTestId('logo-texture')).toHaveCount(1);
-
-    // ✅ Apply as full shirt
-    await page.getByRole('img', { name: 'aiPicker' }).click();
-    await expect(page.getByTestId('full-texture')).toHaveCount(0);
-
-    // 👀 Count existing toasts before clicking
-    const existingToastCount = await page
-      .locator('[role="alert"] >> text=/image applied successfully/i')
-      .count();
-
-    // Fill and click
-    await page
-      .getByTestId('ai-prompt-input')
-      .fill('Make me a full shirt design.');
-    await page.getByTestId('ai-full-button').click();
-
-    // 🕒 Wait for the new toast to appear
-    await page.waitForSelector(
-      `[role="alert"]:nth-of-type(${existingToastCount + 1}) >> text=/image applied successfully/i`,
-      { state: 'visible' }
-    );
-
-    // ✅ Assert full texture applied
-    await expect(page.getByTestId('full-texture')).toHaveCount(1);
+    await page.getByRole('button', { name: 'Customize It' }).click();
+    await page.getByTestId('editor-tab-aiPicker').click();
   });
 
   test.describe('Error Handling', () => {
@@ -129,7 +79,7 @@ test.describe('AI picker', () => {
   });
 
   test.describe('Success Handling', () => {
-    test('should show success toast and apply decal after successful image fetch', async ({
+    test('should show success toast and apply logo after successful image fetch', async ({
       page,
     }) => {
       await mockSuccessfulAiResponse(page);
@@ -137,10 +87,32 @@ test.describe('AI picker', () => {
       await expect(page.getByText(/image applied successfully/i)).toBeVisible();
       await expect(page.getByTestId('logo-texture')).toHaveCount(1);
     });
+
+    test('should show success toast and apply pattern after successful image fetch', async ({
+      page,
+    }) => {
+      await mockSuccessfulAiResponse(page);
+
+      // ✅ Apply as logo
+      await expect(page.getByTestId('full-texture')).toHaveCount(0);
+      await page
+        .getByTestId('ai-prompt-input')
+        .fill('Make me a pattern design.');
+      await page.getByTestId('ai-full-button').click();
+
+      await expect(page.getByText(/image applied successfully/i)).toBeVisible();
+      await expect(page.getByTestId('full-texture')).toHaveCount(1);
+    });
   });
 
   test.describe('UI/UX States', () => {
-    test('should display "Asking AI..." button and disable others while loading', async ({
+    test('should display the ai picker when ai picker tab is clicked', async ({
+      page,
+    }) => {
+      await expect(page.getByTestId('ai-picker')).toBeVisible();
+    });
+
+    test('should display "Asking AI..." button while loading', async ({
       page,
     }) => {
       let resolveResponse: () => void;
@@ -184,8 +156,8 @@ test.describe('AI picker', () => {
     }) => {
       const input = page.getByTestId('ai-prompt-input');
       await input.fill('Preserve this prompt');
-      await page.getByRole('img', { name: 'colorPicker' }).click(); // switch to Color tab
-      await page.getByRole('img', { name: 'aiPicker' }).click(); // switch back to AI Picker
+      await page.getByTestId('editor-tab-colorPicker').click(); // switch to Color tab
+      await page.getByTestId('editor-tab-aiPicker').click(); // switch back to AI Picker
       await expect(input).toHaveValue('Preserve this prompt');
     });
 

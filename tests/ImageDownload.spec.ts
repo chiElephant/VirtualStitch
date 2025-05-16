@@ -6,7 +6,7 @@ async function uploadAndSetup(
   { filter, filename }: { filter: 'Logo' | 'Full'; filename: string }
 ) {
   await page.getByRole('img', { name: 'filePicker' }).click();
-  await page.getByText('Upload File').click();
+  // await page.getByText('Upload File').click();
   await page
     .getByTestId('file-picker-input')
     .setInputFiles('tests/fixtures/emblem.png');
