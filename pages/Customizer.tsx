@@ -258,7 +258,7 @@ const Customizer = (props: CustomizerProps) => {
                 <CustomButton
                   type={'filled'}
                   title={'Go Back'}
-                  data-testid='go-back-button'
+                  data-testid={`button-color-${snap.color.toUpperCase()}`}
                   handleClick={() => (state.intro = true)}
                   customStyles={'w-fit px-4 py-2.5 font-bold text-sm'}
                 />

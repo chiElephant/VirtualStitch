@@ -33,7 +33,7 @@ const CanvasModel = (props: CanvasModelProps) => {
 
       {/* For E2E testing purposes */}
       <div
-        data-testid={snap.color.toLowerCase()}
+        data-testid={`canvas-color-${snap.color.toUpperCase()}`}
         style={{ display: 'none' }}
       />
       {snap.isLogoTexture && (

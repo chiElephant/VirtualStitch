@@ -13,6 +13,7 @@
 # testing
 /coverage
 /test-results
+test-results.json
 
 # next.js
 /.next/

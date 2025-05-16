@@ -12,15 +12,15 @@ const ColorPicker = () => {
       <SketchPicker
         color={snap.color}
         disableAlpha
-        onChange={(color) => (state.color = color.hex)}
+        onChange={(color) => (state.color = color.hex.toUpperCase())}
         presetColors={[
-          '#cccccc',
+          '#CCCCCC',
           '#EFBD4E',
           '#80C670',
           '#726DE8',
           '#353934',
           '#2CCCE4',
-          '#ff8a65',
+          '#FF8A65',
           '#7098DA',
           '#C19277',
           '#FF96AD',

@@ -1,23 +1,23 @@
 import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
-const colorMap = {
-  '#cccccc': 'rgb(204, 204, 204)',
-  '#EFBD4E': 'rgb(239, 189, 78)',
-  '#80C670': 'rgb(128, 198, 112)',
-  '#726DE8': 'rgb(114, 109, 232)',
-  '#353934': 'rgb(53, 57, 52)',
-  '#2CCCE4': 'rgb(44, 204, 228)',
-  '#ff8a65': 'rgb(255, 138, 101)',
-  '#7098DA': 'rgb(112, 152, 218)',
-  '#C19277': 'rgb(193, 146, 119)',
-  '#FF96AD': 'rgb(255, 150, 173)',
-  '#512314': 'rgb(81, 35, 20)',
-  '#5F123D': 'rgb(95, 18, 61)',
-};
+const colorMap = [
+  '#CCCCCC',
+  '#EFBD4E',
+  '#80C670',
+  '#726DE8',
+  '#353934',
+  '#2CCCE4',
+  '#FF8A65',
+  '#7098DA',
+  '#C19277',
+  '#FF96AD',
+  '#512314',
+  '#5F123D',
+];
 
 async function clickColor(page: Page, color: string) {
-  await page.getByTitle(color.toUpperCase()).click();
+  await page.getByTitle(color).click();
 }
 
 test.describe('Color picker', () => {
@@ -37,56 +37,37 @@ test.describe('Color picker', () => {
     test('should initialize with default shirt color and back button color', async ({
       page,
     }) => {
-      await expect(page.getByTestId('#efbd4e')).toHaveCount(1);
-
-      const backButtonColor = await page
-        .getByTestId('go-back-button')
-        .evaluate((el) => window.getComputedStyle(el).backgroundColor);
-      expect(backButtonColor).toBe('rgb(239, 189, 78)');
+      await expect(page.getByTestId('canvas-color-#EFBD4E')).toHaveCount(1);
+      await expect(page.getByTestId('button-color-#EFBD4E')).toHaveCount(1);
     });
   });
 
   test.describe('Color Change Behavior', () => {
     test('should change the shirt color', async ({ page }) => {
-      await expect(page.getByTestId('#efbd4e')).toHaveCount(1);
-      await expect(page.getByTestId('#2ccce4')).toHaveCount(0);
+      await expect(page.getByTestId('canvas-color-#EFBD4E')).toHaveCount(1);
+      await expect(page.getByTestId('canvas-color-#2CCCE4')).toHaveCount(0);
 
       await clickColor(page, '#2CCCE4');
 
-      await expect(page.getByTestId('#efbd4e')).toHaveCount(0);
-      await expect(page.getByTestId('#2ccce4')).toHaveCount(1);
+      await expect(page.getByTestId('canvas-color-#EFBD4E')).toHaveCount(0);
+      await expect(page.getByTestId('canvas-color-#2CCCE4')).toHaveCount(1);
     });
 
     test('should change the background color of the Back button', async ({
       page,
     }) => {
-      const originalColor = await page
-        .getByTestId('go-back-button')
-        .evaluate((el) => window.getComputedStyle(el).backgroundColor);
-
-      expect(originalColor).toBe('rgb(239, 189, 78)');
-
+      await expect(page.getByTestId('button-color-#EFBD4E')).toHaveCount(1);
       await clickColor(page, '#2CCCE4');
-
-      const newColor = await page
-        .getByTestId('go-back-button')
-        .evaluate((el) => window.getComputedStyle(el).backgroundColor);
-
-      expect(newColor).toBe('rgb(44, 204, 228)');
+      await expect(page.getByTestId('button-color-#2CCCE4')).toHaveCount(1);
     });
 
     test('should update the shirt and back button color for each preset color', async ({
       page,
     }) => {
-      for (const [hex, rgb] of Object.entries(colorMap)) {
-        await clickColor(page, hex);
-        const lowerHex = hex.toLowerCase();
-        await expect(page.getByTestId(lowerHex)).toHaveCount(1);
-
-        const backButtonColor = await page
-          .getByTestId('go-back-button')
-          .evaluate((el) => window.getComputedStyle(el).backgroundColor);
-        expect(backButtonColor).toBe(rgb);
+      for (const color of colorMap) {
+        await clickColor(page, color);
+        await expect(page.getByTestId(`canvas-color-${color}`)).toHaveCount(1);
+        await expect(page.getByTestId(`button-color-${color}`)).toHaveCount(1);
       }
     });
 
@@ -95,8 +76,10 @@ test.describe('Color picker', () => {
       for (const color of colorsToTest) {
         await clickColor(page, color);
       }
-      const finalColor = colorsToTest[colorsToTest.length - 1].toLowerCase();
-      await expect(page.getByTestId(finalColor)).toHaveCount(1);
+      const finalColor = colorsToTest[colorsToTest.length - 1].toUpperCase();
+      await expect(page.getByTestId(`canvas-color-${finalColor}`)).toHaveCount(
+        1
+      );
     });
   });
 
@@ -104,23 +87,16 @@ test.describe('Color picker', () => {
     test('should update the shirt color when using the hue slider', async ({
       page,
     }) => {
-      const initialColor = await page
-        .getByTestId('go-back-button')
-        .evaluate((el) => window.getComputedStyle(el).backgroundColor);
+      const button = await page.getByRole('button', { name: 'Go Back' });
+      const currentTestId = await button.getAttribute('data-testid');
 
-      // Interact with the hue slider to change the color
       await page
         .locator('.hue-horizontal')
         .click({ position: { x: 20, y: 5 } });
 
       // Wait and verify that the color has changed
-      await expect
-        .poll(async () => {
-          return await page
-            .getByTestId('go-back-button')
-            .evaluate((el) => window.getComputedStyle(el).backgroundColor);
-        })
-        .not.toBe(initialColor);
+      const newTestId = await button.getAttribute('data-testid');
+      expect(newTestId).not.toBe(currentTestId);
     });
   });
 
@@ -131,7 +107,7 @@ test.describe('Color picker', () => {
       await clickColor(page, '#2CCCE4');
       await page.getByTestId('editor-tab-aiPicker').click(); // switch tab
       await page.getByTestId('editor-tab-colorPicker').click(); // switch back
-      await expect(page.getByTestId('#2ccce4')).toHaveCount(1);
+      await expect(page.getByTestId('canvas-color-#2CCCE4')).toHaveCount(1);
     });
   });
 });

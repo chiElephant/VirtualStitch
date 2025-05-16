@@ -63,10 +63,12 @@ test.describe('Customizer', () => {
       page,
     }) => {
       await test.step('Back button is visible', async () => {
-        await expect(page.getByTestId('go-back-button')).toBeVisible();
+        await expect(
+          page.getByRole('button', { name: 'Go Back' })
+        ).toBeVisible();
       });
       await test.step('Clicking back navigates to home', async () => {
-        await page.getByTestId('go-back-button').click();
+        await page.getByRole('button', { name: 'Go Back' }).click();
         await expect(
           page.getByRole('heading', { name: "LET'S DO IT." })
         ).toBeVisible();
@@ -151,7 +153,7 @@ test.describe('Customizer', () => {
       await toggleFilterTab(page, 'filter-tab-logoShirt');
       await toggleEditorTab(page, 'colorPicker');
 
-      await page.getByTestId('go-back-button').click();
+      await page.getByRole('button', { name: 'Go Back' }).click();
 
       await expect(
         page.getByRole('heading', { name: "LET'S DO IT." })

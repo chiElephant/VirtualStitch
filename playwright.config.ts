@@ -4,35 +4,17 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 export default defineConfig({
-  testDir: './tests',
-
-  fullyParallel: true,
-  forbidOnly: !!process.env.CI,
-  globalTimeout: 60 * 60 * 1000,
-
-  timeout: 90 * 1000,
+  captureGitInfo: { commit: true },
   expect: {
     timeout: process.env.CI ? 15000 : 5000,
   },
-
-  retries: process.env.CI ? 2 : 0,
-
+  failOnFlakyTests: !!process.env.CI,
+  forbidOnly: !!process.env.CI,
+  fullyParallel: true,
+  globalTimeout: process.env.CI ? 60 * 60 * 1000 : undefined,
+  maxFailures: process.env.CI ? 1 : 0,
   outputDir: 'test-results/',
-
-  use: {
-    baseURL: process.env.BASE_URL || 'http://localhost:3000',
-    headless: true,
-    launchOptions: {
-      slowMo: process.env.CI ? 100 : 0,
-    },
-    trace: 'on-first-retry',
-    video: 'on-first-retry',
-
-    viewport: { width: 1280, height: 720 },
-  },
-
-  workers: process.env.CI ? 2 : undefined,
-  reportSlowTests: { max: 5, threshold: 15000 },
+  preserveOutput: 'failures-only',
 
   projects: [
     {
@@ -49,10 +31,38 @@ export default defineConfig({
     },
   ],
 
+  quiet: !!process.env.CI,
+  reportSlowTests: { max: 0, threshold: 5 * 60 * 1000 },
+
+  reporter:
+    process.env.CI ?
+      [['github'], ['json', { outputFile: 'test-results.json' }]]
+    : [
+        ['line', { FORCE_COLOR: true }],
+        ['json', { outputFile: 'test-results.json' }],
+      ],
+
+  retries: process.env.CI ? 2 : 0,
+  testDir: './tests',
+  timeout: 2 * 60 * 1000,
+  tsconfig: './tsconfig.test.json',
+
+  use: {
+    baseURL: process.env.BASE_URL || 'http://localhost:3000',
+    headless: true,
+    launchOptions: {
+      slowMo: process.env.CI ? 100 : 0,
+    },
+    trace: 'on-first-retry',
+    video: 'on-first-retry',
+  },
+
   webServer: {
-    command: 'npm run build && npm run start',
-    url: process.env.BASE_URL || 'http://localhost:3000',
-    timeout: 120 * 1000,
+    command: 'npm run dev',
+    gracefulShutdown: { signal: 'SIGTERM', timeout: 500 },
+    name: 'playwright dev server',
     reuseExistingServer: !process.env.CI,
+    timeout: 2 * 60 * 1000,
+    url: process.env.BASE_URL || 'http://localhost:3000',
   },
 });
