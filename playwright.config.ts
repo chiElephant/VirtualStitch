@@ -31,7 +31,7 @@ export default defineConfig({
     viewport: { width: 1280, height: 720 },
   },
 
-  workers: process.env.CI ? 2 : undefined,
+  workers: process.env.CI ? 7 : undefined,
   reportSlowTests: { max: 5, threshold: 15000 },
 
   projects: [
