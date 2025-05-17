@@ -123,8 +123,8 @@ describe('Customizer', () => {
   });
 
   it('should set intro state to true and hide customizer content when Go Back is clicked', async () => {
-    const { getByTestId, queryByTestId, getByTitle } = render(<Customizer />);
-    const goBackButton = getByTitle('Go Back');
+    const { getByTestId, queryByTestId, getByRole } = render(<Customizer />);
+    const goBackButton = getByRole('button', { name: 'Go Back' });
 
     // Intro starts as false to show the main content
     expect(state.intro).toBe(false);

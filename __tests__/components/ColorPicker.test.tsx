@@ -42,7 +42,7 @@ describe('ColorPicker', () => {
   it('renders preset colors correctly', () => {
     const { getByTestId } = render(<ColorPicker />);
     const presetColors = getByTestId('preset-colors').textContent;
-    expect(presetColors).toContain('#ccc');
+    expect(presetColors).toContain('#CCCCCC');
     expect(presetColors).toContain('#EFBD4E');
     expect(presetColors).toContain('#80C670');
     expect(presetColors).toContain('#512314');
