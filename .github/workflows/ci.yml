@@ -16,7 +16,6 @@ jobs:
       - self-hosted
       - Linux
       - ARM64
-      - Default
     timeout-minutes: 10
 
     env:
@@ -51,7 +50,6 @@ jobs:
       - self-hosted
       - Linux
       - ARM64
-      - Default
 
     timeout-minutes: 60
     strategy:
