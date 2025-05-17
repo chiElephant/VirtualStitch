@@ -5,14 +5,14 @@ async function uploadAndSetup(
   page: Page,
   { filter, filename }: { filter: 'Logo' | 'Full'; filename: string }
 ) {
-  await page.getByRole('img', { name: 'filePicker' }).click();
+  await page.getByTestId('editor-tab-filePicker').click();
   // await page.getByText('Upload File').click();
   await page
     .getByTestId('file-picker-input')
     .setInputFiles('tests/fixtures/emblem.png');
   await page.getByRole('button', { name: filter }).click();
-  await page.getByRole('img', { name: 'imageDownload' }).click();
-  await page.getByLabel(/filename/i).fill(filename);
+  await page.getByTestId('editor-tab-imageDownload').click();
+  await page.getByRole('textbox', { name: 'Filename' }).fill(filename);
 }
 
 // Helper for triggering a download and waiting for it
@@ -24,11 +24,17 @@ async function triggerAndWaitForDownload(page: Page, buttonName: string) {
   return download;
 }
 
+const scenarios = [
+  { label: 'No Filename', input: '' },
+  { label: 'Filled Filename', input: 'my-image' },
+  { label: 'Whitespace Filename', input: '   ' },
+];
+
 test.describe('ImageDownload Component', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: /customize/i }).click();
-    await page.getByRole('img', { name: 'imageDownload' }).click();
+    await page.getByRole('button', { name: 'Customize It' }).click();
+    await page.getByTestId('editor-tab-imageDownload').click();
   });
 
   test.describe('Rendering', () => {
@@ -38,15 +44,12 @@ test.describe('ImageDownload Component', () => {
   });
 
   test.describe('Disabled State', () => {
-    [
-      { label: 'No Filename', input: '' },
-      { label: 'Filled Filename', input: 'my-image' },
-      { label: 'Whitespace Filename', input: '   ' },
-    ].forEach(({ label, input }) => {
+    scenarios.forEach(({ label, input }) => {
       test(`No Active Filter, ${label}`, async ({ page }) => {
         if (input !== '') {
-          await page.getByLabel(/filename/i).fill(input);
+          await page.getByRole('textbox', { name: 'Filename' }).fill(input);
         }
+
         const logoButton = page.getByRole('button', { name: 'Download Logo' });
         const shirtButton = page.getByRole('button', {
           name: 'Download Shirt',
@@ -56,14 +59,11 @@ test.describe('ImageDownload Component', () => {
       });
     });
 
-    [
-      { label: 'No Filename', input: '' },
-      { label: 'Whitespace Filename', input: '   ' },
-    ].forEach(({ label, input }) => {
+    scenarios.forEach(({ label, input }) => {
       test(`Logo Filter, ${label}`, async ({ page }) => {
         await page.getByTestId('filter-tab-logoShirt').click();
         if (input !== '') {
-          await page.getByLabel(/filename/i).fill(input);
+          await page.getByRole('textbox', { name: 'Filename' }).fill(input);
         }
         const logoButton = page.getByRole('button', { name: 'Download Logo' });
         const shirtButton = page.getByRole('button', {
@@ -74,10 +74,7 @@ test.describe('ImageDownload Component', () => {
       });
     });
 
-    [
-      { label: 'No Filename', input: '' },
-      { label: 'Whitespace Filename', input: '   ' },
-    ].forEach(({ label, input }) => {
+    scenarios.forEach(({ label, input }) => {
       test(`Full Filter, ${label}`, async ({ page }) => {
         await page.getByTestId('filter-tab-stylishShirt').click();
         if (input !== '') {
@@ -100,22 +97,26 @@ test.describe('ImageDownload Component', () => {
       page,
     }) => {
       await uploadAndSetup(page, { filter: 'Logo', filename: 'logo-image' });
-      const logoButton = page.getByRole('button', { name: 'Download Logo' });
-      const shirtButton = page.getByRole('button', { name: 'Download Shirt' });
-      await expect(logoButton).toBeEnabled();
-      await expect(shirtButton).toBeEnabled();
+      await expect(
+        page.getByRole('button', { name: 'Download Logo' })
+      ).toBeEnabled();
+      await expect(
+        page.getByRole('button', { name: 'Download Shirt' })
+      ).toBeEnabled();
     });
 
     test('Stylish filter is active, filename is filled, and fullLogo is uploaded', async ({
       page,
     }) => {
       await uploadAndSetup(page, { filter: 'Full', filename: 'logo-image' });
-      const patternButton = page.getByRole('button', {
-        name: 'Download Pattern',
-      });
-      const shirtButton = page.getByRole('button', { name: 'Download Shirt' });
-      await expect(patternButton).toBeEnabled();
-      await expect(shirtButton).toBeEnabled();
+      await expect(
+        page.getByRole('button', {
+          name: 'Download Pattern',
+        })
+      ).toBeEnabled();
+      await expect(
+        page.getByRole('button', { name: 'Download Shirt' })
+      ).toBeEnabled();
     });
   });
 
@@ -185,12 +186,14 @@ test.describe('ImageDownload Component', () => {
     test('should keep the download button text unchanged when no filter is active', async ({
       page,
     }) => {
-      const logoButton = page.getByRole('button', { name: 'Download Logo' });
-      const shirtButton = page.getByRole('button', {
-        name: 'Download Shirt',
-      });
-      await expect(logoButton).toBeVisible();
-      await expect(shirtButton).toBeVisible();
+      await expect(
+        page.getByRole('button', { name: 'Download Logo' })
+      ).toBeVisible();
+      await expect(
+        page.getByRole('button', {
+          name: 'Download Shirt',
+        })
+      ).toBeVisible();
     });
   });
 
@@ -199,7 +202,7 @@ test.describe('ImageDownload Component', () => {
       page,
     }) => {
       await uploadAndSetup(page, { filter: 'Logo', filename: 'reset-test' });
-      const filenameInput = page.getByLabel(/filename/i);
+      const filenameInput = page.getByRole('textbox', { name: 'Filename' });
       const download = await triggerAndWaitForDownload(page, 'Download Logo');
       expect(download).toBeTruthy();
       await expect(filenameInput).toHaveValue('');
@@ -211,10 +214,12 @@ test.describe('ImageDownload Component', () => {
       await uploadAndSetup(page, { filter: 'Logo', filename: 'disable-test' });
       const download = await triggerAndWaitForDownload(page, 'Download Logo');
       expect(download).toBeTruthy();
-      const logoButton = page.getByRole('button', { name: 'Download Logo' });
-      const shirtButton = page.getByRole('button', { name: 'Download Shirt' });
-      await expect(logoButton).toBeDisabled();
-      await expect(shirtButton).toBeDisabled();
+      await expect(
+        page.getByRole('button', { name: 'Download Logo' })
+      ).toBeDisabled();
+      await expect(
+        page.getByRole('button', { name: 'Download Shirt' })
+      ).toBeDisabled();
     });
 
     test('should not trigger any download if the button is disabled (no-op test)', async ({
