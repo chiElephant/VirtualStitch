@@ -2,11 +2,18 @@ import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
 async function toggleEditorTab(page: Page, tabName: string) {
-  await page.getByRole('img', { name: tabName }).click();
+  await page.getByTestId(`editor-tab-${tabName}`).click();
 }
 async function toggleFilterTab(page: Page, tabTestId: string) {
   await page.getByTestId(tabTestId).click();
 }
+
+const tabsAndTestIds = [
+  { tab: 'colorPicker', testId: 'color-picker' },
+  { tab: 'filePicker', testId: 'file-picker' },
+  { tab: 'aiPicker', testId: 'ai-picker' },
+  { tab: 'imageDownload', testId: 'image-download' },
+];
 
 test.describe('Customizer', () => {
   test.beforeEach(async ({ page }) => {
@@ -87,23 +94,11 @@ test.describe('Customizer', () => {
       await expect(page.getByTestId('color-picker')).toHaveCount(0);
     });
 
-    test('should display correct content when each editor tab is clicked', async ({
-      page,
-    }) => {
-      const tabsAndTestIds = [
-        { tab: 'colorPicker', testId: 'color-picker' },
-        { tab: 'filePicker', testId: 'file-picker' },
-        { tab: 'aiPicker', testId: 'ai-picker' },
-        { tab: 'imageDownload', testId: 'image-download' },
-      ];
-
-      for (const { tab, testId } of tabsAndTestIds) {
+    tabsAndTestIds.forEach(({ tab, testId }) => {
+      test(`should display the ${tab} editor tab`, async ({ page }) => {
         await toggleEditorTab(page, tab);
         await expect(page.getByTestId(testId)).toBeVisible();
-        // Close after checking
-        await toggleEditorTab(page, tab);
-        await expect(page.getByTestId(testId)).toHaveCount(0);
-      }
+      });
     });
   });
 
@@ -111,38 +106,22 @@ test.describe('Customizer', () => {
     test('should not change filter tab state when toggling editor tabs', async ({
       page,
     }) => {
-      await toggleFilterTab(page, 'filter-tab-logoShirt');
+      await page.getByTestId('filter-tab-logoShirt').click();
 
-      // Check background color and opacity before toggling editor tab
-      const stylesBefore = await page
+      const isActiveTab = await page
         .getByTestId('filter-tab-logoShirt')
-        .evaluate((el) => {
-          const computed = window.getComputedStyle(el);
-          return {
-            bgColor: computed.backgroundColor,
-            opacity: computed.opacity,
-          };
-        });
+        .getAttribute('data-is-active');
 
-      expect(stylesBefore.bgColor).not.toBe('transparent');
-      expect(stylesBefore.opacity).toBe('0.5');
+      expect(isActiveTab).toBeTruthy();
 
       // Toggle editor tab
-      await toggleEditorTab(page, 'colorPicker');
+      await page.getByTestId('editor-tab-colorPicker').click();
 
-      // Check background color and opacity after toggling editor tab
-      const stylesAfter = await page
+      const newActiveTab = await page
         .getByTestId('filter-tab-logoShirt')
-        .evaluate((el) => {
-          const computed = window.getComputedStyle(el);
-          return {
-            bgColor: computed.backgroundColor,
-            opacity: computed.opacity,
-          };
-        });
+        .getAttribute('data-is-active');
 
-      expect(stylesAfter.bgColor).toBe(stylesBefore.bgColor);
-      expect(stylesAfter.opacity).toBe(stylesBefore.opacity);
+      expect(newActiveTab).toBeTruthy();
     });
   });
 

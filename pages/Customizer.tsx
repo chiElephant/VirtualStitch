@@ -272,6 +272,7 @@ const Customizer = (props: CustomizerProps) => {
                     key={`${tab.name}-filtertab`}
                     tab={tab}
                     data-testid={`filter-tab-${tab.name}`}
+                    data-is-active={activeFilterTab[tab.name]}
                     isFilterTab
                     isActiveTab={activeFilterTab[tab.name]}
                     handleClick={() => handleActiveFilterTab(tab.name)}
