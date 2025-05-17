@@ -97,7 +97,7 @@ jobs:
           npx playwright install --with-deps
 
       - name: Playwright tests (${{ matrix.project }})
-        run: npx playwright test --project=${{ matrix.project }}
+        run: npx playwright test --project=${{ matrix.project }} --reporter=list
         env:
           CI: true
 
