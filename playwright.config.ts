@@ -61,7 +61,7 @@ export default defineConfig({
     command: 'npm run dev',
     gracefulShutdown: { signal: 'SIGTERM', timeout: 500 },
     name: 'playwright dev server',
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: true,
     timeout: 2 * 60 * 1000,
     url: process.env.BASE_URL || 'http://localhost:3000',
   },
