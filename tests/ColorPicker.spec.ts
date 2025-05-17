@@ -1,20 +1,5 @@
-import { test, expect } from '@playwright/test';
-import type { Page } from '@playwright/test';
-
-const colorMap = [
-  '#CCCCCC',
-  '#EFBD4E',
-  '#80C670',
-  '#726DE8',
-  '#353934',
-  '#2CCCE4',
-  '#FF8A65',
-  '#7098DA',
-  '#C19277',
-  '#FF96AD',
-  '#512314',
-  '#5F123D',
-];
+import { test, expect, type Page } from '@playwright/test';
+import { presetColors as colorMap } from '@/config/presetColors';
 
 async function clickColor(page: Page, color: string) {
   await page.getByTitle(color).click();
@@ -61,14 +46,14 @@ test.describe('Color picker', () => {
       await expect(page.getByTestId('button-color-#2CCCE4')).toHaveCount(1);
     });
 
-    test('should update the shirt and back button color for each preset color', async ({
-      page,
-    }) => {
-      for (const color of colorMap) {
+    colorMap.forEach((color) => {
+      test(`should update the shirt and back button color for ${color}`, async ({
+        page,
+      }) => {
         await clickColor(page, color);
         await expect(page.getByTestId(`canvas-color-${color}`)).toHaveCount(1);
         await expect(page.getByTestId(`button-color-${color}`)).toHaveCount(1);
-      }
+      });
     });
 
     test('should handle rapid color changes smoothly', async ({ page }) => {

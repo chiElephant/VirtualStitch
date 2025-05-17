@@ -2,6 +2,7 @@ import React from 'react';
 import { render, fireEvent } from '@testing-library/react';
 import { act } from 'react';
 import { ColorPicker } from '@/components';
+import { presetColors } from '@/config/presetColors';
 import state from '@/store';
 
 interface SketchPickerProps {
@@ -41,10 +42,10 @@ describe('ColorPicker', () => {
 
   it('renders preset colors correctly', () => {
     const { getByTestId } = render(<ColorPicker />);
-    const presetColors = getByTestId('preset-colors').textContent;
-    expect(presetColors).toContain('#CCCCCC');
-    expect(presetColors).toContain('#EFBD4E');
-    expect(presetColors).toContain('#80C670');
-    expect(presetColors).toContain('#512314');
+    const displayedColors = getByTestId('preset-colors').textContent;
+
+    for (const color of presetColors) {
+      expect(displayedColors).toContain(color);
+    }
   });
 });

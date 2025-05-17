@@ -10,8 +10,12 @@
     "strict": true,
     "noEmit": true,
     "forceConsistentCasingInFileNames": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "baseUrl": ".", // required for paths to work
+    "paths": {
+      "@/*": ["./*"]
+    }
   },
-  "include": ["tests/**/*.ts", "tests/**/*.tsx"],
+  "include": ["tests/**/*.ts", "tests/**/*.tsx", "config/**/*.ts"],
   "exclude": ["node_modules", ".next", "dist"]
 }
