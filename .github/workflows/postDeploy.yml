@@ -1,0 +1,69 @@
+name: Post Deploy Tests
+
+on:
+  workflow_dispatch:
+  repository_dispatch:
+    types: [vercel.deployment.success]
+
+jobs:
+  post-deploy-tests:
+    if: github.event_name == 'repository_dispatch'
+    runs-on: [self-hosted, ubuntu, arm64]
+    timeout-minutes: 30
+
+    env:
+      NODE_ENV: test
+      BASE_URL: ${{ github.event.client_payload.url }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+      UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci && npx playwright install --with-deps
+
+      - name: Run Playwright Tests
+        run: npx playwright test --reporter=list
+        env:
+          CI: true
+
+      - name: Upload HTML Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: post-deploy-report
+          path: playwright-report/
+
+      - name: Notify on failure
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: '🚨 Post-Deploy Tests Failed'
+          to: anthony@303devs.com
+          from: 'CI Bot <admin@303devs.com>'
+          body: 'Some tests failed on the deployed site. Check the attached report.'
+
+      - name: Notify on success
+        if: success()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: '✅ Post-Deploy Tests Passed'
+          to: anthony@303devs.com
+          from: 'CI Bot <admin@303devs.com>'
+          body: 'All post-deploy tests passed successfully.'

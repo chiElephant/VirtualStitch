@@ -12,7 +12,7 @@ on:
 
 jobs:
   ci-checks:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, ubuntu, arm64]
     timeout-minutes: 5
 
     env:
@@ -25,14 +25,6 @@ jobs:
     steps:
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
-
-      - name: Cache node_modules
-        uses: actions/cache@v3
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
 
       - name: 🔧 Set up Node.js
         uses: actions/setup-node@v4
@@ -51,7 +43,7 @@ jobs:
 
   playwright-tests:
     needs: ci-checks
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, ubuntu, arm64]
     timeout-minutes: 60
     strategy:
       fail-fast: true
@@ -68,22 +60,6 @@ jobs:
     steps:
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
-
-      - name: Cache node_modules
-        uses: actions/cache@v3
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-
-      - name: Cache Playwright browsers
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-browsers-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-playwright-browsers-
 
       - name: 🔧 Set up Node.js
         uses: actions/setup-node@v4
