@@ -11,7 +11,7 @@ export default defineConfig({
   failOnFlakyTests: !!process.env.CI,
   forbidOnly: !!process.env.CI,
   fullyParallel: true,
-  globalTimeout: process.env.CI ? 30 * 60 * 1000 : undefined,
+  globalTimeout: process.env.CI ? 50 * 60 * 1000 : undefined,
   maxFailures: process.env.CI ? 1 : 0,
   outputDir: 'test-results/',
   preserveOutput: 'failures-only',
@@ -66,5 +66,5 @@ export default defineConfig({
     url: process.env.BASE_URL || 'http://localhost:3000',
   },
 
-  workers: process.env.CI ? 2 : undefined,
+  workers: process.env.CI ? 1 : undefined,
 });
