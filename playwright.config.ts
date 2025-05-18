@@ -66,5 +66,5 @@ export default defineConfig({
     url: process.env.BASE_URL || 'http://localhost:3000',
   },
 
-  workers: process.env.CI ? 2 : undefined,
+  workers: process.env.CI ? 1 : undefined,
 });
