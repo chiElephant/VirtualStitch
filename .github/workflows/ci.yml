@@ -12,6 +12,7 @@ on:
 
 jobs:
   ci-checks:
+    name: ci-checks
     runs-on:
       - self-hosted
       - Linux
@@ -45,6 +46,7 @@ jobs:
         run: npm run test
 
   playwright-tests:
+    name: playwright-tests
     needs: ci-checks
     runs-on:
       - self-hosted
