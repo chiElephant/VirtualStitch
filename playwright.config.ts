@@ -58,13 +58,13 @@ export default defineConfig({
   },
 
   webServer: {
-    command: 'npm run dev',
+    command: 'npm run build && npm start',
     gracefulShutdown: { signal: 'SIGTERM', timeout: 500 },
-    name: 'playwright dev server',
-    reuseExistingServer: !!process.env.CI,
+    name: 'Playwright server',
+    reuseExistingServer: true,
     timeout: 2 * 60 * 1000,
     url: process.env.BASE_URL || 'http://localhost:3000',
   },
 
-  workers: !!process.env.CI ? 2 : undefined,
+  workers: process.env.CI ? 2 : undefined,
 });
