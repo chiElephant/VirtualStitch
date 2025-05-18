@@ -22,26 +22,26 @@ test.describe('Color picker', () => {
     test('should initialize with default shirt color and back button color', async ({
       page,
     }) => {
-      await expect(page.getByTestId('canvas-color-#EFBD4E')).toHaveCount(1);
-      await expect(page.getByTestId('button-color-#EFBD4E')).toHaveCount(1);
+      await expect(page.getByTestId('canvas-color-#00C851')).toHaveCount(1);
+      await expect(page.getByTestId('button-color-#00C851')).toHaveCount(1);
     });
   });
 
   test.describe('Color Change Behavior', () => {
     test('should change the shirt color', async ({ page }) => {
-      await expect(page.getByTestId('canvas-color-#EFBD4E')).toHaveCount(1);
+      await expect(page.getByTestId('canvas-color-#00C851')).toHaveCount(1);
       await expect(page.getByTestId('canvas-color-#2CCCE4')).toHaveCount(0);
 
       await clickColor(page, '#2CCCE4');
 
-      await expect(page.getByTestId('canvas-color-#EFBD4E')).toHaveCount(0);
+      await expect(page.getByTestId('canvas-color-#00C851')).toHaveCount(0);
       await expect(page.getByTestId('canvas-color-#2CCCE4')).toHaveCount(1);
     });
 
     test('should change the background color of the Back button', async ({
       page,
     }) => {
-      await expect(page.getByTestId('button-color-#EFBD4E')).toHaveCount(1);
+      await expect(page.getByTestId('button-color-#00C851')).toHaveCount(1);
       await clickColor(page, '#2CCCE4');
       await expect(page.getByTestId('button-color-#2CCCE4')).toHaveCount(1);
     });

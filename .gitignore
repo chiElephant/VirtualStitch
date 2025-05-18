@@ -45,4 +45,4 @@ yarn-error.log*
 next-env.d.ts
 
 # scripts
-commit-push.sh
+handle-push.sh

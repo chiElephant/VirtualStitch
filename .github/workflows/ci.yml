@@ -12,11 +12,12 @@ on:
 
 jobs:
   ci-checks:
+    name: ci-checks
     runs-on:
       - self-hosted
       - Linux
       - ARM64
-    timeout-minutes: 10
+    timeout-minutes: 5
 
     env:
       NODE_ENV: test
@@ -45,13 +46,14 @@ jobs:
         run: npm run test
 
   playwright-tests:
+    name: playwright-tests
     needs: ci-checks
     runs-on:
       - self-hosted
       - Linux
       - ARM64
 
-    timeout-minutes: 60
+    timeout-minutes: 30
     strategy:
       fail-fast: true
       matrix:
