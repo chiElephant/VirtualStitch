@@ -11,7 +11,7 @@ export interface State {
 
 const state = proxy({
   intro: true,
-  color: '#EFBD4E',
+  color: '#00C851',
   isLogoTexture: false,
   isFullTexture: false,
   logoDecal: './icons/logo.png',

@@ -26,7 +26,7 @@ const Home = (props: React.ComponentProps<typeof motion.section>) => {
           <motion.header {...slideAnimation('down')}>
             <Image
               src={'/icons/emblem.png'}
-              alt={'303Devs'}
+              alt={'logo'}
               width={32}
               height={32}
               className='w-8 h-8 object-contain'

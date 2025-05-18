@@ -11,7 +11,7 @@ export default defineConfig({
   failOnFlakyTests: !!process.env.CI,
   forbidOnly: !!process.env.CI,
   fullyParallel: true,
-  globalTimeout: process.env.CI ? 90 * 60 * 1000 : undefined,
+  globalTimeout: process.env.CI ? 30 * 60 * 1000 : undefined,
   maxFailures: process.env.CI ? 1 : 0,
   outputDir: 'test-results/',
   preserveOutput: 'failures-only',
@@ -42,7 +42,7 @@ export default defineConfig({
         ['json', { outputFile: 'test-results.json' }],
       ],
 
-  retries: process.env.CI ? 2 : 0,
+  retries: process.env.CI ? 1 : 0,
   testDir: './tests',
   timeout: 2 * 60 * 1000,
   tsconfig: './tsconfig.test.json',
