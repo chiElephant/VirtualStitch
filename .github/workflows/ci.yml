@@ -51,7 +51,7 @@ jobs:
       - Linux
       - ARM64
 
-    timeout-minutes: 60
+    timeout-minutes: 45
     strategy:
       fail-fast: true
       matrix:
