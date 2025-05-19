@@ -10,7 +10,7 @@ on:
 
 jobs:
   ci-checks:
-    if: github.event_name == 'repository_dispatch' && github.event.client_payload.environment == 'production'
+    if: github.event_name == 'repository_dispatch' && github.event.client_payload.environment == 'preview'
     name: ci-checks
     runs-on:
       - self-hosted
@@ -28,8 +28,6 @@ jobs:
     steps:
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.client_payload.git.sha }}
 
       - name: 🔧 Set up Node.js
         uses: actions/setup-node@v4
@@ -47,6 +45,7 @@ jobs:
         run: npm run test
 
   playwright-tests:
+    if: github.event_name == 'repository_dispatch' && github.event.client_payload.environment == 'preview'
     name: playwright-tests
     needs: ci-checks
     runs-on:
@@ -71,17 +70,18 @@ jobs:
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
 
+        with:
+          ref: ${{ github.event.client_payload.git.sha }}
+
       - name: 🔧 Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 18.x
           cache: 'npm'
 
-      - name: Dump event payload
-        run: echo "${{ toJson(github.event) }}"
-
       - name: Log target BASE_URL
         run: echo "Testing against $BASE_URL"
+
       - name: 📦 Install dependencies
         run: |
           npm ci --legacy-peer-deps

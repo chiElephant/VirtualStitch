@@ -44,9 +44,6 @@ jobs:
           node-version: 18.x
           cache: 'npm'
 
-      - name: Dump event payload
-        run: echo "${{ toJson(github.event) }}"
-
       - name: Log target BASE_URL
         run: echo "Testing against $BASE_URL"
 
@@ -88,16 +85,3 @@ jobs:
           to: anthony@303devs.com
           from: 'CI Bot <admin@303devs.com>'
           body: 'Some tests failed on the deployed site. Check the attached report.'
-
-      - name: Notify on success
-        if: success()
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.gmail.com
-          server_port: 587
-          username: ${{ secrets.SMTP_USERNAME }}
-          password: ${{ secrets.SMTP_PASSWORD }}
-          subject: '✅ Post-Deploy Tests Passed'
-          to: anthony@303devs.com
-          from: 'CI Bot <admin@303devs.com>'
-          body: 'All post-deploy tests passed successfully.'
