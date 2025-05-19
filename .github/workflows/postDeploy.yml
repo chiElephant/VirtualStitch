@@ -18,7 +18,7 @@ jobs:
       - Linux
       - ARM64
 
-    timeout-minutes: 60
+    timeout-minutes: 30
 
     strategy:
       fail-fast: true
@@ -49,6 +49,15 @@ jobs:
 
       - name: Log target BASE_URL
         run: echo "Testing against $BASE_URL"
+
+      - name: Debug Fetch hardcoded url
+        run: |
+          echo "GET $BASE_URL"
+          curl -I --max-time 10 https://www.corewebvitals.io/
+      - name: Debug Fetch homepage
+        run: |
+          echo "GET $BASE_URL"
+          curl -I --max-time 10 "$BASE_URL"
 
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
