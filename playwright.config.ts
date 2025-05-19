@@ -36,10 +36,10 @@ export default defineConfig({
 
   reporter:
     process.env.CI ?
-      [['github'], ['json', { outputFile: 'test-results.json' }]]
+      [['github'], ['json', { outputFile: './test_results/test-results.json' }]]
     : [
         ['line', { FORCE_COLOR: true }],
-        ['json', { outputFile: 'test-results.json' }],
+        ['json', { outputFile: './test_results/test-results.json' }],
       ],
 
   retries: process.env.CI ? 1 : 0,
