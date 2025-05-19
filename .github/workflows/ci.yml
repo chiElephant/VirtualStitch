@@ -32,7 +32,7 @@ jobs:
       - name: 🔧 Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18.x
+          node-version: lts/*
           cache: 'npm'
 
       - name: 📦 Install dependencies
@@ -77,23 +77,8 @@ jobs:
       - name: 🔧 Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18.x
+          node-version: lts/*
           cache: 'npm'
-
-      - name: Dump event payload
-        run: echo "${{ toJson(github.event) }}"
-
-      - name: Log target BASE_URL
-        run: echo "Testing against $BASE_URL"
-
-      - name: Debug Fetch hardcoded url
-        run: |
-          echo "GET $BASE_URL"
-          curl -I --max-time 10 https://www.corewebvitals.io/
-      - name: Debug Fetch homepage
-        run: |
-          echo "GET $BASE_URL"
-          curl -I --max-time 10 "$BASE_URL"
 
       - name: 📦 Install dependencies
         run: |
