@@ -11,7 +11,7 @@ on:
 jobs:
   ci-checks:
     if: github.event_name == 'repository_dispatch' && github.event.client_payload.environment == 'preview'
-    name: ci-checks
+    name: ✅ ci-checks
     runs-on:
       - self-hosted
       - Linux
