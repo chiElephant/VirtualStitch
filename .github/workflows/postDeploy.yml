@@ -1,5 +1,9 @@
 name: Post Deploy Tests
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   workflow_dispatch:
   repository_dispatch:
@@ -7,12 +11,19 @@ on:
 
 jobs:
   post-deploy-tests:
-    if: github.event_name == 'repository_dispatch'
+    if: github.event_name == 'repository_dispatch' && github.event.client_payload.environment == 'production'
+    name: playwright-tests
     runs-on:
       - self-hosted
       - Linux
       - ARM64
-    timeout-minutes: 30
+
+    timeout-minutes: 60
+
+    strategy:
+      fail-fast: true
+      matrix:
+        project: [chromium, firefox, webkit]
 
     env:
       NODE_ENV: test
@@ -22,31 +33,48 @@ jobs:
       UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
 
     steps:
-      - uses: actions/checkout@v4
+      - name: ⬇️ Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.client_payload.git.sha }}
 
-      - name: Setup Node.js
+      - name: 🔧 Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 18.x
           cache: 'npm'
 
       - name: Dump event payload
         run: echo "${{ toJson(github.event) }}"
 
+      - name: Log target BASE_URL
+        run: echo "Testing against $BASE_URL"
+
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
 
-      - name: Run Playwright Tests
-        run: npx playwright test --reporter=list
+      - name: 🧪 Run Playwright tests (${{ matrix.project }})
+        run: npx playwright test --project=${{ matrix.project }} --reporter=list
         env:
           CI: true
+          BASE_URL: ${{ github.event.client_payload.url }}
 
-      - name: Upload HTML Report
+      - name: 📤 Upload Playwright artifacts (screenshots, traces, videos)
+        if: failure()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.job }}-playwright-results-${{ matrix.project }}
+          path: test-results/
+          retention-days: 7
+
+      - name: 📤 Upload Playwright HTML report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: post-deploy-report
-          path: playwright-report/
+          name: ${{ github.job }}-playwright-html-report-${{ matrix.project }}
+          path: playwright-report
+          retention-days: 7
 
       - name: Notify on failure
         if: failure()

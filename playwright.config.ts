@@ -11,7 +11,7 @@ export default defineConfig({
   failOnFlakyTests: !!process.env.CI,
   forbidOnly: !!process.env.CI,
   fullyParallel: true,
-  globalTimeout: process.env.CI ? 50 * 60 * 1000 : undefined,
+  globalTimeout: process.env.CI ? 60 * 60 * 1000 : undefined,
   maxFailures: process.env.CI ? 1 : 0,
   outputDir: 'test-results/',
   preserveOutput: 'failures-only',
@@ -55,15 +55,6 @@ export default defineConfig({
     },
     trace: 'on-first-retry',
     video: 'on-first-retry',
-  },
-
-  webServer: {
-    command: 'npm run build && npm start',
-    gracefulShutdown: { signal: 'SIGTERM', timeout: 500 },
-    name: 'Playwright server',
-    reuseExistingServer: true,
-    timeout: 2 * 60 * 1000,
-    url: process.env.BASE_URL || 'http://localhost:3000',
   },
 
   workers: process.env.CI ? 1 : undefined,

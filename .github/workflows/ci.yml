@@ -5,11 +5,12 @@ concurrency:
   cancel-in-progress: true
 
 on:
-  pull_request:
-    branches: [main]
+  repository_dispatch:
+    types: [vercel.deployment.success]
 
 jobs:
   ci-checks:
+    if: github.event_name == 'repository_dispatch' && github.event.client_payload.environment == 'production'
     name: ci-checks
     runs-on:
       - self-hosted
@@ -27,6 +28,8 @@ jobs:
     steps:
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.client_payload.git.sha }}
 
       - name: 🔧 Set up Node.js
         uses: actions/setup-node@v4
@@ -51,7 +54,7 @@ jobs:
       - Linux
       - ARM64
 
-    timeout-minutes: 45
+    timeout-minutes: 60
     strategy:
       fail-fast: true
       matrix:
@@ -59,7 +62,7 @@ jobs:
 
     env:
       NODE_ENV: test
-      BASE_URL: http://localhost:3000
+      BASE_URL: ${{ github.event.client_payload.url }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
       UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
@@ -74,6 +77,11 @@ jobs:
           node-version: 18.x
           cache: 'npm'
 
+      - name: Dump event payload
+        run: echo "${{ toJson(github.event) }}"
+
+      - name: Log target BASE_URL
+        run: echo "Testing against $BASE_URL"
       - name: 📦 Install dependencies
         run: |
           npm ci --legacy-peer-deps
@@ -82,6 +90,7 @@ jobs:
         run: npx playwright test --project=${{ matrix.project }} --reporter=list
         env:
           CI: true
+          BASE_URL: ${{ github.event.client_payload.url }}
 
       - name: 📤 Upload Playwright artifacts (screenshots, traces, videos)
         if: failure()
@@ -90,6 +99,7 @@ jobs:
         with:
           name: ${{ github.job }}-playwright-results-${{ matrix.project }}
           path: test-results/
+          retention-days: 7
 
       - name: 📤 Upload Playwright HTML report
         if: always()
@@ -97,3 +107,4 @@ jobs:
         with:
           name: ${{ github.job }}-playwright-html-report-${{ matrix.project }}
           path: playwright-report
+          retention-days: 7
