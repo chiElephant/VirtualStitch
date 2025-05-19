@@ -5,18 +5,14 @@ on:
   repository_dispatch:
     types: [vercel.deployment.success]
 
-concurrency:
-  group: post-deploy-${{ github.run_id }}
-  cancel-in-progress: false
-
 jobs:
   post-deploy-tests:
-    if: github.event.client_payload.target == 'production'
+    if: github.event_name == 'repository_dispatch' && github.event.client_payload.target == 'production'
     runs-on:
       - self-hosted
       - Linux
       - ARM64
-    timeout-minutes: 35
+    timeout-minutes: 30
 
     env:
       NODE_ENV: test
@@ -34,6 +30,8 @@ jobs:
           node-version: 18
           cache: 'npm'
 
+      - name: Dump event payload
+        run: echo "${{ toJson(github.event) }}"
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
 
