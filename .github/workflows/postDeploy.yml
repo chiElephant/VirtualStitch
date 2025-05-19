@@ -31,6 +31,7 @@ jobs:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
       UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
 
     steps:
       - name: ⬇️ Checkout code
@@ -66,7 +67,6 @@ jobs:
         run: npx playwright test --project=${{ matrix.project }} --reporter=list
         env:
           CI: true
-          BASE_URL: ${{ github.event.client_payload.url }}
 
       - name: 📤 Upload Playwright artifacts (screenshots, traces, videos)
         if: failure()
