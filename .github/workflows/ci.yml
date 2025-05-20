@@ -26,6 +26,18 @@ jobs:
       UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
 
     steps:
+      - name: 🕒 Report CI pending status to GitHub PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: '${{ github.event.client_payload.git.sha }}',
+              state: 'pending',
+              context: '✅ ci-checks',
+              description: 'CI checks are in progress',
+            })
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
 
@@ -43,6 +55,34 @@ jobs:
 
       - name: 🧪 Run Jest tests
         run: npm run test
+
+      - name: ❌ Report CI failure to GitHub PR
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: '${{ github.event.client_payload.git.sha }}',
+              state: 'failure',
+              context: 'ci-checks',
+              description: 'Jest or Lint checks failed',
+            })
+
+      - name: ✅ Report status to GitHub PR
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: '${{ github.event.client_payload.git.sha }}',
+              state: 'success',
+              context: 'ci-checks',
+              description: 'Jest and Lint checks passed',
+            })
 
   playwright-tests:
     if: github.event_name == 'repository_dispatch' && github.event.client_payload.environment == 'preview'
@@ -68,11 +108,24 @@ jobs:
       VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
 
     steps:
+      - name: 🕒 Report Playwright pending status to GitHub PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: '${{ github.event.client_payload.git.sha }}',
+              state: 'pending',
+              context: 'playwright-tests (${ { matrix.project } })',
+              description: 'Playwright ${ { matrix.project } } tests are in progress',
+            })
+
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
 
         with:
-          ref: ${{ github.event.client_payload.git.sha }}
+          ref: '${{ github.event.client_payload.git.sha }}'
 
       - name: 🔧 Set up Node.js
         uses: actions/setup-node@v4
@@ -84,17 +137,46 @@ jobs:
         run: |
           npm ci --legacy-peer-deps
 
-      - name: 🧪 Run Playwright tests (${{ matrix.project }})
+      - name: 🧪 Run Playwright tests (${ { matrix.project } })
         run: npx playwright test --project=${{ matrix.project }} --reporter=list
         env:
           CI: true
+        shell: bash
+
+      - name: ❌ Report Playwright failure to GitHub PR
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: '${{ github.event.client_payload.git.sha }}',
+              state: 'failure',
+              context: 'playwright-tests (${ { matrix.project } })',
+              description: 'Playwright ${ { matrix.project } } tests failed',
+            })
+
+      - name: ✅ Report status to GitHub PR
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: '${{ github.event.client_payload.git.sha }}',
+              state: 'success',
+              context: 'playwright-tests (${ { matrix.project } })',
+              description: 'Playwright ${ { matrix.project } } tests passed',
+            })
 
       - name: 📤 Upload Playwright artifacts (screenshots, traces, videos)
         if: failure()
         continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ github.job }}-playwright-results-${{ matrix.project }}
+          name: '${{ github.job }}-playwright-results-${{ matrix.project }}'
           path: test-results/
           retention-days: 7
 
@@ -102,6 +184,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ github.job }}-playwright-html-report-${{ matrix.project }}
+          name: '${{ github.job }}-playwright-html-report-${{ matrix.project }}'
           path: playwright-report
           retention-days: 7
