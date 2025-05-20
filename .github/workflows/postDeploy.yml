@@ -12,7 +12,7 @@ on:
 jobs:
   post-deploy-tests:
     if: github.event_name == 'repository_dispatch' && github.event.client_payload.environment == 'production'
-    name: 🧪 playwright-tests
+    name: 🧪 E2E playwright-tests
     runs-on:
       - self-hosted
       - Linux
