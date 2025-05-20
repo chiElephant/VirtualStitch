@@ -9,6 +9,15 @@ const localBaseURL = 'http://localhost:3000';
 const ciBaseURL = process.env.BASE_URL;
 const bypassQuery = `?x-vercel-protection-bypass=${bypassSecret}&x-vercel-set-bypass-cookie=samesitenone`;
 
+/* getProjectConfig dynamically configures browser-specific settings.
+Chromium requires bypass credentials (for Vercel-protected environments) to be passed via query parameters
+instead of headers due to stricter cookie policies and header behavior.
+This function isolates that logic, ensuring:
+- In CI: Chromium appends the Vercel bypass query to the BASE_URL
+Firefox and WebKit support bypassing via extra HTTP headers, so they continue using that method.
+This separation ensures stable E2E tests across CI and local environments, while satisfying
+the constraints of each browser engine regarding cookie and auth handling. */
+
 function getProjectConfig(
   browser: 'Desktop Chrome' | 'Desktop Firefox' | 'Desktop Safari'
 ) {
@@ -56,10 +65,10 @@ export default defineConfig({
 
   reporter:
     isCI ?
-      [['github'], ['json', { outputFile: './test_results/test-results.json' }]]
+      [['github'], ['json', { outputFile: './test-results/test-results.json' }]]
     : [
         ['line', { FORCE_COLOR: true }],
-        ['json', { outputFile: './test_results/test-results.json' }],
+        ['json', { outputFile: './test-results/test-results.json' }],
       ],
 
   retries: isCI ? 1 : 0,
@@ -76,5 +85,5 @@ export default defineConfig({
     video: 'on-first-retry',
   },
 
-  workers: isCI ? 2 : undefined,
+  workers: isCI ? 1 : undefined,
 });
