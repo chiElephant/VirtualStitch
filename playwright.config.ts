@@ -3,10 +3,13 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const isCI = !!process.env.CI;
-const bypassSecret = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
 const localBaseURL = 'http://localhost:3000';
+
+const isCI = !!process.env.CI;
 const ciBaseURL = process.env.BASE_URL;
+
+// Vercel Automation Bypass
+const bypassSecret = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
 const bypassQuery = `?x-vercel-protection-bypass=${bypassSecret}&x-vercel-set-bypass-cookie=samesitenone`;
 
 /* getProjectConfig dynamically configures browser-specific settings.
@@ -49,7 +52,7 @@ export default defineConfig({
   failOnFlakyTests: isCI,
   forbidOnly: isCI,
   fullyParallel: true,
-  globalTimeout: isCI ? 60 * 60 * 1000 : undefined,
+  globalTimeout: isCI ? 30 * 60 * 1000 : undefined,
   maxFailures: isCI ? 1 : 0,
   outputDir: 'test-results/',
   preserveOutput: 'failures-only',
@@ -61,7 +64,7 @@ export default defineConfig({
   ],
 
   quiet: isCI,
-  reportSlowTests: { max: 0, threshold: 5 * 60 * 1000 },
+  reportSlowTests: { max: 2, threshold: 5 * 60 * 1000 },
 
   reporter:
     isCI ?
@@ -73,7 +76,7 @@ export default defineConfig({
 
   retries: isCI ? 1 : 0,
   testDir: './tests',
-  timeout: 2 * 60 * 1000,
+  timeout: 1 * 60 * 1000,
   tsconfig: './tsconfig.test.json',
 
   use: {
