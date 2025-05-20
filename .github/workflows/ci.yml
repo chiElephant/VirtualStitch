@@ -29,6 +29,7 @@ jobs:
       - name: 🕒 Report CI pending status to GitHub PR
         uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             github.repos.createCommitStatus({
               owner: context.repo.owner,
@@ -60,6 +61,7 @@ jobs:
         if: failure()
         uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             github.repos.createCommitStatus({
               owner: context.repo.owner,
@@ -74,6 +76,7 @@ jobs:
         if: success()
         uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             github.repos.createCommitStatus({
               owner: context.repo.owner,
@@ -111,6 +114,7 @@ jobs:
       - name: 🕒 Report Playwright pending status to GitHub PR
         uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             github.repos.createCommitStatus({
               owner: context.repo.owner,
@@ -147,6 +151,7 @@ jobs:
         if: failure()
         uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             github.repos.createCommitStatus({
               owner: context.repo.owner,
@@ -161,6 +166,7 @@ jobs:
         if: success()
         uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             github.repos.createCommitStatus({
               owner: context.repo.owner,
