@@ -16,8 +16,8 @@ const tabsAndTestIds = [
 ];
 
 test.describe('Customizer', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+  test.beforeEach(async ({ page, baseURL }) => {
+    await page.goto(`${baseURL}`);
     await page.getByRole('button', { name: 'Customize It' }).click();
   });
 

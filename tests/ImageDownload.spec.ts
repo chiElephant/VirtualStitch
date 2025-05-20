@@ -31,8 +31,8 @@ const scenarios = [
 ];
 
 test.describe('ImageDownload Component', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+  test.beforeEach(async ({ page, baseURL }) => {
+    await page.goto(`${baseURL}`);
     await page.getByRole('button', { name: 'Customize It' }).click();
     await page.getByTestId('editor-tab-imageDownload').click();
   });

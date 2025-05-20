@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Canvas', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+  test.beforeEach(async ({ page, baseURL }) => {
+    await page.goto(`${baseURL}`);
     await page.getByRole('button', { name: 'Customize It' }).click();
   });
 

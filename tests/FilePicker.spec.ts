@@ -11,8 +11,8 @@ async function uploadFile(page: Page, filePath: string) {
 }
 
 test.describe('File Picker', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+  test.beforeEach(async ({ page, baseURL }) => {
+    await page.goto(`${baseURL}`);
     await page.getByRole('button', { name: 'Customize It' }).click();
     await page.getByTestId('editor-tab-filePicker').click();
   });

@@ -35,8 +35,8 @@ async function submitAiPrompt(page: Page, prompt: string) {
 test.describe('AI picker', () => {
   test.describe.configure({ timeout: 240_000 });
 
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+  test.beforeEach(async ({ page, baseURL }) => {
+    await page.goto(`${baseURL}`);
     await page.getByRole('button', { name: 'Customize It' }).click();
     await page.getByTestId('editor-tab-aiPicker').click();
   });

@@ -6,8 +6,8 @@ async function clickColor(page: Page, color: string) {
 }
 
 test.describe('Color picker', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+  test.beforeEach(async ({ page, baseURL }) => {
+    await page.goto(`${baseURL}`);
     await page.getByRole('button', { name: 'Customize It' }).click();
     await page.getByTestId('editor-tab-colorPicker').click();
   });

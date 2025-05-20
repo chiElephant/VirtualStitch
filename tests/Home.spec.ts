@@ -1,9 +1,9 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Home', () => {
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page, baseURL }) => {
     // Go to the starting url before each test.
-    await page.goto('/');
+    await page.goto(`${baseURL}`);
   });
 
   test.describe('Static Content', () => {

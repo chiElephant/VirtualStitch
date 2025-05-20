@@ -15,7 +15,7 @@ function getProjectConfig(
   if (browser === 'Desktop Chrome') {
     return {
       ...devices[browser],
-      baseURL: `${isCI ? ciBaseURL : localBaseURL}${bypassQuery}`,
+      baseURL: isCI ? `${ciBaseURL}${bypassQuery}` : localBaseURL,
     };
   }
 
