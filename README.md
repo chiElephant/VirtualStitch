@@ -1,6 +1,10 @@
 # 🧵 VirtualStitch
 
-VirtualStitch is an interactive 3D t-shirt customization platform built with Next.js, Three.js, Tailwind CSS, and OpenAI integration. Users can upload images, generate designs using AI, customize colors and patterns in real-time, and download their creations—all within a fully responsive and performant UI.
+## ✨ Overview
+
+VirtualStitch is a modern product customization platform built for e-commerce brands and design enthusiasts. It enables users to preview and personalize 3D-rendered t-shirts in real time using uploaded images or AI-generated art. The result is a seamless, interactive experience that drives engagement and conversion.
+
+Whether you're launching a digital fashion storefront or showcasing generative design tools, VirtualStitch offers a powerful, customizable foundation.
 
 ## 📊 Badges
 
@@ -36,9 +40,6 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 To learn more about Next.js, take a look at the following resources:
 
 - [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
 ## Deploy on Vercel
 
@@ -46,14 +47,10 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
 
-# Virtual Stitch
-
-Virtual Stitch is a fully interactive 3D t-shirt customization platform built with Next.js, Three.js, Tailwind CSS, and OpenAI integration. Users can upload their own images, generate designs using AI, apply them as decals or full patterns, and download their creations.
-
 ## 🚀 Features
 
 - 🖼 **Image Upload**: Upload custom images to apply as logos or full-shirt textures.
-- 🤖 **AI-Generated Designs**: Generate unique logos or patterns using the OpenAI API.
+- 🤖 **AI-Generated Designs**: Uses OpenAI’s image generation endpoints to create personalized logos or patterns from user prompts.
 - 🎨 **Real-Time Customization**: Apply colors, switch between logo/full modes, and preview instantly.
 - 💾 **Download Options**: Download the full 3D canvas or just the applied logo/texture.
 - 🔒 **Request Limiting**: Prevents excessive API calls using Upstash Redis.
@@ -127,6 +124,14 @@ Example coverage report:
 
 ![Coverage Report](/images/coverage_report.png)
 
+## ⚙️ CI/CD
+
+This repo includes a custom CI/CD pipeline that:
+
+- Runs all Jest and Playwright tests on every push and PR
+- Deploys only after tests pass
+- Automatically triggers post-deploy Playwright smoke tests against the production Vercel deployment
+
 ## 🚀 Deployment
 
 The app is designed for seamless deployment to [Vercel](https://vercel.com). Push your main branch and connect your repository to Vercel for continuous deployment.
@@ -170,6 +175,14 @@ _Options to download the full 3D canvas or applied designs._
 ![Coverage Report](/images/coverage_report.png)
 
 _Test coverage report showing 100% coverage._
+
+## 🗺 Roadmap
+
+- [x] Full AI + file-based customization
+- [x] Post-deploy smoke tests
+- [ ] Mobile-first optimization
+- [ ] Add animation to loading and interaction states
+- [ ] Internationalization (i18n)
 
 ## 🤝 Contributing
 

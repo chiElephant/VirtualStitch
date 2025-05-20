@@ -3,64 +3,78 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+const isCI = !!process.env.CI;
+const bypassSecret = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
+const localBaseURL = 'http://localhost:3000';
+const ciBaseURL = process.env.BASE_URL;
+const bypassQuery = `?x-vercel-protection-bypass=${bypassSecret}&x-vercel-set-bypass-cookie=samesitenone`;
+
+function getProjectConfig(
+  browser: 'Desktop Chrome' | 'Desktop Firefox' | 'Desktop Safari'
+) {
+  if (browser === 'Desktop Chrome') {
+    return {
+      ...devices[browser],
+      baseURL: `${isCI ? ciBaseURL : localBaseURL}${bypassQuery}`,
+    };
+  }
+
+  return {
+    ...devices[browser],
+    baseURL: isCI ? ciBaseURL : localBaseURL,
+    extraHTTPHeaders:
+      bypassSecret ?
+        {
+          'x-vercel-protection-bypass': bypassSecret,
+          'x-vercel-set-bypass-cookie': 'samesitenone',
+        }
+      : undefined,
+  };
+}
+
 export default defineConfig({
   captureGitInfo: { commit: true },
   expect: {
-    timeout: process.env.CI ? 15000 : 5000,
+    timeout: isCI ? 15000 : 5000,
   },
-  failOnFlakyTests: !!process.env.CI,
-  forbidOnly: !!process.env.CI,
+  failOnFlakyTests: isCI,
+  forbidOnly: isCI,
   fullyParallel: true,
-  globalTimeout: process.env.CI ? 60 * 60 * 1000 : undefined,
-  maxFailures: process.env.CI ? 1 : 0,
+  globalTimeout: isCI ? 60 * 60 * 1000 : undefined,
+  maxFailures: isCI ? 1 : 0,
   outputDir: 'test-results/',
   preserveOutput: 'failures-only',
 
   projects: [
-    {
-      name: 'Chromium',
-      use: { ...devices['Desktop Chrome'] },
-    },
-    {
-      name: 'Firefox',
-      use: { ...devices['Desktop Firefox'] },
-    },
-    {
-      name: 'WebKit',
-      use: { ...devices['Desktop Safari'] },
-    },
+    { name: 'Chromium', use: getProjectConfig('Desktop Chrome') },
+    { name: 'Firefox', use: getProjectConfig('Desktop Firefox') },
+    { name: 'WebKit', use: getProjectConfig('Desktop Safari') },
   ],
 
-  quiet: !!process.env.CI,
+  quiet: isCI,
   reportSlowTests: { max: 0, threshold: 5 * 60 * 1000 },
 
   reporter:
-    process.env.CI ?
+    isCI ?
       [['github'], ['json', { outputFile: './test_results/test-results.json' }]]
     : [
         ['line', { FORCE_COLOR: true }],
         ['json', { outputFile: './test_results/test-results.json' }],
       ],
 
-  retries: process.env.CI ? 1 : 0,
+  retries: isCI ? 1 : 0,
   testDir: './tests',
   timeout: 2 * 60 * 1000,
   tsconfig: './tsconfig.test.json',
 
   use: {
-    baseURL: process.env.BASE_URL || 'http://localhost:3000',
-    extraHTTPHeaders: {
-      'x-vercel-protection-bypass':
-        process.env.VERCEL_AUTOMATION_BYPASS_SECRET || '',
-      'x-vercel-set-bypass-cookie': 'samesitenone',
-    },
     headless: true,
     launchOptions: {
-      slowMo: process.env.CI ? 100 : 0,
+      slowMo: isCI ? 100 : 0,
     },
     trace: 'on-first-retry',
     video: 'on-first-retry',
   },
 
-  workers: process.env.CI ? 1 : undefined,
+  workers: isCI ? 2 : undefined,
 });
