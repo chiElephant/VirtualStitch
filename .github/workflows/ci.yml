@@ -20,7 +20,7 @@ jobs:
 
     env:
       NODE_ENV: test
-      BASE_URL: http://localhost:3000
+      BASE_URL: ${{ github.event.client_payload.url }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
       UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
