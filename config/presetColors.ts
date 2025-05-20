@@ -1,3 +1,4 @@
+// Preset colors for the color picker
 export const presetColors = [
   '#CCCCCC',
   '#EFBD4E',

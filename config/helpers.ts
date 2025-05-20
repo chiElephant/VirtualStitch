@@ -1,6 +1,9 @@
 import { toast } from 'react-toastify';
 import { downloadCanvasToImage, downloadImageToFile } from './downloaders';
 
+// Handles downloading either a canvas or decal image based on the given type.
+// Automatically resets the input file name on success.
+// Displays user-friendly toast notifications for error handling.
 export const handleImageDownload = (
   type: 'canvas' | 'image',
   fileName: string,
@@ -45,6 +48,8 @@ export const handleImageDownload = (
   }
 };
 
+// Reads a Blob file (e.g., an uploaded image) and converts it into a base64 data URL.
+// Returns a Promise that resolves with the file's content.
 export const reader = (file: Blob) =>
   new Promise((resolve, reject) => {
     const fileReader = new FileReader();
@@ -57,6 +62,9 @@ export const reader = (file: Blob) =>
     }
   });
 
+// Calculates whether black or white text will be more legible on a given background color.
+// Uses luminance based on the YIQ formula to determine brightness.
+// Assumes input is a valid 6-digit hex color string.
 export const getContrastingColor = (color: string) => {
   // Remove the '#' character if it exists
   const hex = color.replace('#', '');

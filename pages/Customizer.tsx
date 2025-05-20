@@ -69,6 +69,10 @@ const Customizer = (props: CustomizerProps) => {
         }),
       });
 
+      // Handle various API error states with specific toasts for better UX.
+      // - 429: Rate limiting (too many requests)
+      // - 500: AI service/server-side error
+      // - fallback: catch-all unexpected error
       if (!response.ok) {
         if (response.status === 429) {
           toast.error(
@@ -155,6 +159,7 @@ const Customizer = (props: CustomizerProps) => {
   const activeFilterKey =
     Object.keys(activeFilterTab).find((key) => activeFilterTab[key]) || '';
 
+  // Maps editor tab keys to their corresponding components for rendering.
   const tabContentMap = {
     colorPicker: <ColorPicker />,
     filePicker: (
@@ -175,9 +180,16 @@ const Customizer = (props: CustomizerProps) => {
     imageDownload: <ImageDownload activeFilterTab={activeFilterKey} />,
   };
 
+  // Dynamically render the currently active editor tab component (e.g. ColorPicker, AIPicker).
   const generateTabContent = () =>
     activeEditorTab ? tabContentMap[activeEditorTab] : null;
 
+  /**
+   * Applies the given decal image (logo or full) to the 3D model state.
+   * - Maps the `type` to the corresponding decal type (logo or full texture).
+   * - Dynamically sets the image data on the correct Valtio state key.
+   * - Updates the filter tab UI and texture toggle booleans accordingly.
+   */
   const handleDecals = (type: string, result: string) => {
     const decalType = DecalTypes[type];
 
@@ -204,6 +216,10 @@ const Customizer = (props: CustomizerProps) => {
     });
   };
 
+  /**
+   * Toggles the active state of a filter tab and updates the corresponding
+   * global state (isLogoTexture or isFullTexture) for the 3D model render logic.
+   */
   const handleActiveFilterTab = (tabName: string) => {
     const isActive = !activeFilterTab[tabName];
 
