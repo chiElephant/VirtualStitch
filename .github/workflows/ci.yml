@@ -66,7 +66,7 @@ jobs:
               repo: context.repo.repo,
               sha: '${{ github.event.client_payload.git.sha }}',
               state: 'failure',
-              context: 'ci-checks',
+              context: '✅ ci-checks',
               description: 'Jest or Lint checks failed',
             })
 
@@ -80,7 +80,7 @@ jobs:
               repo: context.repo.repo,
               sha: '${{ github.event.client_payload.git.sha }}',
               state: 'success',
-              context: 'ci-checks',
+              context: '✅ ci-checks',
               description: 'Jest and Lint checks passed',
             })
 
