@@ -1,5 +1,5 @@
 import * as core from '@actions/core';
-import { Octokit } from '@octokit/core';
+import { Octokit } from '@octokit/rest';
 
 (async () => {
   try {
@@ -24,21 +24,13 @@ import { Octokit } from '@octokit/core';
 
     const octokit = new Octokit({
       auth: token,
-      request: {
-        headers: {
-          'X-GitHub-Api-Version': '2022-11-28',
-        },
-      },
     });
 
-    const listResponse = await octokit.request(
-      'GET /repos/{owner}/{repo}/commits/{ref}/check-runs',
-      {
-        owner,
-        repo,
-        ref: sha,
-      }
-    );
+    const listResponse = await octokit.checks.listForRef({
+      owner,
+      repo,
+      ref: sha,
+    });
 
     const checkRun = listResponse.data.check_runs.find((c) => c.name === name);
     if (!checkRun) {
@@ -66,10 +58,9 @@ import { Octokit } from '@octokit/core';
       `[DEBUG] Sending update payload: ${JSON.stringify(updatePayload, null, 2)}`
     );
 
-    const response = await octokit.request(
-      'PATCH /repos/{owner}/{repo}/check-runs/{check_run_id}',
-      updatePayload
-    );
+    const response = await octokit.checks.update({
+      ...updatePayload,
+    });
 
     core.info(
       `[DEBUG] Check run updated successfully. Response: ${JSON.stringify(response.data, null, 2)}`
