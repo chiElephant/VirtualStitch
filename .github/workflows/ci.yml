@@ -26,16 +26,8 @@ jobs:
       UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
 
     steps:
-      - name: ✅ Mark check as in progress
-        if: github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != ''
-        uses: ./.github/actions/update-check
-        with:
-          sha: ${{ github.event.client_payload.git.sha }}
-          name: '✅ ci-checks'
-          status: 'in_progress'
-          title: '⏳ CI Running'
-          summary: 'The CI checks are currently in progress.'
-          token: ${{ secrets.FGT_UPDATE_CHECK_TOKEN }}
+      - name: 🧪 Log GitHub context
+        run: echo '${{ toJson(github) }}'
 
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
@@ -138,16 +130,8 @@ jobs:
       VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
 
     steps:
-      - name: ✅ Mark check as in progress
-        if: github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != ''
-        uses: ./.github/actions/update-check
-        with:
-          sha: ${{ github.event.client_payload.git.sha }}
-          name: 'playwright-tests (${{ matrix.project }})'
-          status: 'in_progress'
-          title: '⏳ Playwright Tests Running (${{ matrix.project }})'
-          summary: 'The Playwright tests are currently in progress.'
-          token: ${{ secrets.FGT_UPDATE_CHECK_TOKEN }}
+      - name: 🧪 Log GitHub context
+        run: echo '${{ toJson(github) }}'
 
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
