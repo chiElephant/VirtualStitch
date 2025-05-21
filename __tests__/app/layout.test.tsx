@@ -25,6 +25,8 @@ describe('RootLayout', () => {
 
   it('has correct metadata (for SEO and app identity)', () => {
     expect(metadata.title).toBe('Virtual Stitch');
-    expect(metadata.description).toBe('Design It. Wear It. Virtually Perfect.');
+    expect(metadata.description).toBe(
+      'VirtualStitch is a custom apparel design platform by 303Devs LLC'
+    );
   });
 });

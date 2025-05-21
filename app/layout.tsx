@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: 'Virtual Stitch',
   description:
-    '"VirtualStitch is a custom apparel design platform by 303Devs LLC, offering intuitive tools to create, preview, and download unique shirt patterns."',
+    'VirtualStitch is a custom apparel design platform by 303Devs LLC, offering intuitive tools to create, preview, and download unique shirt patterns.',
   viewport: 'width=device-width, initial-scale=1',
 };
 

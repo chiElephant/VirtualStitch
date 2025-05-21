@@ -1,0 +1,35 @@
+name: 'Update Check Run'
+description: "Update a GitHub Check Run's status"
+
+inputs:
+  sha:
+    description: 'The SHA of the commit to update the check for'
+    required: true
+  name:
+    description: 'The name of the check run to update'
+    required: true
+  status:
+    description: 'The new status of the check run (queued, in_progress, completed)'
+    required: false
+  conclusion:
+    description: 'The final result of the check run (success, failure, cancelled, etc)'
+    required: false
+  title:
+    description: "Title for the check run's output"
+    required: false
+  summary:
+    description: "Summary text for the check run's output"
+    required: false
+  details_url:
+    description: 'Optional URL with more information about the check'
+    required: false
+  token:
+    description: 'GitHub token with checks:write permission'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: 🧪 Run update-check JavaScript
+      run: node .github/actions/update-check/update-check.js
+      shell: bash
