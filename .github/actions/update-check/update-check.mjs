@@ -7,11 +7,11 @@ import { Octokit } from '@octokit/rest';
     // Retrieve inputs provided to the action
     const sha = core.getInput('sha');
     const name = core.getInput('name');
-    const status = core.getInput('status') || undefined;
-    const conclusion = core.getInput('conclusion') || undefined;
-    const title = core.getInput('title') || '';
-    const summary = core.getInput('summary') || '';
-    const details_url = core.getInput('details_url') || undefined;
+    const status = core.getInput('status');
+    const conclusion = core.getInput('conclusion');
+    const title = core.getInput('title');
+    const summary = core.getInput('summary');
+    const details_url = core.getInput('details_url') || '';
     const token = core.getInput('token');
 
     // Extract owner and repository name from the environment variable
