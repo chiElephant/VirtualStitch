@@ -88,15 +88,13 @@ yarn install
 
 Create a `.env.local` file at the root with the following keys:
 
-| Key                        | Description                                       | Required |
-| -------------------------- | ------------------------------------------------- | -------- |
-| `OPENAI_API_KEY`           | Your OpenAI API key                               | ✅ Yes   |
-| `UPSTASH_REDIS_REST_URL`   | Upstash Redis REST API URL                        | ✅ Yes   |
-| `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis API token                           | ✅ Yes   |
-| `API_RATE_LIMIT`           | Max requests allowed per period                   | ✅ Yes   |
-| `CI`                       | Set to true for CI environments                   | ❌ No    |
-| `BASE_URL`                 | Base URL override for tests                       | ❌ No    |
-| `START_SERVER`             | Start server automatically (for Playwright tests) | ❌ No    |
+| Key                        | Description                     | Required |
+| -------------------------- | ------------------------------- | -------- |
+| `OPENAI_API_KEY`           | Your OpenAI API key             | ✅ Yes   |
+| `UPSTASH_REDIS_REST_URL`   | Upstash Redis REST API URL      | ✅ Yes   |
+| `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis API token         | ✅ Yes   |
+| `CI`                       | Set to true for CI environments | ❌ No    |
+| `BASE_URL`                 | Base URL override for tests     | ❌ No    |
 
 ### 4️⃣ Run the App
 
