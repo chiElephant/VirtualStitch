@@ -26,7 +26,7 @@ describe('RootLayout', () => {
   it('has correct metadata (for SEO and app identity)', () => {
     expect(metadata.title).toBe('Virtual Stitch');
     expect(metadata.description).toBe(
-      'VirtualStitch is a custom apparel design platform by 303Devs LLC'
+      'VirtualStitch is a custom apparel design platform by 303Devs LLC, offering intuitive tools to create, preview, and download unique shirt patterns.'
     );
   });
 });
