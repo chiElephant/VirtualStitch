@@ -50,5 +50,6 @@ export const DecalTypes: {
   },
 };
 
+// Default decal URLs
 export const DEFAULT_LOGO = './icons/logo.png';
 export const DEFAULT_FULL = './icons/pattern.png';
