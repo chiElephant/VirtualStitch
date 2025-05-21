@@ -39,6 +39,7 @@ jobs:
           title: '🚧 CI In Progress'
           summary: 'CI checks are running...'
           token: ${{ secrets.FGT_UPDATE_CHECK_TOKEN }}
+          details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
@@ -69,6 +70,7 @@ jobs:
           title: '❌ CI Failed'
           summary: 'Some checks failed. Review the logs for details.'
           token: ${{ secrets.FGT_UPDATE_CHECK_TOKEN }}
+          details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       - name: ✅ Update check status to success
         if: success() && github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != ''
         uses: ./.github/actions/update-check
@@ -80,6 +82,7 @@ jobs:
           title: '✅ CI Passed'
           summary: 'All tests and lint checks passed successfully.'
           token: ${{ secrets.FGT_UPDATE_CHECK_TOKEN }}
+          details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
       - name: ✅ Update check status to cancelled
         if: cancelled() && github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != ''
@@ -92,6 +95,7 @@ jobs:
           title: '⚠️ CI Cancelled'
           summary: 'The CI run was cancelled.'
           token: ${{ secrets.FGT_UPDATE_CHECK_TOKEN }}
+          details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
       - name: ✅ Update check status to skipped
         if: github.job == 'ci-checks' && github.run_attempt > 1 && github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != ''
@@ -104,6 +108,7 @@ jobs:
           title: '⚠️ CI Skipped'
           summary: 'The CI run was skipped due to a previous attempt.'
           token: ${{ secrets.FGT_UPDATE_CHECK_TOKEN }}
+          details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
       - name: ✅ Update check status to timed_out
         if: failure() && github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != '' && contains(github.event.client_payload.git.message || '', 'timeout')
@@ -116,6 +121,7 @@ jobs:
           title: '⏰ CI Timed Out'
           summary: 'The CI run timed out before completion.'
           token: ${{ secrets.FGT_UPDATE_CHECK_TOKEN }}
+          details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
   playwright-tests:
     if: github.event_name == 'repository_dispatch' && github.event.client_payload.environment == 'preview'
@@ -154,6 +160,7 @@ jobs:
           title: '🚧 Playwright Tests In Progress (${{ matrix.project }})'
           summary: 'Playwright tests are running...'
           token: ${{ secrets.FGT_UPDATE_CHECK_TOKEN }}
+          details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
@@ -187,6 +194,7 @@ jobs:
           title: '❌ Playwright Tests Failed (${{ matrix.project }})'
           summary: 'Some Playwright tests failed. Review the logs for details.'
           token: ${{ secrets.FGT_UPDATE_CHECK_TOKEN }}
+          details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
       - name: ✅ Update check status to success
         if: success() && github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != ''
@@ -199,6 +207,7 @@ jobs:
           title: '✅ Playwright Tests Passed (${{ matrix.project }})'
           summary: 'All Playwright tests passed successfully.'
           token: ${{ secrets.FGT_UPDATE_CHECK_TOKEN }}
+          details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
       - name: ✅ Update check status to cancelled
         if: cancelled() && github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != ''
@@ -211,6 +220,7 @@ jobs:
           title: '⚠️ Playwright Tests Cancelled (${{ matrix.project }})'
           summary: 'The Playwright tests run was cancelled.'
           token: ${{ secrets.FGT_UPDATE_CHECK_TOKEN }}
+          details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
       - name: ✅ Update check status to skipped
         if: github.job == 'playwright-tests' && github.run_attempt > 1 && github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != ''
@@ -223,6 +233,7 @@ jobs:
           title: '⚠️ Playwright Tests Skipped (${{ matrix.project }})'
           summary: 'The Playwright tests run was skipped due to a previous attempt.'
           token: ${{ secrets.FGT_UPDATE_CHECK_TOKEN }}
+          details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
       - name: ✅ Update check status to timed_out
         if: failure() && github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != '' && contains(github.event.client_payload.git.message || '', 'timeout')
@@ -235,6 +246,7 @@ jobs:
           title: '⏰ Playwright Tests Timed Out (${{ matrix.project }})'
           summary: 'The Playwright tests run timed out before completion.'
           token: ${{ secrets.FGT_UPDATE_CHECK_TOKEN }}
+          details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
       - name: 📤 Upload Playwright artifacts (screenshots, traces, videos)
         if: failure()

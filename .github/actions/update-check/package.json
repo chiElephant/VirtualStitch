@@ -1,0 +1,11 @@
+{
+  "name": "update-check",
+  "version": "1.0.0",
+  "description": "GitHub Action to update check run status",
+  "type": "module",
+  "main": "update-check.mjs",
+  "dependencies": {
+    "@actions/core": "^1.11.1",
+    "@octokit/rest": "^20.0.0"
+  }
+}
