@@ -34,50 +34,67 @@ runs:
       with:
         github-token: ${{ inputs.token }}
         script: |
-          const sha = core.getInput('sha');
-          const name = core.getInput('name');
-          const status = core.getInput('status') || undefined;
-          const conclusion = core.getInput('conclusion') || undefined;
-          const title = core.getInput('title') || '';
-          const summary = core.getInput('summary') || '';
-          const details_url = core.getInput('details_url') || undefined;
+          try {
+            const sha = core.getInput('sha');
+            const name = core.getInput('name');
+            const status = core.getInput('status') || undefined;
+            const conclusion = core.getInput('conclusion') || undefined;
+            const title = core.getInput('title') || '';
+            const summary = core.getInput('summary') || '';
+            const details_url = core.getInput('details_url') || undefined;
 
+            core.info(`[DEBUG] sha=${sha}`);
+            core.info(`[DEBUG] check name=${name}`);
+            core.info(`[DEBUG] status=${status}`);
+            core.info(`[DEBUG] conclusion=${conclusion}`);
+            core.info(`[DEBUG] title=${title}`);
+            core.info(`[DEBUG] summary=${summary}`);
+            core.info(`[DEBUG] details_url=${details_url}`);
 
-          const { data: { check_runs } } = await github.rest.checks.listForRef({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            ref: sha,
-            headers: {
-              'X-GitHub-Api-Version': '2022-11-28'
+            const { data: { check_runs } } = await github.rest.checks.listForRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: sha,
+              headers: {
+                'X-GitHub-Api-Version': '2022-11-28'
+              }
+            });
+
+            core.info(`[DEBUG] Found ${check_runs.length} check runs for ref ${sha}`);
+
+            const checkRun = check_runs.find(c => c.name === name);
+            if (!checkRun) {
+              core.setFailed(`No check run found with name '${name}' for sha ${sha}`);
+              return;
             }
-          });
 
-          const checkRun = check_runs.find(c => c.name === name);
-          if (!checkRun) {
-            core.setFailed(`No check run found with name '${name}' for sha ${sha}`);
-            return;
+            const updatePayload = {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              check_run_id: checkRun.id,
+              status,
+              conclusion,
+              completed_at: conclusion ? new Date().toISOString() : undefined,
+              output: {
+                title,
+                summary
+              }
+            };
+            if (details_url) {
+              updatePayload.details_url = details_url;
+            }
+
+            core.info(`[DEBUG] Sending update payload: ${JSON.stringify(updatePayload, null, 2)}`);
+
+            const response = await github.rest.checks.update({
+              ...updatePayload,
+              headers: {
+                'X-GitHub-Api-Version': '2022-11-28'
+              }
+            });
+
+            core.info(`[DEBUG] Check run updated successfully. Response: ${JSON.stringify(response.data, null, 2)}`);
+          } catch (err) {
+            core.setFailed(`[ERROR] ${err.message || err}`);
+            core.info(`[ERROR DEBUG] ${JSON.stringify(err, Object.getOwnPropertyNames(err), 2)}`);
           }
-
-          const updatePayload = {
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            check_run_id: checkRun.id,
-            status,
-            conclusion,
-            completed_at: conclusion ? new Date().toISOString() : undefined,
-            output: {
-              title,
-              summary
-            }
-          };
-          if (details_url) {
-            updatePayload.details_url = details_url;
-          }
-
-          await github.rest.checks.update({
-            ...updatePayload,
-            headers: {
-              'X-GitHub-Api-Version': '2022-11-28'
-            }
-          });
-          core.info(`Check '${name}' updated to status=${status} conclusion=${conclusion}`);
