@@ -1,0 +1,83 @@
+name: 'Update Check Run'
+description: "Update a GitHub Check Run's status"
+
+inputs:
+  sha:
+    description: 'The SHA of the commit to update the check for'
+    required: true
+  name:
+    description: 'The name of the check run to update'
+    required: true
+  status:
+    description: 'The new status of the check run (queued, in_progress, completed)'
+    required: false
+  conclusion:
+    description: 'The final result of the check run (success, failure, cancelled, etc)'
+    required: false
+  title:
+    description: "Title for the check run's output"
+    required: false
+  summary:
+    description: "Summary text for the check run's output"
+    required: false
+  details_url:
+    description: 'Optional URL with more information about the check'
+    required: false
+  token:
+    description: 'GitHub token with checks:write permission'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - uses: actions/github-script@v6
+      with:
+        github-token: ${{ inputs.token }}
+        script: |
+          const sha = core.getInput('sha');
+          const name = core.getInput('name');
+          const status = core.getInput('status') || undefined;
+          const conclusion = core.getInput('conclusion') || undefined;
+          const title = core.getInput('title') || '';
+          const summary = core.getInput('summary') || '';
+          const details_url = core.getInput('details_url') || undefined;
+
+
+          const { data: { check_runs } } = await github.rest.checks.listForRef({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            ref: sha,
+            headers: {
+              'X-GitHub-Api-Version': '2022-11-28'
+            }
+          });
+
+          const checkRun = check_runs.find(c => c.name === name);
+          if (!checkRun) {
+            core.setFailed(`No check run found with name '${name}' for sha ${sha}`);
+            return;
+          }
+
+          const updatePayload = {
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            check_run_id: checkRun.id,
+            status,
+            conclusion,
+            completed_at: conclusion ? new Date().toISOString() : undefined,
+            output: {
+              title,
+              summary
+            }
+          };
+          if (details_url) {
+            updatePayload.details_url = details_url;
+          }
+
+          await github.rest.checks.update({
+            ...updatePayload,
+            headers: {
+              'X-GitHub-Api-Version': '2022-11-28'
+            }
+          });
+          core.info(`Check '${name}' updated to status=${status} conclusion=${conclusion}`);

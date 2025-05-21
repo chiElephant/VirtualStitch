@@ -26,19 +26,17 @@ jobs:
       UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
 
     steps:
-      - name: 🕒 Report CI pending status to GitHub PR
-        uses: actions/github-script@v7
+      - name: ✅ Mark check as in progress
+        if: github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != ''
+        uses: ./.github/actions/update-check
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            github.rest.repos.createCommitStatus({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              sha: '${{ github.event.client_payload.git.sha }}',
-              state: 'pending',
-              context: '✅ ci-checks',
-              description: 'CI checks are in progress',
-            })
+          sha: ${{ github.event.client_payload.git.sha }}
+          name: '✅ ci-checks'
+          status: 'in_progress'
+          title: '⏳ CI Running'
+          summary: 'The CI checks are currently in progress.'
+          token: ${{ secrets.FGT_UPDATE_CHECK_TOKEN }}
+
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
 
@@ -57,35 +55,64 @@ jobs:
       - name: 🧪 Run Jest tests
         run: npm run test
 
-      - name: ❌ Report CI failure to GitHub PR
-        if: failure()
-        uses: actions/github-script@v7
+      - name: ✅ Update check status to failed
+        if: failure() && github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != ''
+        uses: ./.github/actions/update-check
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            github.rest.repos.createCommitStatus({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              sha: '${{ github.event.client_payload.git.sha }}',
-              state: 'failure',
-              context: '✅ ci-checks',
-              description: 'Jest or Lint checks failed',
-            })
+          sha: ${{ github.event.client_payload.git.sha }}
+          name: '✅ ci-checks'
+          status: 'completed'
+          conclusion: 'failure'
+          title: '❌ CI Failed'
+          summary: 'Some checks failed. Review the logs for details.'
+          token: ${{ secrets.FGT_UPDATE_CHECK_TOKEN }}
+      - name: ✅ Update check status to success
+        if: success() && github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != ''
+        uses: ./.github/actions/update-check
+        with:
+          sha: ${{ github.event.client_payload.git.sha }}
+          name: '✅ ci-checks'
+          status: 'completed'
+          conclusion: 'success'
+          title: '✅ CI Passed'
+          summary: 'All tests and lint checks passed successfully.'
+          token: ${{ secrets.FGT_UPDATE_CHECK_TOKEN }}
 
-      - name: ✅ Report status to GitHub PR
-        if: success()
-        uses: actions/github-script@v7
+      - name: ✅ Update check status to cancelled
+        if: cancelled() && github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != ''
+        uses: ./.github/actions/update-check
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            github.rest.repos.createCommitStatus({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              sha: '${{ github.event.client_payload.git.sha }}',
-              state: 'success',
-              context: '✅ ci-checks',
-              description: 'Jest and Lint checks passed',
-            })
+          sha: ${{ github.event.client_payload.git.sha }}
+          name: '✅ ci-checks'
+          status: 'completed'
+          conclusion: 'cancelled'
+          title: '⚠️ CI Cancelled'
+          summary: 'The CI run was cancelled.'
+          token: ${{ secrets.FGT_UPDATE_CHECK_TOKEN }}
+
+      - name: ✅ Update check status to skipped
+        if: github.job == 'ci-checks' && github.run_attempt > 1 && github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != ''
+        uses: ./.github/actions/update-check
+        with:
+          sha: ${{ github.event.client_payload.git.sha }}
+          name: '✅ ci-checks'
+          status: 'completed'
+          conclusion: 'skipped'
+          title: '⚠️ CI Skipped'
+          summary: 'The CI run was skipped due to a previous attempt.'
+          token: ${{ secrets.FGT_UPDATE_CHECK_TOKEN }}
+
+      - name: ✅ Update check status to timed_out
+        if: failure() && github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != '' && contains(github.event.client_payload.git.message || '', 'timeout')
+        uses: ./.github/actions/update-check
+        with:
+          sha: ${{ github.event.client_payload.git.sha }}
+          name: '✅ ci-checks'
+          status: 'completed'
+          conclusion: 'timed_out'
+          title: '⏰ CI Timed Out'
+          summary: 'The CI run timed out before completion.'
+          token: ${{ secrets.FGT_UPDATE_CHECK_TOKEN }}
 
   playwright-tests:
     if: github.event_name == 'repository_dispatch' && github.event.client_payload.environment == 'preview'
@@ -111,25 +138,22 @@ jobs:
       VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
 
     steps:
-      - name: 🕒 Report Playwright pending status to GitHub PR
-        uses: actions/github-script@v7
+      - name: ✅ Mark check as in progress
+        if: github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != ''
+        uses: ./.github/actions/update-check
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            github.rest.repos.createCommitStatus({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              sha: '${{ github.event.client_payload.git.sha }}',
-              state: 'pending',
-              context: 'playwright-tests (${ { matrix.project } })',
-              description: 'Playwright ${ { matrix.project } } tests are in progress',
-            })
+          sha: ${{ github.event.client_payload.git.sha }}
+          name: 'playwright-tests (${{ matrix.project }})'
+          status: 'in_progress'
+          title: '⏳ Playwright Tests Running (${{ matrix.project }})'
+          summary: 'The Playwright tests are currently in progress.'
+          token: ${{ secrets.FGT_UPDATE_CHECK_TOKEN }}
 
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
-
         with:
-          ref: '${{ github.event.client_payload.git.sha }}'
+          ref: ${{ github.event.client_payload.git.sha }}
+          fetch-depth: 0
 
       - name: 🔧 Set up Node.js
         uses: actions/setup-node@v4
@@ -141,41 +165,70 @@ jobs:
         run: |
           npm ci --legacy-peer-deps
 
-      - name: 🧪 Run Playwright tests (${ { matrix.project } })
-        run: npx playwright test --project=${{ matrix.project }} --reporter=list
+      - name: 🧪 Run Playwright tests (${{ matrix.project }})
+        run: npx playwright test --project=${{ matrix.project }} --reporter=list,html
         env:
           CI: true
-        shell: bash
 
-      - name: ❌ Report Playwright failure to GitHub PR
-        if: failure()
-        uses: actions/github-script@v7
+      - name: ✅ Update check status to failed
+        if: failure() && github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != ''
+        uses: ./.github/actions/update-check
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            github.rest.repos.createCommitStatus({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              sha: '${{ github.event.client_payload.git.sha }}',
-              state: 'failure',
-              context: 'playwright-tests (${ { matrix.project } })',
-              description: 'Playwright ${ { matrix.project } } tests failed',
-            })
+          sha: ${{ github.event.client_payload.git.sha }}
+          name: 'playwright-tests (${{ matrix.project }})'
+          status: 'completed'
+          conclusion: 'failure'
+          title: '❌ Playwright Tests Failed (${{ matrix.project }})'
+          summary: 'Some Playwright tests failed. Review the logs for details.'
+          token: ${{ secrets.FGT_UPDATE_CHECK_TOKEN }}
 
-      - name: ✅ Report status to GitHub PR
-        if: success()
-        uses: actions/github-script@v7
+      - name: ✅ Update check status to success
+        if: success() && github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != ''
+        uses: ./.github/actions/update-check
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            github.rest.repos.createCommitStatus({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              sha: '${{ github.event.client_payload.git.sha }}',
-              state: 'success',
-              context: 'playwright-tests (${ { matrix.project } })',
-              description: 'Playwright ${ { matrix.project } } tests passed',
-            })
+          sha: ${{ github.event.client_payload.git.sha }}
+          name: 'playwright-tests (${{ matrix.project }})'
+          status: 'completed'
+          conclusion: 'success'
+          title: '✅ Playwright Tests Passed (${{ matrix.project }})'
+          summary: 'All Playwright tests passed successfully.'
+          token: ${{ secrets.FGT_UPDATE_CHECK_TOKEN }}
+
+      - name: ✅ Update check status to cancelled
+        if: cancelled() && github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != ''
+        uses: ./.github/actions/update-check
+        with:
+          sha: ${{ github.event.client_payload.git.sha }}
+          name: 'playwright-tests (${{ matrix.project }})'
+          status: 'completed'
+          conclusion: 'cancelled'
+          title: '⚠️ Playwright Tests Cancelled (${{ matrix.project }})'
+          summary: 'The Playwright tests run was cancelled.'
+          token: ${{ secrets.FGT_UPDATE_CHECK_TOKEN }}
+
+      - name: ✅ Update check status to skipped
+        if: github.job == 'playwright-tests' && github.run_attempt > 1 && github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != ''
+        uses: ./.github/actions/update-check
+        with:
+          sha: ${{ github.event.client_payload.git.sha }}
+          name: 'playwright-tests (${{ matrix.project }})'
+          status: 'completed'
+          conclusion: 'skipped'
+          title: '⚠️ Playwright Tests Skipped (${{ matrix.project }})'
+          summary: 'The Playwright tests run was skipped due to a previous attempt.'
+          token: ${{ secrets.FGT_UPDATE_CHECK_TOKEN }}
+
+      - name: ✅ Update check status to timed_out
+        if: failure() && github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != '' && contains(github.event.client_payload.git.message || '', 'timeout')
+        uses: ./.github/actions/update-check
+        with:
+          sha: ${{ github.event.client_payload.git.sha }}
+          name: 'playwright-tests (${{ matrix.project }})'
+          status: 'completed'
+          conclusion: 'timed_out'
+          title: '⏰ Playwright Tests Timed Out (${{ matrix.project }})'
+          summary: 'The Playwright tests run timed out before completion.'
+          token: ${{ secrets.FGT_UPDATE_CHECK_TOKEN }}
 
       - name: 📤 Upload Playwright artifacts (screenshots, traces, videos)
         if: failure()
