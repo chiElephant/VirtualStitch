@@ -3,6 +3,11 @@ import * as core from '@actions/core';
 import { Octokit } from '@octokit/rest';
 
 // Helper: wait for GitHub to index the commit SHA
+// This function retries a GET request to the GitHub Commits API
+// to check whether the given SHA is accessible.
+// It's useful when GitHub hasn't fully registered the commit yet (e.g. after repository_dispatch).
+// If the commit isn't found (HTTP 404 or 422), it waits and retries.
+// Throws an error if the commit is not found after all attempts.
 async function waitForCommit(octokit, owner, repo, sha, attempts = 6, interval = 5000) {
   for (let i = 1; i <= attempts; i++) {
     try {
@@ -55,6 +60,7 @@ async function waitForCommit(octokit, owner, repo, sha, attempts = 6, interval =
       auth: token,
     });
     
+    // Wait for the GitHub API to recognize the commit before proceeding
     await waitForCommit(octokit, owner, repo, sha);
     
     // Fetch all check runs associated with the specified commit SHA
