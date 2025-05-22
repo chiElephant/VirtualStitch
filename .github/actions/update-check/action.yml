@@ -9,7 +9,7 @@ inputs:
     description: 'The name of the check run to update'
     required: true
   status:
-    description: 'The new status of the check run (queued, in_progress, completed)'
+    description: 'The new status of the check run (in_progress, completed)'
     required: false
   conclusion:
     description: 'The final result of the check run (success, failure, cancelled, etc)'
