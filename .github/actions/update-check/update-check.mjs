@@ -73,14 +73,27 @@ async function waitForCommit(octokit, owner, repo, sha, attempts = 6, interval =
     });
 
     // Find the specific check run by name
-    const checkRun = listResponse.data.check_runs.find((c) => c.name === name);
+    let checkRun = listResponse.data.check_runs.find((c) => c.name === name);
+
     if (!checkRun) {
-      core.warning(`No check run found with name '${name}' for sha ${sha}`);
-      core.info(
-        `Available check runs:\n${listResponse.data.check_runs.map((c) => c.name).join('\n')}`
-      );
-      core.setFailed(`Check run '${name}' not found`);
-      return;
+      core.info(`ℹ️ No check run found for '${name}' on sha ${sha}. Creating one now...`);
+
+      const createResponse = await octokit.checks.create({
+        owner,
+        repo,
+        name,
+        head_sha: sha,
+        status: status || 'in_progress',
+        started_at: new Date().toISOString(), // 👈 Add this line
+        output: {
+          title: title || name,
+          summary: summary || '',
+        },
+        details_url: details_url || undefined,
+      });
+
+      checkRun = createResponse.data;
+      core.info(`✅ Created check run '${name}' with ID ${checkRun.id}`);
     }
 
     // Prepare the payload for updating the check run

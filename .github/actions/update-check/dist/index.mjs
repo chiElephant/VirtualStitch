@@ -31641,6 +31641,11 @@ var __webpack_exports__ = {};
 
 
 // Helper: wait for GitHub to index the commit SHA
+// This function retries a GET request to the GitHub Commits API
+// to check whether the given SHA is accessible.
+// It's useful when GitHub hasn't fully registered the commit yet (e.g. after repository_dispatch).
+// If the commit isn't found (HTTP 404 or 422), it waits and retries.
+// Throws an error if the commit is not found after all attempts.
 async function waitForCommit(octokit, owner, repo, sha, attempts = 6, interval = 5000) {
   for (let i = 1; i <= attempts; i++) {
     try {
@@ -31693,6 +31698,7 @@ async function waitForCommit(octokit, owner, repo, sha, attempts = 6, interval =
       auth: token,
     });
     
+    // Wait for the GitHub API to recognize the commit before proceeding
     await waitForCommit(octokit, owner, repo, sha);
     
     // Fetch all check runs associated with the specified commit SHA
@@ -31705,14 +31711,27 @@ async function waitForCommit(octokit, owner, repo, sha, attempts = 6, interval =
     });
 
     // Find the specific check run by name
-    const checkRun = listResponse.data.check_runs.find((c) => c.name === name);
+    let checkRun = listResponse.data.check_runs.find((c) => c.name === name);
+
     if (!checkRun) {
-      _actions_core__WEBPACK_IMPORTED_MODULE_0__.warning(`No check run found with name '${name}' for sha ${sha}`);
-      _actions_core__WEBPACK_IMPORTED_MODULE_0__.info(
-        `Available check runs:\n${listResponse.data.check_runs.map((c) => c.name).join('\n')}`
-      );
-      _actions_core__WEBPACK_IMPORTED_MODULE_0__.setFailed(`Check run '${name}' not found`);
-      return;
+      _actions_core__WEBPACK_IMPORTED_MODULE_0__.info(`ℹ️ No check run found for '${name}' on sha ${sha}. Creating one now...`);
+
+      const createResponse = await octokit.checks.create({
+        owner,
+        repo,
+        name,
+        head_sha: sha,
+        status: status || 'in_progress',
+        started_at: new Date().toISOString(), // 👈 Add this line
+        output: {
+          title: title || name,
+          summary: summary || '',
+        },
+        details_url: details_url || undefined,
+      });
+
+      checkRun = createResponse.data;
+      _actions_core__WEBPACK_IMPORTED_MODULE_0__.info(`✅ Created check run '${name}' with ID ${checkRun.id}`);
     }
 
     // Prepare the payload for updating the check run

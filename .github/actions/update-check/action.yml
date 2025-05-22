@@ -24,7 +24,7 @@ inputs:
     description: 'Optional URL with more information about the check'
     required: false
   token:
-    description: 'GitHub token with checks:write permission'
+    description: 'GitHub FGA token'
     required: true
 
 runs:
