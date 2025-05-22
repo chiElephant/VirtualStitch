@@ -1,5 +1,8 @@
 name: CI
 
+permissions:
+  checks: write
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -7,6 +10,13 @@ concurrency:
 on:
   repository_dispatch:
     types: [vercel.deployment.success]
+
+env:
+  NODE_ENV: test
+  BASE_URL: ${{ github.event.client_payload.url }}
+  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+  UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+  UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
 
 jobs:
   ci-checks:
@@ -17,13 +27,6 @@ jobs:
       - Linux
       - ARM64
     timeout-minutes: 5
-
-    env:
-      NODE_ENV: test
-      BASE_URL: ${{ github.event.client_payload.url }}
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
-      UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
 
     steps:
       - name: 🧪 Log GitHub context
@@ -60,7 +63,7 @@ jobs:
         run: npm run test
 
       - name: ✅ Update check status to failed
-        if: failure() && github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != ''
+        if: always() && failure() && github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != ''
         uses: ./.github/actions/update-check
         with:
           sha: ${{ github.event.client_payload.git.sha }}
@@ -71,8 +74,9 @@ jobs:
           summary: 'Some checks failed. Review the logs for details.'
           token: ${{ secrets.FGT_UPDATE_CHECK_TOKEN }}
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
       - name: ✅ Update check status to success
-        if: success() && github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != ''
+        if: always() && success() && github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != ''
         uses: ./.github/actions/update-check
         with:
           sha: ${{ github.event.client_payload.git.sha }}
@@ -85,7 +89,7 @@ jobs:
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
       - name: ✅ Update check status to cancelled
-        if: cancelled() && github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != ''
+        if: always() && cancelled() && github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != ''
         uses: ./.github/actions/update-check
         with:
           sha: ${{ github.event.client_payload.git.sha }}
@@ -98,7 +102,7 @@ jobs:
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
       - name: ✅ Update check status to skipped
-        if: github.job == 'ci-checks' && github.run_attempt > 1 && github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != ''
+        if: always() && github.job == 'ci-checks' && github.run_attempt > 1 && github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != ''
         uses: ./.github/actions/update-check
         with:
           sha: ${{ github.event.client_payload.git.sha }}
@@ -111,7 +115,7 @@ jobs:
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
       - name: ✅ Update check status to timed_out
-        if: failure() && github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != '' && contains(github.event.client_payload.git.message || '', 'timeout')
+        if: always() && failure() && github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != '' && contains(github.event.client_payload.git.message || '', 'timeout')
         uses: ./.github/actions/update-check
         with:
           sha: ${{ github.event.client_payload.git.sha }}
@@ -137,14 +141,6 @@ jobs:
       fail-fast: true
       matrix:
         project: [chromium, firefox, webkit]
-
-    env:
-      NODE_ENV: test
-      BASE_URL: ${{ github.event.client_payload.url }}
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
-      UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
-      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
 
     steps:
       - name: 🧪 Log GitHub context
@@ -184,7 +180,7 @@ jobs:
           CI: true
 
       - name: ✅ Update check status to failed
-        if: failure() && github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != ''
+        if: always() && failure() && github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != ''
         uses: ./.github/actions/update-check
         with:
           sha: ${{ github.event.client_payload.git.sha }}
@@ -197,7 +193,7 @@ jobs:
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
       - name: ✅ Update check status to success
-        if: success() && github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != ''
+        if: always() && success() && github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != ''
         uses: ./.github/actions/update-check
         with:
           sha: ${{ github.event.client_payload.git.sha }}
@@ -210,7 +206,7 @@ jobs:
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
       - name: ✅ Update check status to cancelled
-        if: cancelled() && github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != ''
+        if: always() && cancelled() && github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != ''
         uses: ./.github/actions/update-check
         with:
           sha: ${{ github.event.client_payload.git.sha }}
@@ -223,7 +219,7 @@ jobs:
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
       - name: ✅ Update check status to skipped
-        if: github.job == 'playwright-tests' && github.run_attempt > 1 && github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != ''
+        if: always() && github.job == 'playwright-tests' && github.run_attempt > 1 && github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != ''
         uses: ./.github/actions/update-check
         with:
           sha: ${{ github.event.client_payload.git.sha }}
@@ -236,7 +232,7 @@ jobs:
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
       - name: ✅ Update check status to timed_out
-        if: failure() && github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != '' && contains(github.event.client_payload.git.message || '', 'timeout')
+        if: always() && failure() && github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != '' && contains(github.event.client_payload.git.message || '', 'timeout')
         uses: ./.github/actions/update-check
         with:
           sha: ${{ github.event.client_payload.git.sha }}
