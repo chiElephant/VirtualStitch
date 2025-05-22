@@ -41,7 +41,7 @@ jobs:
           status: 'in_progress'
           title: '🚧 CI In Progress'
           summary: 'CI checks are running...'
-          token: ${{ secrets.FGT_UPDATE_CHECK_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
       - name: ⬇️ Checkout code
