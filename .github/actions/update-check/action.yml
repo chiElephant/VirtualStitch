@@ -28,8 +28,5 @@ inputs:
     required: true
 
 runs:
-  using: 'composite'
-  steps:
-    - name: 🧪 Run update-check JavaScript
-      run: node .github/actions/update-check/update-check.mjs
-      shell: bash
+  using: 'node20'
+  main: 'dist/index.mjs'
