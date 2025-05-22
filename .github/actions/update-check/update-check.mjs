@@ -43,6 +43,7 @@ async function waitForCommit(octokit, owner, repo, sha, attempts = 6, interval =
     const token = core.getInput('token');
 
     // Extract owner and repository name from the environment variable
+    // This is automatically set by GitHub Actions as "owner/repo"
     const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
 
     // Log debug information for tracing
@@ -78,6 +79,8 @@ async function waitForCommit(octokit, owner, repo, sha, attempts = 6, interval =
     if (!checkRun) {
       core.info(`ℹ️ No check run found for '${name}' on sha ${sha}. Creating one now...`);
 
+      // Manually create the check run if it wasn't auto-created (e.g., from a dispatch event)
+      // This happens when the workflow is triggered on a SHA that GitHub hasn't run jobs for
       const createResponse = await octokit.checks.create({
         owner,
         repo,
@@ -110,7 +113,8 @@ async function waitForCommit(octokit, owner, repo, sha, attempts = 6, interval =
         summary,
       },
     };
-    // Include the details URL if provided
+    
+    // Include the details URL if provided (shown in the GitHub Checks UI for user navigation)
     if (details_url) {
       updatePayload.details_url = details_url;
     }
