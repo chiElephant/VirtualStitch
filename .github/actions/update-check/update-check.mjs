@@ -2,6 +2,29 @@
 import * as core from '@actions/core';
 import { Octokit } from '@octokit/rest';
 
+// Helper: wait for GitHub to index the commit SHA
+async function waitForCommit(octokit, owner, repo, sha, attempts = 6, interval = 5000) {
+  for (let i = 1; i <= attempts; i++) {
+    try {
+      await octokit.request('GET /repos/{owner}/{repo}/commits/{ref}', {
+        owner,
+        repo,
+        ref: sha,
+      });
+      core.info(`✅ Commit ${sha} is now available.`);
+      return true;
+    } catch (err) {
+      if (err.status === 422 || err.status === 404) {
+        core.info(`⏳ Commit ${sha} not found (attempt ${i}/${attempts}). Retrying in ${interval / 1000}s...`);
+        await new Promise(res => setTimeout(res, interval));
+      } else {
+        throw err;
+      }
+    }
+  }
+  throw new Error(`🛑 Commit ${sha} not available after ${attempts} retries.`);
+}
+
 (async () => {
   try {
     // Retrieve inputs provided to the action
@@ -26,11 +49,14 @@ import { Octokit } from '@octokit/rest';
     core.info(`[DEBUG] summary=${summary}`);
     core.info(`[DEBUG] details_url=${details_url}`);
 
+    
     // Initialize Octokit with the provided token for authentication
     const octokit = new Octokit({
       auth: token,
     });
-
+    
+    await waitForCommit(octokit, owner, repo, sha);
+    
     // Fetch all check runs associated with the specified commit SHA
     // This is necessary because the Checks API requires the check run ID to update a check run,
     // and we need to find the ID corresponding to the check run name provided
