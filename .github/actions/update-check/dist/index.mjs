@@ -31681,8 +31681,11 @@ var __webpack_exports__ = {};
     // Find the specific check run by name
     const checkRun = listResponse.data.check_runs.find((c) => c.name === name);
     if (!checkRun) {
-      // If the check run is not found, fail the action with an appropriate message
-      _actions_core__WEBPACK_IMPORTED_MODULE_0__.setFailed(`No check run found with name '${name}' for sha ${sha}`);
+      _actions_core__WEBPACK_IMPORTED_MODULE_0__.warning(`No check run found with name '${name}' for sha ${sha}`);
+      _actions_core__WEBPACK_IMPORTED_MODULE_0__.info(
+        `Available check runs:\n${listResponse.data.check_runs.map((c) => c.name).join('\n')}`
+      );
+      _actions_core__WEBPACK_IMPORTED_MODULE_0__.setFailed(`Check run '${name}' not found`);
       return;
     }
 

@@ -43,8 +43,11 @@ import { Octokit } from '@octokit/rest';
     // Find the specific check run by name
     const checkRun = listResponse.data.check_runs.find((c) => c.name === name);
     if (!checkRun) {
-      // If the check run is not found, fail the action with an appropriate message
-      core.setFailed(`No check run found with name '${name}' for sha ${sha}`);
+      core.warning(`No check run found with name '${name}' for sha ${sha}`);
+      core.info(
+        `Available check runs:\n${listResponse.data.check_runs.map((c) => c.name).join('\n')}`
+      );
+      core.setFailed(`Check run '${name}' not found`);
       return;
     }
 

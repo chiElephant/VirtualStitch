@@ -36,8 +36,8 @@ jobs:
         if: github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != ''
         uses: ./.github/actions/update-check
         with:
-          sha: ${{ github.event.client_payload.git.sha }}
-          name: '✅ ci-checks'
+          sha: ${{ github.event.client_payload.git.sha }}.
+          name: 'ci-checks'
           status: 'in_progress'
           title: '🚧 CI In Progress'
           summary: 'CI checks are running...'
@@ -67,7 +67,7 @@ jobs:
         uses: ./.github/actions/update-check
         with:
           sha: ${{ github.event.client_payload.git.sha }}
-          name: '✅ ci-checks'
+          name: 'ci-checks'
           status: 'completed'
           conclusion: 'failure'
           title: '❌ CI Failed'
@@ -80,7 +80,7 @@ jobs:
         uses: ./.github/actions/update-check
         with:
           sha: ${{ github.event.client_payload.git.sha }}
-          name: '✅ ci-checks'
+          name: 'ci-checks'
           status: 'completed'
           conclusion: 'success'
           title: '✅ CI Passed'
@@ -93,7 +93,7 @@ jobs:
         uses: ./.github/actions/update-check
         with:
           sha: ${{ github.event.client_payload.git.sha }}
-          name: '✅ ci-checks'
+          name: 'ci-checks'
           status: 'completed'
           conclusion: 'cancelled'
           title: '⚠️ CI Cancelled'
@@ -106,7 +106,7 @@ jobs:
         uses: ./.github/actions/update-check
         with:
           sha: ${{ github.event.client_payload.git.sha }}
-          name: '✅ ci-checks'
+          name: 'ci-checks'
           status: 'completed'
           conclusion: 'skipped'
           title: '⚠️ CI Skipped'
@@ -119,7 +119,7 @@ jobs:
         uses: ./.github/actions/update-check
         with:
           sha: ${{ github.event.client_payload.git.sha }}
-          name: '✅ ci-checks'
+          name: 'ci-checks'
           status: 'completed'
           conclusion: 'timed_out'
           title: '⏰ CI Timed Out'
