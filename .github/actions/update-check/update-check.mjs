@@ -1,3 +1,4 @@
+// This is a testing comment.
 // Import necessary modules from GitHub Actions toolkit and Octokit REST API
 import * as core from '@actions/core';
 import { Octokit } from '@octokit/rest';
