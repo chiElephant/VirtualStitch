@@ -52,6 +52,7 @@ jobs:
           summary: 'CI checks are running...'
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           host: ${{ secrets.APP_HOST }}
+          app_secret: ${{ secrets.INTERNAL_APP_SECRET }}
 
       - name: 📦 Install dependencies
         run: npm ci --legacy-peer-deps
@@ -74,6 +75,8 @@ jobs:
           summary: 'Some checks failed. Review the logs for details.'
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           host: ${{ secrets.APP_HOST }}
+          app_secret: ${{ secrets.INTERNAL_APP_SECRET }}
+
       - name: ✅ Report ci-checks success to GitHub App
         if: always() && success()
         uses: ./.github/actions/report-checks
@@ -86,6 +89,8 @@ jobs:
           summary: 'All tests and lint checks passed successfully.'
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           host: ${{ secrets.APP_HOST }}
+          app_secret: ${{ secrets.INTERNAL_APP_SECRET }}
+
       - name: ⚠️ Report ci-checks cancelled to GitHub App
         if: always() && cancelled()
         uses: ./.github/actions/report-checks
@@ -98,6 +103,8 @@ jobs:
           summary: 'The CI run was cancelled.'
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           host: ${{ secrets.APP_HOST }}
+          app_secret: ${{ secrets.INTERNAL_APP_SECRET }}
+
       - name: ⚠️ Report ci-checks skipped to GitHub App
         if: always() && github.run_attempt > 1
         uses: ./.github/actions/report-checks
@@ -110,6 +117,8 @@ jobs:
           summary: 'The CI run was skipped due to a previous attempt.'
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           host: ${{ secrets.APP_HOST }}
+          app_secret: ${{ secrets.INTERNAL_APP_SECRET }}
+
       - name: ⏰ Report ci-checks timed_out to GitHub App
         if: always() && failure() && contains(github.event.client_payload.git.message || '', 'timeout')
         uses: ./.github/actions/report-checks
@@ -122,6 +131,8 @@ jobs:
           summary: 'The CI run timed out before completion.'
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           host: ${{ secrets.APP_HOST }}
+          app_secret: ${{ secrets.INTERNAL_APP_SECRET }}
+
       - name: 📝 Summary report for CI Checks
         if: always()
         run: |
@@ -155,6 +166,7 @@ jobs:
           summary: Playwright tests are running...
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           host: ${{ secrets.APP_HOST }}
+          app_secret: ${{ secrets.INTERNAL_APP_SECRET }}
 
       - name: 🧪 Log GitHub context
         run: echo '${{ toJson(github) }}'
@@ -191,6 +203,7 @@ jobs:
           summary: Some Playwright tests failed. Review the logs for details.
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           host: ${{ secrets.APP_HOST }}
+          app_secret: ${{ secrets.INTERNAL_APP_SECRET }}
 
       - name: ✅ Report playwright success to GitHub App
         if: always() && success()
@@ -204,6 +217,7 @@ jobs:
           summary: All Playwright tests passed successfully.
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           host: ${{ secrets.APP_HOST }}
+          app_secret: ${{ secrets.INTERNAL_APP_SECRET }}
 
       - name: ⚠️ Report playwright cancelled to GitHub App
         if: always() && cancelled()
@@ -217,6 +231,7 @@ jobs:
           summary: The Playwright tests run was cancelled.
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           host: ${{ secrets.APP_HOST }}
+          app_secret: ${{ secrets.INTERNAL_APP_SECRET }}
 
       - name: ⚠️ Report playwright skipped to GitHub App
         if: always() && github.run_attempt > 1
@@ -230,6 +245,7 @@ jobs:
           summary: The Playwright tests run was skipped due to a previous attempt.
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           host: ${{ secrets.APP_HOST }}
+          app_secret: ${{ secrets.INTERNAL_APP_SECRET }}
 
       - name: ⏰ Report playwright timed_out to GitHub App
         if: always() && failure() && contains(github.event.client_payload.git.message || '', 'timeout')
@@ -243,6 +259,7 @@ jobs:
           summary: The Playwright tests run timed out before completion.
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           host: ${{ secrets.APP_HOST }}
+          app_secret: ${{ secrets.INTERNAL_APP_SECRET }}
 
       - name: 📤 Upload Playwright artifacts (screenshots, traces, videos)
         if: failure()

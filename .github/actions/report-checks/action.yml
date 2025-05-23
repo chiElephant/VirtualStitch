@@ -26,14 +26,17 @@ inputs:
   host:
     description: 'The domain to send the POST request to (e.g., virtual-stitch.303devs.com)'
     required: true
+  app_secret:
+    description: 'Internal app secret to authorize the check update'
+    required: true
 
 runs:
   using: 'composite'
   steps:
     - run: |
-        OWNER_UPPER=$(echo "${{ github.repository_owner }}" | tr '[:lower:]' '[:upper:]')
+        OWNER_UPPER=$(echo "${GITHUB_REPOSITORY_OWNER}" | tr '[:lower:]' '[:upper:]')
         curl -X POST https://${{ inputs.host }}/api/github-webhook/${OWNER_UPPER}/report \
-          -H "Authorization: Bearer ${{ secrets.INTERNAL_APP_SECRET }}" \
+          -H "Authorization: Bearer ${{ inputs.app_secret }}" \
           -H "Content-Type: application/json" \
           -d @- <<EOF
         {
