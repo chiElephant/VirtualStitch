@@ -29,16 +29,6 @@ jobs:
     timeout-minutes: 5
 
     steps:
-      - name: 🚀 Report ci-checks in_progress to GitHub App
-        uses: ./.github/actions/report-checks
-        with:
-          sha: ${{ github.event.client_payload.git.sha }}
-          status: in_progress
-          name: ✅ ci-checks
-          title: '🚧 CI In Progress'
-          summary: 'CI checks are running...'
-          details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          host: ${{ secrets.APP_HOST }}
       - name: 🧪 Log GitHub context
         run: echo '${{ toJson(github) }}'
 
@@ -50,6 +40,17 @@ jobs:
         with:
           node-version: lts/*
           cache: 'npm'
+
+      - name: 🚀 Report ci-checks in_progress to GitHub App
+        uses: ./.github/actions/report-checks
+        with:
+          sha: ${{ github.event.client_payload.git.sha }}
+          status: in_progress
+          name: ✅ ci-checks
+          title: '🚧 CI In Progress'
+          summary: 'CI checks are running...'
+          details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          host: ${{ secrets.APP_HOST }}
 
       - name: 📦 Install dependencies
         run: npm ci --legacy-peer-deps
