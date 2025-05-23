@@ -34,7 +34,7 @@ jobs:
         with:
           sha: ${{ github.event.client_payload.git.sha }}
           status: in_progress
-          name: ci-checks
+          name: ✅ ci-checks
           title: '🚧 CI In Progress'
           summary: 'CI checks are running...'
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -67,7 +67,7 @@ jobs:
           sha: ${{ github.event.client_payload.git.sha }}
           status: completed
           conclusion: failure
-          name: ci-checks
+          name: ✅ ci-checks
           title: '❌ CI Failed'
           summary: 'Some checks failed. Review the logs for details.'
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -79,7 +79,7 @@ jobs:
           sha: ${{ github.event.client_payload.git.sha }}
           status: completed
           conclusion: success
-          name: ci-checks
+          name: ✅ ci-checks
           title: '✅ CI Passed'
           summary: 'All tests and lint checks passed successfully.'
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -91,7 +91,7 @@ jobs:
           sha: ${{ github.event.client_payload.git.sha }}
           status: completed
           conclusion: cancelled
-          name: ci-checks
+          name: ✅ ci-checks
           title: '⚠️ CI Cancelled'
           summary: 'The CI run was cancelled.'
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -103,7 +103,7 @@ jobs:
           sha: ${{ github.event.client_payload.git.sha }}
           status: completed
           conclusion: skipped
-          name: ci-checks
+          name: ✅ ci-checks
           title: '⚠️ CI Skipped'
           summary: 'The CI run was skipped due to a previous attempt.'
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -115,7 +115,7 @@ jobs:
           sha: ${{ github.event.client_payload.git.sha }}
           status: completed
           conclusion: timed_out
-          name: ci-checks
+          name: ✅ ci-checks
           title: '⏰ CI Timed Out'
           summary: 'The CI run timed out before completion.'
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
