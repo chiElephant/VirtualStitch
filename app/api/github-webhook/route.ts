@@ -5,6 +5,7 @@ import { createAppAuth } from '@octokit/auth-app';
 import { Redis } from '@upstash/redis';
 import { createCheckRun, updateCheckRun } from '@/lib/github';
 
+// Initialize Redis client to help ensure idempotency of webhook-triggered operations.
 const redis = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL!,
   token: process.env.UPSTASH_REDIS_REST_TOKEN!,
@@ -15,6 +16,7 @@ export async function POST(req: NextRequest) {
   const pathname = url.pathname;
 
   // Match route like /api/github-webhook/303DEVS/report
+  // This dynamic route determines which GitHub App credentials to use based on organization
   const match = pathname.match(/\/([^\/]+)\/report$/);
   if (match) {
     const routeOwner = match[1];
@@ -27,9 +29,10 @@ export async function POST(req: NextRequest) {
       return new Response('Unsupported owner in route', { status: 400 });
     }
 
-    const appId = process.env[`${ownerPrefix}_GITHUB_APP_ID`]!;
+    // Dynamically pull in the GitHub App credentials based on the org
+    const appId = process.env[`GITHUB_APP_ID_${ownerPrefix}`]!;
     const privateKey = process.env[
-      `${ownerPrefix}_GITHUB_PRIVATE_KEY`
+      `GITHUB_PRIVATE_KEY_${ownerPrefix}`
     ]!.replace(/\\n/g, '\n');
     const [owner, repo] = process.env.GITHUB_REPOSITORY!.split('/');
 
@@ -42,6 +45,7 @@ export async function POST(req: NextRequest) {
         auth: { appId, privateKey },
       });
 
+      // Retrieve installation context to scope authentication
       const { data: installation } =
         await appOctokit.rest.apps.getRepoInstallation({ owner, repo });
 
@@ -51,6 +55,8 @@ export async function POST(req: NextRequest) {
       });
 
       const checkName = name || 'ci-checks';
+
+      // List existing checks for this SHA and find the one matching by name
       const list = await octokit.rest.checks.listForRef({
         owner,
         repo,
@@ -65,6 +71,7 @@ export async function POST(req: NextRequest) {
         );
       }
 
+      // Deduplicate updates by caching a key for 10 minutes
       const redisKey = `check:${checkRun.id}:${status}:${conclusion}`;
       const alreadyUpdated = await redis.get(redisKey);
       if (alreadyUpdated) {
@@ -93,10 +100,13 @@ export async function POST(req: NextRequest) {
   }
 
   // === Webhook handler for check_suite ===
+
+  // GitHub sends a signature to verify the payload came from them
   const rawBody = await req.text();
   const signature = req.headers.get('x-hub-signature-256') || '';
   const event = req.headers.get('x-github-event') || '';
 
+  // Try verifying against all known webhook secrets
   const webhookSecrets = ['303DEVS', 'CHIELEPHANT'].map(
     (prefix) => process.env[`${prefix}_GITHUB_WEBHOOK_SECRET`]
   );
@@ -114,6 +124,7 @@ export async function POST(req: NextRequest) {
     return new Response('Event ignored', { status: 200 });
   }
 
+  // Basic validation of webhook payload
   const sha = payload.check_suite?.head_sha;
   const owner = payload.repository?.owner?.login;
   const repo = payload.repository?.name;
@@ -123,6 +134,7 @@ export async function POST(req: NextRequest) {
     return new Response('Missing required payload data', { status: 400 });
   }
 
+  // Resolve env prefix dynamically
   const prefix =
     owner.toLowerCase().includes('303devs') ? '303DEVS'
     : owner.toLowerCase().includes('chie') ? 'CHIELEPHANT'
@@ -138,6 +150,7 @@ export async function POST(req: NextRequest) {
     '\n'
   );
 
+  // Prevent re-creating check runs for the same SHA
   const alreadyCreated = await redis.get(`checks_created:${sha}`);
   if (alreadyCreated) {
     return new Response('⏭️ Checks already created for this SHA.', {
@@ -145,6 +158,7 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  // These are the standard check runs initialized for each commit
   const checkNames = [
     'ci-checks',
     'playwright-tests (chromium)',
@@ -158,6 +172,7 @@ export async function POST(req: NextRequest) {
       auth: { appId, privateKey, installationId },
     });
 
+    // Create all check runs in "queued" state so that workflows can later update them
     for (const checkName of checkNames) {
       await createCheckRun(octokit, {
         owner,

@@ -5,6 +5,8 @@ import { createAppAuth } from '@octokit/auth-app';
 
 /**
  * Instantiate an Octokit instance using GitHub App credentials.
+ * Supports optional installationId for scoped access.
+ * This makes it reusable for both app-wide and installation-level API calls.
  */
 export const createOctokitApp = (
   appId: string,
@@ -22,6 +24,7 @@ export const createOctokitApp = (
 
 /**
  * Create a new check run with default "queued" state.
+ * Called when GitHub App receives check_suite:requested event.
  */
 export async function createCheckRun(
   octokit: Octokit,
@@ -32,6 +35,7 @@ export async function createCheckRun(
 
 /**
  * Update an existing check run.
+ * Called from CI workflow via webhook to reflect job status.
  */
 export async function updateCheckRun(
   octokit: Octokit,
