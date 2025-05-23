@@ -1,4 +1,4 @@
-// THIS IS AN ARBITRARY CI/CD PIPELINE TEST COMMENT TO BE REMOVED WHEN FLOW IS CONFIRMED SUCCESSFUL
+// THIS IS AN ARBITRARY CI/CD PIPELINE TEST COMMENT TO BE REMOVED WHEN FLOW IS CONFIRMED AS WORKING
 import { NextRequest } from 'next/server';
 import { verify } from '@octokit/webhooks-methods';
 import { Octokit } from '@octokit/rest';
