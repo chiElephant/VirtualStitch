@@ -1,0 +1,49 @@
+name: 'Report Check Result'
+description: 'Send check result to GitHub App'
+
+inputs:
+  sha:
+    description: 'The commit SHA to associate the check with'
+    required: true
+  status:
+    description: 'The current status of the check (e.g., in_progress, completed)'
+    required: true
+  conclusion:
+    description: 'The final conclusion of the check (e.g., success, failure). Optional unless status is completed'
+    required: false
+  name:
+    description: 'The name of the check run'
+    required: true
+  title:
+    description: 'The title shown in the GitHub Checks UI'
+    required: true
+  summary:
+    description: 'A brief summary of the check result'
+    required: true
+  details_url:
+    description: 'URL linking to detailed information (e.g., logs or report)'
+    required: true
+  host:
+    description: 'The domain to send the POST request to (e.g., virtual-stitch.303devs.com)'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - run: |
+        OWNER_UPPER=$(echo "${{ github.repository_owner }}" | tr '[:lower:]' '[:upper:]')
+        curl -X POST https://${{ inputs.host }}/api/github-webhook/${OWNER_UPPER}/report \
+          -H "Authorization: Bearer ${{ secrets.INTERNAL_APP_SECRET }}" \
+          -H "Content-Type: application/json" \
+          -d @- <<EOF
+        {
+          "sha": "${{ inputs.sha }}",
+          "status": "${{ inputs.status }}",
+          "conclusion": "${{ inputs.conclusion }}",
+          "name": "${{ inputs.name }}",
+          "title": "${{ inputs.title }}",
+          "summary": "${{ inputs.summary }}",
+          "details_url": "${{ inputs.details_url }}"
+        }
+        EOF
+      shell: bash

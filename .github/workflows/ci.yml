@@ -29,20 +29,18 @@ jobs:
     timeout-minutes: 5
 
     steps:
-      - name: 🧪 Log GitHub context
-        run: echo '${{ toJson(github) }}'
-
-      - name: 🚀 Update check status to in_progress
-        if: github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != ''
-        uses: ./.github/actions/update-check
+      - name: 🚀 Report ci-checks in_progress to GitHub App
+        uses: ./.github/actions/report-checks
         with:
           sha: ${{ github.event.client_payload.git.sha }}
-          name: 'ci-checks'
-          status: 'in_progress'
+          status: in_progress
+          name: ci-checks
           title: '🚧 CI In Progress'
           summary: 'CI checks are running...'
-          token: ${{ secrets.FGT_UPDATE_CHECK_TOKEN }}
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          host: ${{ secrets.APP_HOST }}
+      - name: 🧪 Log GitHub context
+        run: echo '${{ toJson(github) }}'
 
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
@@ -62,71 +60,73 @@ jobs:
       - name: 🧪 Run Jest tests
         run: npm run test
 
-      - name: ✅ Update check status to failed
-        if: always() && failure() && github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != ''
-        uses: ./.github/actions/update-check
+      - name: ❌ Report ci-checks failure to GitHub App
+        if: always() && failure()
+        uses: ./.github/actions/report-checks
         with:
           sha: ${{ github.event.client_payload.git.sha }}
-          name: 'ci-checks'
-          status: 'completed'
-          conclusion: 'failure'
+          status: completed
+          conclusion: failure
+          name: ci-checks
           title: '❌ CI Failed'
           summary: 'Some checks failed. Review the logs for details.'
-          token: ${{ secrets.FGT_UPDATE_CHECK_TOKEN }}
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
-      - name: ✅ Update check status to success
-        if: always() && success() && github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != ''
-        uses: ./.github/actions/update-check
+          host: ${{ secrets.APP_HOST }}
+      - name: ✅ Report ci-checks success to GitHub App
+        if: always() && success()
+        uses: ./.github/actions/report-checks
         with:
           sha: ${{ github.event.client_payload.git.sha }}
-          name: 'ci-checks'
-          status: 'completed'
-          conclusion: 'success'
+          status: completed
+          conclusion: success
+          name: ci-checks
           title: '✅ CI Passed'
           summary: 'All tests and lint checks passed successfully.'
-          token: ${{ secrets.FGT_UPDATE_CHECK_TOKEN }}
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
-      - name: ✅ Update check status to cancelled
-        if: always() && cancelled() && github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != ''
-        uses: ./.github/actions/update-check
+          host: ${{ secrets.APP_HOST }}
+      - name: ⚠️ Report ci-checks cancelled to GitHub App
+        if: always() && cancelled()
+        uses: ./.github/actions/report-checks
         with:
           sha: ${{ github.event.client_payload.git.sha }}
-          name: 'ci-checks'
-          status: 'completed'
-          conclusion: 'cancelled'
+          status: completed
+          conclusion: cancelled
+          name: ci-checks
           title: '⚠️ CI Cancelled'
           summary: 'The CI run was cancelled.'
-          token: ${{ secrets.FGT_UPDATE_CHECK_TOKEN }}
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
-      - name: ✅ Update check status to skipped
-        if: always() && github.job == 'ci-checks' && github.run_attempt > 1 && github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != ''
-        uses: ./.github/actions/update-check
+          host: ${{ secrets.APP_HOST }}
+      - name: ⚠️ Report ci-checks skipped to GitHub App
+        if: always() && github.run_attempt > 1
+        uses: ./.github/actions/report-checks
         with:
           sha: ${{ github.event.client_payload.git.sha }}
-          name: 'ci-checks'
-          status: 'completed'
-          conclusion: 'skipped'
+          status: completed
+          conclusion: skipped
+          name: ci-checks
           title: '⚠️ CI Skipped'
           summary: 'The CI run was skipped due to a previous attempt.'
-          token: ${{ secrets.FGT_UPDATE_CHECK_TOKEN }}
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
-      - name: ✅ Update check status to timed_out
-        if: always() && failure() && github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != '' && contains(github.event.client_payload.git.message || '', 'timeout')
-        uses: ./.github/actions/update-check
+          host: ${{ secrets.APP_HOST }}
+      - name: ⏰ Report ci-checks timed_out to GitHub App
+        if: always() && failure() && contains(github.event.client_payload.git.message || '', 'timeout')
+        uses: ./.github/actions/report-checks
         with:
           sha: ${{ github.event.client_payload.git.sha }}
-          name: 'ci-checks'
-          status: 'completed'
-          conclusion: 'timed_out'
+          status: completed
+          conclusion: timed_out
+          name: ci-checks
           title: '⏰ CI Timed Out'
           summary: 'The CI run timed out before completion.'
-          token: ${{ secrets.FGT_UPDATE_CHECK_TOKEN }}
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
+          host: ${{ secrets.APP_HOST }}
+      - name: 📝 Summary report for CI Checks
+        if: always()
+        run: |
+          echo "## CI Summary" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Lint and tests completed." >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Run ID**: ${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
   playwright-tests:
     if: github.event_name == 'repository_dispatch' && github.event.client_payload.environment == 'preview'
     name: 🧪 playwright-tests
@@ -143,20 +143,19 @@ jobs:
         project: [chromium, firefox, webkit]
 
     steps:
-      - name: 🧪 Log GitHub context
-        run: echo '${{ toJson(github) }}'
-
-      - name: 🚀 Update check status to in_progress
-        if: github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != ''
-        uses: ./.github/actions/update-check
+      - name: 🚀 Report playwright in_progress to GitHub App
+        uses: ./.github/actions/report-checks
         with:
           sha: ${{ github.event.client_payload.git.sha }}
-          name: 'playwright-tests (${{ matrix.project }})'
-          status: 'in_progress'
-          title: '🚧 Playwright Tests In Progress (${{ matrix.project }})'
-          summary: 'Playwright tests are running...'
-          token: ${{ secrets.FGT_UPDATE_CHECK_TOKEN }}
+          status: in_progress
+          name: playwright-tests (${{ matrix.project }})
+          title: 🚧 Playwright Tests In Progress (${{ matrix.project }})
+          summary: Playwright tests are running...
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          host: ${{ secrets.APP_HOST }}
+
+      - name: 🧪 Log GitHub context
+        run: echo '${{ toJson(github) }}'
 
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
@@ -171,78 +170,77 @@ jobs:
           cache: 'npm'
 
       - name: 📦 Install dependencies
-        run: |
-          npm ci --legacy-peer-deps
+        run: npm ci --legacy-peer-deps
 
       - name: 🧪 Run Playwright tests (${{ matrix.project }})
         run: npx playwright test --project=${{ matrix.project }} --reporter=list,html
         env:
           CI: true
 
-      - name: ✅ Update check status to failed
-        if: always() && failure() && github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != ''
-        uses: ./.github/actions/update-check
+      - name: ❌ Report playwright failure to GitHub App
+        if: always() && failure()
+        uses: ./.github/actions/report-checks
         with:
           sha: ${{ github.event.client_payload.git.sha }}
-          name: 'playwright-tests (${{ matrix.project }})'
-          status: 'completed'
-          conclusion: 'failure'
-          title: '❌ Playwright Tests Failed (${{ matrix.project }})'
-          summary: 'Some Playwright tests failed. Review the logs for details.'
-          token: ${{ secrets.FGT_UPDATE_CHECK_TOKEN }}
+          status: completed
+          conclusion: failure
+          name: playwright-tests (${{ matrix.project }})
+          title: ❌ Playwright Tests Failed (${{ matrix.project }})
+          summary: Some Playwright tests failed. Review the logs for details.
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          host: ${{ secrets.APP_HOST }}
 
-      - name: ✅ Update check status to success
-        if: always() && success() && github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != ''
-        uses: ./.github/actions/update-check
+      - name: ✅ Report playwright success to GitHub App
+        if: always() && success()
+        uses: ./.github/actions/report-checks
         with:
           sha: ${{ github.event.client_payload.git.sha }}
-          name: 'playwright-tests (${{ matrix.project }})'
-          status: 'completed'
-          conclusion: 'success'
-          title: '✅ Playwright Tests Passed (${{ matrix.project }})'
-          summary: 'All Playwright tests passed successfully.'
-          token: ${{ secrets.FGT_UPDATE_CHECK_TOKEN }}
+          status: completed
+          conclusion: success
+          name: playwright-tests (${{ matrix.project }})
+          title: ✅ Playwright Tests Passed (${{ matrix.project }})
+          summary: All Playwright tests passed successfully.
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          host: ${{ secrets.APP_HOST }}
 
-      - name: ✅ Update check status to cancelled
-        if: always() && cancelled() && github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != ''
-        uses: ./.github/actions/update-check
+      - name: ⚠️ Report playwright cancelled to GitHub App
+        if: always() && cancelled()
+        uses: ./.github/actions/report-checks
         with:
           sha: ${{ github.event.client_payload.git.sha }}
-          name: 'playwright-tests (${{ matrix.project }})'
-          status: 'completed'
-          conclusion: 'cancelled'
-          title: '⚠️ Playwright Tests Cancelled (${{ matrix.project }})'
-          summary: 'The Playwright tests run was cancelled.'
-          token: ${{ secrets.FGT_UPDATE_CHECK_TOKEN }}
+          status: completed
+          conclusion: cancelled
+          name: playwright-tests (${{ matrix.project }})
+          title: ⚠️ Playwright Tests Cancelled (${{ matrix.project }})
+          summary: The Playwright tests run was cancelled.
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          host: ${{ secrets.APP_HOST }}
 
-      - name: ✅ Update check status to skipped
-        if: always() && github.job == 'playwright-tests' && github.run_attempt > 1 && github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != ''
-        uses: ./.github/actions/update-check
+      - name: ⚠️ Report playwright skipped to GitHub App
+        if: always() && github.run_attempt > 1
+        uses: ./.github/actions/report-checks
         with:
           sha: ${{ github.event.client_payload.git.sha }}
-          name: 'playwright-tests (${{ matrix.project }})'
-          status: 'completed'
-          conclusion: 'skipped'
-          title: '⚠️ Playwright Tests Skipped (${{ matrix.project }})'
-          summary: 'The Playwright tests run was skipped due to a previous attempt.'
-          token: ${{ secrets.FGT_UPDATE_CHECK_TOKEN }}
+          status: completed
+          conclusion: skipped
+          name: playwright-tests (${{ matrix.project }})
+          title: ⚠️ Playwright Tests Skipped (${{ matrix.project }})
+          summary: The Playwright tests run was skipped due to a previous attempt.
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          host: ${{ secrets.APP_HOST }}
 
-      - name: ✅ Update check status to timed_out
-        if: always() && failure() && github.event_name == 'repository_dispatch' && github.event.client_payload.git.sha != '' && contains(github.event.client_payload.git.message || '', 'timeout')
-        uses: ./.github/actions/update-check
+      - name: ⏰ Report playwright timed_out to GitHub App
+        if: always() && failure() && contains(github.event.client_payload.git.message || '', 'timeout')
+        uses: ./.github/actions/report-checks
         with:
           sha: ${{ github.event.client_payload.git.sha }}
-          name: 'playwright-tests (${{ matrix.project }})'
-          status: 'completed'
-          conclusion: 'timed_out'
-          title: '⏰ Playwright Tests Timed Out (${{ matrix.project }})'
-          summary: 'The Playwright tests run timed out before completion.'
-          token: ${{ secrets.FGT_UPDATE_CHECK_TOKEN }}
+          status: completed
+          conclusion: timed_out
+          name: playwright-tests (${{ matrix.project }})
+          title: ⏰ Playwright Tests Timed Out (${{ matrix.project }})
+          summary: The Playwright tests run timed out before completion.
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          host: ${{ secrets.APP_HOST }}
 
       - name: 📤 Upload Playwright artifacts (screenshots, traces, videos)
         if: failure()
@@ -260,3 +258,11 @@ jobs:
           name: '${{ github.job }}-playwright-html-report-${{ matrix.project }}'
           path: playwright-report
           retention-days: 7
+
+      - name: 📝 Summary report for Playwright (${{ matrix.project }})
+        if: always()
+        run: |
+          echo "## Playwright Test Summary: ${{ matrix.project }}" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Tests finished running." >> $GITHUB_STEP_SUMMARY
+          echo "- **Project**: ${{ matrix.project }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
