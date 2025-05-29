@@ -17,6 +17,7 @@ const customJestConfig = {
     '<rootDir>/store/**/*.{ts,tsx}',
     '<rootDir>/config/**/*.{ts,tsx}',
     '<rootDir>/pages/**/*.{ts,tsx}',
+    '<rootDir>/lib/**/*.{ts,tsx}',
   ],
   coverageReporters: ['text', 'lcov', 'html'],
   coverageThreshold: {
@@ -34,7 +35,8 @@ const customJestConfig = {
     '/node_modules/',
     '/tests/', // ✅ ignore Playwright folder
   ],
-  verbose: true,
+  verbose: false,
+  silent: true,
 };
 
 export default createJestConfig(customJestConfig);
