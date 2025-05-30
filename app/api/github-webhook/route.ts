@@ -148,8 +148,8 @@ export async function POST(req: NextRequest) {
     return new Response('Unsupported repository owner.', { status: 400 });
   }
 
-  const appId = process.env[`${prefix}_GITHUB_APP_ID`]!;
-  const privateKey = process.env[`${prefix}_GITHUB_PRIVATE_KEY`]!.replace(
+  const appId = process.env[`GITHUB_APP_ID_${prefix}`]!;
+  const privateKey = process.env[`GITHUB_PRIVATE_KEY_${prefix}`]!.replace(
     /\\n/g,
     '\n'
   );

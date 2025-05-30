@@ -49,17 +49,18 @@ describe('POST /api/github-webhook', () => {
   let verifyMock: jest.Mock;
 
   const defaultEnv = {
-    'GITHUB_REPOSITORY': '303devs/VirtualStitch',
-    'GITHUB_APP_ID_303DEVS': '123',
-    'GITHUB_PRIVATE_KEY_303DEVS': 'fake_key',
-    '303DEVS_GITHUB_WEBHOOK_SECRET': 'secret',
-    '303DEVS_GITHUB_APP_ID': '123',
-    '303DEVS_GITHUB_PRIVATE_KEY': 'fake_key',
-    'CHIELEPHANT_GITHUB_APP_ID': '123',
-    'CHIELEPHANT_GITHUB_PRIVATE_KEY': 'fake_key',
-    'CHIELEPHANT_GITHUB_WEBHOOK_SECRET': 'secret',
-    'UPSTASH_REDIS_REST_URL': 'http://localhost:8080',
-    'UPSTASH_REDIS_REST_TOKEN': 'token',
+    GITHUB_REPOSITORY: '303Devs/VirtualStitch',
+    GITHUB_REPOSITORY_303DEVS: '303Devs/VirtualStitch',
+    GITHUB_APP_ID_303DEVS: '123',
+    GITHUB_PRIVATE_KEY_303DEVS: 'fake_key',
+    GITHUB_WEBHOOK_SECRET_303DEVS: 'fake_secret',
+    GITHUB_REPOSITORY_CHIELEPHANT: 'chiElephant/VirtualStitch',
+    GITHUB_APP_ID_CHIELEPHANT: '123',
+    GITHUB_PRIVATE_KEY_CHIELEPHANT: 'fake_key',
+    GITHUB_WEBHOOK_SECRET_CHIELEPHANT: 'fake_secret',
+    UPSTASH_REDIS_REST_URL: 'http://localhost:8080',
+    UPSTASH_REDIS_REST_TOKEN: 'token',
+    OPENAI_API_KEY: 'fake_key',
   };
 
   beforeEach(async () => {
@@ -203,7 +204,7 @@ describe('POST /api/github-webhook', () => {
       expect(res.status).toBe(200);
       expect(await res.text()).toBe('✅ Check run updated');
       expect(updateCheckRunMock).toHaveBeenCalledWith(expect.any(Object), {
-        owner: '303devs',
+        owner: '303Devs',
         repo: 'VirtualStitch',
         check_run_id: 456,
         status: 'completed',
