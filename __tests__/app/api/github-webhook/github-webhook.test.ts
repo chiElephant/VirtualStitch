@@ -167,7 +167,13 @@ describe('POST /api/github-webhook', () => {
     });
 
     it('accepts valid route owner in mixed case', async () => {
-      process.env.GITHUB_REPOSITORY = 'chiElephant/VirtualStitch'; // 👈 ensure this matches CHIELEPHANT
+      // Explicitly provide all expected env variables to avoid undefined errors
+      process.env.GITHUB_REPOSITORY = 'chiElephant/VirtualStitch';
+      process.env.GITHUB_REPOSITORY_CHIELEPHANT = 'chiElephant/VirtualStitch';
+      process.env.GITHUB_APP_ID_CHIELEPHANT = '123';
+      process.env.GITHUB_PRIVATE_KEY_CHIELEPHANT =
+        '-----BEGIN PRIVATE KEY-----\\nfake\\nkey\\n-----END PRIVATE KEY-----';
+      process.env.GITHUB_WEBHOOK_SECRET_CHIELEPHANT = 'fake_secret';
 
       const req = makeReportRequest({}, {}, 'ChIeLePhAnT');
       const res = await POST(req);
