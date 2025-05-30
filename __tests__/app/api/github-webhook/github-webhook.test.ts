@@ -167,6 +167,8 @@ describe('POST /api/github-webhook', () => {
     });
 
     it('accepts valid route owner in mixed case', async () => {
+      process.env.GITHUB_REPOSITORY = 'chiElephant/VirtualStitch'; // 👈 ensure this matches CHIELEPHANT
+
       const req = makeReportRequest({}, {}, 'ChIeLePhAnT');
       const res = await POST(req);
       expect(res.status).not.toBe(400);
