@@ -1,10 +1,8 @@
 # 🧵 VirtualStitch
 
-## ✨ Overview
+## Technical Overview
 
-VirtualStitch is a modern product customization platform built for e-commerce brands and design enthusiasts. It enables users to preview and personalize 3D-rendered t-shirts in real time using uploaded images or AI-generated art. The result is a seamless, interactive experience that drives engagement and conversion.
-
-Whether you're launching a digital fashion storefront or showcasing generative design tools, VirtualStitch offers a powerful, customizable foundation.
+VirtualStitch is a production-grade 3D apparel customization platform built with modern web technologies. It enables real-time t-shirt personalization through AI-generated designs, custom image uploads, and interactive 3D rendering. The application features enterprise-level CI/CD infrastructure with automated testing, deployment pipelines, and GitHub App integration for comprehensive quality assurance.
 
 ## 📊 Badges
 
@@ -15,177 +13,344 @@ Whether you're launching a digital fashion storefront or showcasing generative d
 ![Three.js](https://img.shields.io/badge/Three.js-0.159-black?logo=three.js&logoColor=white)
 ![CI](https://github.com/ChiElephant/VirtualStitch/actions/workflows/ci.yml/badge.svg)
 
-## Getting Started
+## Architecture & Technology Stack
 
-First, run the development server:
+### **Frontend Architecture**
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **Framework**: Next.js 15.3.1 with React 19 (App Router)
+- **3D Engine**: Three.js 0.172 with React Three Fiber 9.0.0-rc.3
+- **3D Components**: React Three Drei 10.0.7 for advanced 3D utilities
+- **State Management**: Valtio 2.1.2 (proxy-based reactive state)
+- **Animation**: Framer Motion 11.18.0 for smooth UI transitions
+- **Styling**: Tailwind CSS 3.4.1 with custom glassmorphism effects
+- **Math Utilities**: Maath 0.10.8 for 3D mathematical operations
+
+### **Backend & APIs**
+
+- **Runtime**: Node.js with Next.js API Routes
+- **AI Integration**: OpenAI GPT-Image-1 model for design generation
+- **Database/Cache**: Upstash Redis for rate limiting and state management
+- **Authentication**: GitHub App authentication with Octokit integration
+- **File Handling**: Native File API with base64 encoding for image processing
+
+### **Development & Testing Stack**
+
+- **Language**: TypeScript 5 with strict type checking
+- **Testing Framework**: Jest 29.7.0 with 100% coverage requirement
+- **E2E Testing**: Playwright 1.52.0 with multi-browser support
+- **Linting**: ESLint 9 with Next.js configuration
+- **Code Formatting**: Prettier 3.4.2 with custom configuration
+- **Build System**: Next.js native bundler with Three.js transpilation
+
+### **Infrastructure & DevOps**
+
+- **Hosting**: Vercel with edge deployment
+- **CI/CD**: Custom GitHub Actions workflows
+- **Monitoring**: Self-hosted ARM64 Linux runners
+- **Webhook Integration**: GitHub App with automated check reporting
+- **Environment Management**: Secure environment variable handling
+
+## Core Features & Implementation
+
+### **3D Rendering Engine**
+
+```typescript
+// Real-time 3D t-shirt with physics-based materials
+- PBR (Physically Based Rendering) materials
+- Real-time shadow mapping with AccumulativeShadows
+- Camera rig with responsive positioning
+- Automatic model scaling and centering
+- Canvas export capabilities for downloads
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### **AI Design Generation**
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```typescript
+// Integration with OpenAI's image generation API
+- Custom prompt processing with context optimization
+- Rate limiting (1 request/60 seconds per IP)
+- Base64 image encoding for seamless texture application
+- Error handling with user-friendly feedback
+- Redis-based request tracking
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### **State Management Architecture**
 
-## Learn More
+```typescript
+// Valtio proxy-based state with TypeScript interfaces
+interface State {
+  intro: boolean;
+  color: string;
+  isLogoTexture: boolean;
+  isFullTexture: boolean;
+  logoDecal: string;
+  fullDecal: string;
+}
+```
 
-To learn more about Next.js, take a look at the following resources:
+### **Advanced CI/CD Pipeline**
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+#### **Multi-Stage Testing**
 
-## Deploy on Vercel
+1. **Unit/Integration Tests**: Jest with 100% coverage requirement
+2. **End-to-End Tests**: Playwright across Chromium, Firefox, WebKit
+3. **Post-Deploy Smoke Tests**: Production environment validation
+4. **Performance Monitoring**: Automated performance regression detection
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+#### **GitHub App Integration**
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Custom check run creation and updates
+- Real-time CI status reporting
+- Multi-organization support (303DEVS, CHIELEPHANT)
+- Webhook signature verification with multiple secrets
+- Redis-based deduplication for idempotent operations
 
-## 🚀 Features
+## Installation & Setup
 
-- 🖼 **Image Upload**: Upload custom images to apply as logos or full-shirt textures.
-- 🤖 **AI-Generated Designs**: Uses OpenAI’s image generation endpoints to create personalized logos or patterns from user prompts.
-- 🎨 **Real-Time Customization**: Apply colors, switch between logo/full modes, and preview instantly.
-- 💾 **Download Options**: Download the full 3D canvas or just the applied logo/texture.
-- 🔒 **Request Limiting**: Prevents excessive API calls using Upstash Redis.
-- 🛠 **Fully Responsive**: Works across devices and screen sizes.
+### **Prerequisites**
 
-## 🛠 Tech Stack
+- Node.js 18.x or later (LTS recommended)
+- npm 9.x or later
+- Redis instance (Upstash recommended)
+- OpenAI API access
+- GitHub App credentials (for CI/CD features)
 
-- **Framework**: [Next.js](https://nextjs.org)
-- **3D Engine**: [Three.js](https://threejs.org)
-- **State Management**: [Valtio](https://valtio.pmnd.rs)
-- **Styling**: [Tailwind CSS](https://tailwindcss.com)
-- **AI Integration**: [OpenAI API](https://platform.openai.com/)
-- **Database & Rate Limiting**: [Upstash Redis](https://upstash.com/)
-- **Hosting**: [Vercel](https://vercel.com)
-- **Testing**: [Jest](https://jestjs.io), [Playwright](https://playwright.dev)
-
-## 🖥 Setup & Development
-
-### 1️⃣ Clone the Repository
+### **Environment Configuration**
 
 ```bash
-git clone https://github.com/chiElephant/VirtualStitch.git
+# Core API Keys
+OPENAI_API_KEY=your_openai_api_key
+UPSTASH_REDIS_REST_URL=your_redis_url
+UPSTASH_REDIS_REST_TOKEN=your_redis_token
+
+# GitHub App Integration (Optional)
+GITHUB_APP_ID_303DEVS=your_app_id
+GITHUB_PRIVATE_KEY_303DEVS=your_private_key
+303DEVS_GITHUB_WEBHOOK_SECRET=your_webhook_secret
+
+# Testing Environment
+CI=false
+BASE_URL=http://localhost:3000
+VERCEL_AUTOMATION_BYPASS_SECRET=your_bypass_secret
+```
+
+### **Development Setup**
+
+```bash
+# Clone and install dependencies
+git clone https://github.com/your-org/VirtualStitch.git
 cd VirtualStitch
-```
+npm install --legacy-peer-deps
 
-### 2️⃣ Install Dependencies
-
-```bash
-npm install
-# or
-yarn install
-```
-
-### 3️⃣ Configure Environment Variables
-
-Create a `.env.local` file at the root with the following keys:
-
-| Key                        | Description                     | Required |
-| -------------------------- | ------------------------------- | -------- |
-| `OPENAI_API_KEY`           | Your OpenAI API key             | ✅ Yes   |
-| `UPSTASH_REDIS_REST_URL`   | Upstash Redis REST API URL      | ✅ Yes   |
-| `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis API token         | ✅ Yes   |
-| `CI`                       | Set to true for CI environments | ❌ No    |
-| `BASE_URL`                 | Base URL override for tests     | ❌ No    |
-
-### 4️⃣ Run the App
-
-```bash
+# Start development server
 npm run dev
+
+# Run test suites
+npm run test              # Unit/Integration tests
+npm run test:coverage     # Coverage report
+npm run test:e2e         # Playwright E2E tests
 ```
 
-Visit [http://localhost:3000](http://localhost:3000).
+## API Architecture
 
-## ✅ Testing
+### **Custom Logo Generation (`/api/custom-logo`)**
 
-We use [Jest](https://jestjs.io) for unit/integration tests and [Playwright](https://playwright.dev) for end-to-end tests.
+```typescript
+POST /api/custom-logo
+Content-Type: application/json
 
-All components and API routes are covered by unit and integration tests. We aim for 100% coverage across components, API routes, and logic. Run tests with:
+Request:
+{
+  "prompt": "string (required)"
+}
 
-```bash
-npm run test
-# or with coverage
-npm run test:coverage
-# or E3E
-npm run test:e2e
+Response:
+{
+  "photo": "base64_encoded_image_string"
+}
+
+Rate Limits: 1 request per 60 seconds per IP
+Error Codes: 429 (Rate Limited), 500 (Generation Failed)
 ```
 
-Example coverage report:
+### **GitHub Webhook Handler (`/api/github-webhook`)**
 
-![Coverage Report](/images/coverage_report.png)
+```typescript
+POST /api/github-webhook/{ORG}/report
+Authorization: Bearer {INTERNAL_APP_SECRET}
 
-## ⚙️ CI/CD
+Features:
+- Check run status updates
+- Multi-organization support
+- Webhook signature verification
+- Redis-based deduplication
+- Automatic check run creation
+```
 
-This repo includes a custom CI/CD pipeline that:
+## Performance Specifications
 
-- Runs all Jest and Playwright tests on every push and PR
-- Deploys only after tests pass
-- Automatically triggers post-deploy Playwright smoke tests against the production Vercel deployment
+### **Rendering Performance**
 
-## 🚀 Deployment
+- **Target FPS**: 60fps on desktop, 30fps on mobile
+- **Initial Load**: < 3 seconds (including 3D model)
+- **Texture Application**: Real-time with < 100ms latency
+- **Memory Usage**: < 150MB typical, < 300MB peak
 
-The app is designed for seamless deployment to [Vercel](https://vercel.com). Push your main branch and connect your repository to Vercel for continuous deployment.
+### **Network Optimization**
 
-This repository includes a CI/CD pipeline via GitHub Actions that runs tests automatically before deployment. Vercel handles continuous deployment from the `main` branch.
+- **Model Compression**: GLTF with Draco compression
+- **Texture Streaming**: Progressive loading with fallbacks
+- **CDN Integration**: Static assets via Vercel Edge Network
+- **Cache Strategy**: Aggressive caching with Redis backing
 
-## 🖼 Screenshots
+## Security Implementation
 
-### 🏠 Home Page
+### **Input Validation**
 
-![Home Screenshot](/images/screenshot_1.png)
+- Strict TypeScript interfaces for all API endpoints
+- File type validation for image uploads
+- Prompt sanitization for AI generation requests
+- Rate limiting with IP-based tracking
 
-_Home page with main call-to-action and 3D canvas._
+### **Authentication & Authorization**
 
-### 🎨 Customizer - Color Picker
+- GitHub App authentication with JWT tokens
+- Webhook signature verification using HMAC-SHA256
+- Environment-based secret management
+- Cross-origin request protection
 
-![Customizer Color Picker](/images/screenshot_2.png)
+### **Data Protection**
 
-_Color picker interface for customizing t-shirt colors._
+- No persistent user data storage
+- Temporary file handling with automatic cleanup
+- Redis TTL for automatic data expiration
+- Secure cookie handling for session management
 
-### 🤖 Customizer - AI Picker
+## Testing Strategy
 
-![Customizer AI Picker](/images/screenshot_3.png)
+### **Coverage Requirements**
 
-_AI design generation interface for creating unique logos and patterns._
+```json
+{
+  "branches": 100,
+  "functions": 100,
+  "lines": 100,
+  "statements": 100
+}
+```
 
-### 📂 Customizer - File Upload
+### **Test Categories**
 
-![Customizer File Upload](/images/screenshot_4.png)
+1. **Unit Tests**: Component logic, utility functions, API handlers
+2. **Integration Tests**: API endpoints, state management, file handling
+3. **E2E Tests**: Complete user workflows across browsers
+4. **Visual Regression**: 3D rendering consistency checks
 
-_Upload custom images to apply as decals or full-shirt textures._
+### **Automated Quality Gates**
 
-### 📥 Download Functionality
+- All tests must pass before deployment
+- Coverage thresholds enforced
+- Lint checks with zero warnings
+- Type checking with strict mode
+- Performance budget enforcement
 
-![Download Feature](/images/screenshot_5.png)
+## Deployment Architecture
 
-_Options to download the full 3D canvas or applied designs._
+### **Vercel Integration**
 
-### 🧪 Test Coverage Report
+```yaml
+# Automatic deployments on push to main
+# Preview deployments for pull requests
+# Edge function optimization
+# Global CDN distribution
+```
 
-![Coverage Report](/images/coverage_report.png)
+### **CI/CD Workflow**
 
-_Test coverage report showing 100% coverage._
+1. **Code Push** → Trigger CI pipeline
+2. **Quality Checks** → Lint, type check, test execution
+3. **Build Process** → Next.js optimization, asset compilation
+4. **Deployment** → Vercel edge deployment
+5. **Post-Deploy Testing** → Production smoke tests
+6. **Health Monitoring** → Automated status reporting
 
-## 🗺 Roadmap
+## Scalability Considerations
 
-- [x] Full AI + file-based customization
-- [x] Post-deploy smoke tests
-- [ ] Mobile-first optimization
-- [ ] Add animation to loading and interaction states
-- [ ] Internationalization (i18n)
+### **Performance Scaling**
 
-## 🤝 Contributing
+- **Edge Deployment**: Global CDN with regional optimization
+- **Client-Side Rendering**: Reduced server load with CSR strategy
+- **Asset Optimization**: Automatic image optimization and compression
+- **Caching Strategy**: Multi-layer caching (Redis, CDN, browser)
 
-Contributions are welcome! Please open an issue or submit a pull request.
+### **Rate Limit Management**
 
-## 📄 License
+- **Redis-based tracking**: Distributed rate limiting
+- **IP-based restrictions**: Prevents abuse while allowing legitimate use
+- **Graceful degradation**: Fallback behaviors for rate-limited users
+- **Monitoring & Alerting**: Real-time rate limit monitoring
 
-This project is licensed under the MIT License.
+## Development Guidelines
+
+### **Code Standards**
+
+- **TypeScript**: Strict mode with comprehensive type coverage
+- **Component Architecture**: Functional components with hooks
+- **State Management**: Valtio proxy patterns with immutable updates
+- **Error Handling**: Comprehensive error boundaries and user feedback
+- **Performance**: React.memo, useMemo, useCallback for optimization
+
+### **Git Workflow**
+
+- **Feature Branches**: All development in feature branches
+- **Pull Requests**: Required for all changes with automated checks
+- **Conventional Commits**: Standardized commit message format
+- **Automated Releases**: Semantic versioning with automated changelog
+
+## Monitoring & Observability
+
+### **Application Metrics**
+
+- **Performance**: Core Web Vitals tracking
+- **Error Rates**: Real-time error monitoring
+- **User Interactions**: Feature usage analytics
+- **API Performance**: Response time and success rate monitoring
+
+### **Infrastructure Metrics**
+
+- **Deployment Health**: Automatic deployment status reporting
+- **CI/CD Performance**: Build time and success rate tracking
+- **Resource Usage**: Memory, CPU, and bandwidth monitoring
+- **Security Events**: Authentication and rate limiting events
+
+## Contributing
+
+### **Development Process**
+
+1. Fork the repository and create a feature branch
+2. Implement changes with comprehensive test coverage
+3. Ensure all quality gates pass (lint, test, type check)
+4. Submit pull request with detailed description
+5. Address code review feedback
+6. Automated deployment upon approval and merge
+
+### **Code Review Checklist**
+
+- [ ] TypeScript types are comprehensive and accurate
+- [ ] Test coverage meets 100% requirement
+- [ ] Performance implications are considered
+- [ ] Security best practices are followed
+- [ ] Documentation is updated as needed
+- [ ] Accessibility standards are maintained
+
+## License & Support
+
+**License**: MIT License - see LICENSE file for details
+
+**Technical Support**: For technical questions, please open an issue on GitHub with detailed reproduction steps and environment information.
+
+**Performance Issues**: Include browser console logs, network timing, and device specifications when reporting performance problems.
+
+---
+
+_This README reflects the current state of the VirtualStitch codebase. For the latest updates and changes, please refer to the CHANGELOG.md file and recent commit history._

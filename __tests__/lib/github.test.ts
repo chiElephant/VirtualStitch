@@ -1,6 +1,6 @@
 import { Octokit } from '@octokit/rest';
-import { createAppAuth } from '@octokit/auth-app';
 import { createOctokitApp, createCheckRun, updateCheckRun } from '@/lib/github';
+import type { RestEndpointMethodTypes } from '@octokit/rest';
 
 // Mock createAppAuth because Octokit uses it internally
 jest.mock('@octokit/auth-app', () => ({
@@ -77,12 +77,16 @@ describe('github.ts utilities', () => {
   describe('updateCheckRun', () => {
     it('calls octokit.rest.checks.update with options', async () => {
       const octokit = createOctokitApp(fakeAppId, fakePrivateKey);
-      const options = {
-        owner: 'org',
-        repo: 'repo',
-        check_run_id: 123,
-        status: 'completed',
-      };
+
+      const options: RestEndpointMethodTypes['checks']['update']['parameters'] =
+        {
+          owner: 'org',
+          repo: 'repo',
+          check_run_id: 123,
+          status: 'completed',
+          conclusion: 'success',
+          completed_at: new Date().toISOString(),
+        };
 
       await updateCheckRun(octokit, options);
       expect(updateMock).toHaveBeenCalledWith(options);
