@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
         auth: { appId, privateKey, installationId: installation.id },
       });
 
-      const checkName = name ?? 'ci-checks';
+      const checkName = name ?? '✅ ci-checks';
 
       const list = await octokit.rest.checks.listForRef({
         owner,
@@ -161,8 +161,9 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  // Updated check names to match your workflows exactly
   const checkNames = [
-    'ci-checks',
+    '✅ ci-checks', // Matches your CI workflow
     'playwright-tests (chromium)',
     'playwright-tests (webkit)',
     'playwright-tests (firefox)',
@@ -182,8 +183,8 @@ export async function POST(req: NextRequest) {
         head_sha: sha,
         status: 'queued',
         output: {
-          title: checkName,
-          summary: 'Check initialized.',
+          title: `${checkName} - Queued`,
+          summary: `${checkName} has been queued and will start shortly.`,
         },
       });
     }

@@ -22,7 +22,12 @@ This separation ensures stable E2E tests across CI and local environments, while
 the constraints of each browser engine regarding cookie and auth handling. */
 
 function getProjectConfig(
-  browser: 'Desktop Chrome' | 'Desktop Firefox' | 'Desktop Safari'
+  browser:
+    | 'Desktop Chrome'
+    | 'Desktop Firefox'
+    | 'Desktop Safari'
+    | 'Pixel 5'
+    | 'iPhone 12'
 ) {
   if (browser === 'Desktop Chrome') {
     return {
@@ -61,6 +66,10 @@ export default defineConfig({
     { name: 'Chromium', use: getProjectConfig('Desktop Chrome') },
     { name: 'Firefox', use: getProjectConfig('Desktop Firefox') },
     { name: 'WebKit', use: getProjectConfig('Desktop Safari') },
+
+    // Mobile testing
+    { name: 'Mobile Chrome', use: getProjectConfig('Pixel 5') },
+    { name: 'Mobile Safari', use: getProjectConfig('iPhone 12') },
   ],
 
   quiet: isCI,
@@ -89,4 +98,14 @@ export default defineConfig({
   },
 
   workers: isCI ? 1 : undefined,
+
+  // Run local dev server before starting tests (for local development)
+  webServer:
+    process.env.CI ?
+      undefined
+    : {
+        command: 'npm run dev',
+        url: 'http://localhost:3000',
+        reuseExistingServer: !process.env.CI,
+      },
 });

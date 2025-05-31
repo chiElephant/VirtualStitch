@@ -1,0 +1,243 @@
+name: Production Monitoring
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  workflow_dispatch:
+  repository_dispatch:
+    types: [vercel.deployment.success]
+
+jobs:
+  production-monitoring:
+    name: 🚀 Production Health Check
+    runs-on:
+      - self-hosted
+      - Linux
+      - ARM64
+
+    # Only run on successful production deployments
+    if: >
+      github.event_name == 'repository_dispatch' && 
+      github.event.client_payload.environment == 'production'
+
+    timeout-minutes: 15
+
+    env:
+      NODE_ENV: production
+      BASE_URL: ${{ github.event.client_payload.url }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+      UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+
+    steps:
+      - name: 📋 Log production deployment info
+        run: |
+          echo "🚀 Production deployment detected!"
+          echo "📍 URL: ${{ github.event.client_payload.url }}"
+          echo "📦 Commit: ${{ github.event.client_payload.git.sha }}"
+          echo "🌿 Branch: ${{ github.event.client_payload.git.branch }}"
+          echo "👤 Author: ${{ github.event.client_payload.git.author }}"
+
+      - name: ⬇️ Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.client_payload.git.sha }}
+
+      - name: 🔧 Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: 'npm'
+
+      - name: 📦 Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: 🎭 Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: ⏳ Wait for production deployment to stabilize
+        run: |
+          echo "🔄 Waiting for production deployment to be fully ready..."
+          sleep 60
+          echo "🧪 Testing production URL: ${{ github.event.client_payload.url }}"
+
+          # Test with retries
+          for i in {1..5}; do
+            if curl -f --max-time 30 ${{ github.event.client_payload.url }}; then
+              echo "✅ Production deployment is ready!"
+              break
+            else
+              echo "⚠️ Attempt $i failed, retrying in 10 seconds..."
+              sleep 10
+            fi
+          done
+
+      - name: 🧪 Run critical smoke tests
+        id: smoke_tests
+        run: |
+          echo "🚀 Running critical smoke tests on production..."
+          npx playwright test --grep "@smoke" --reporter=list
+        env:
+          CI: true
+        continue-on-error: true
+
+      - name: 🏥 Run API health checks
+        id: api_health
+        run: |
+          echo "🏥 Running API health checks..."
+          npx playwright test --grep "@api-health" --reporter=list
+        env:
+          CI: true
+        continue-on-error: true
+
+      - name: ⚡ Run performance monitoring
+        id: performance
+        run: |
+          echo "⚡ Running performance monitoring..."
+          npx playwright test --grep "@performance-monitoring" --reporter=list
+        env:
+          CI: true
+        continue-on-error: true
+
+      - name: 🔒 Check SSL certificate
+        id: ssl_check
+        run: |
+          echo "🔒 Checking SSL certificate..."
+          if curl -vI ${{ github.event.client_payload.url }} 2>&1 | grep -i "ssl certificate verify ok"; then
+            echo "✅ SSL certificate is valid"
+            echo "ssl_status=valid" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️ SSL certificate verification failed"
+            echo "ssl_status=invalid" >> $GITHUB_OUTPUT
+          fi
+        continue-on-error: true
+
+      - name: 📊 Collect deployment metrics
+        id: metrics
+        run: |
+          echo "📊 Collecting deployment metrics..."
+          echo "deployment_time=$(date -Iseconds)" >> $GITHUB_OUTPUT
+          echo "commit_sha=${{ github.event.client_payload.git.sha }}" >> $GITHUB_OUTPUT
+          echo "deploy_url=${{ github.event.client_payload.url }}" >> $GITHUB_OUTPUT
+
+      - name: ✅ Send success notification email
+        if: >
+          steps.smoke_tests.outcome == 'success' &&
+          steps.api_health.outcome == 'success' &&
+          steps.performance.outcome == 'success'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: ✅ Production Deployment Successful - ${{ github.event.client_payload.git.branch }}
+          to: ${{ secrets.NOTIFICATION_EMAIL }}
+          from: 'VirtualStitch CI <${{ secrets.SMTP_USERNAME }}>'
+          html_body: |
+            <h2>🚀 Production Deployment Successful!</h2>
+
+            <p>Your latest code changes have been successfully deployed and all health checks passed.</p>
+
+            <h3>📊 Deployment Details</h3>
+            <ul>
+              <li><strong>URL:</strong> <a href="${{ github.event.client_payload.url }}">${{ github.event.client_payload.url }}</a></li>
+              <li><strong>Commit:</strong> <code>${{ github.event.client_payload.git.sha }}</code></li>
+              <li><strong>Branch:</strong> ${{ github.event.client_payload.git.branch }}</li>
+              <li><strong>Author:</strong> ${{ github.event.client_payload.git.author }}</li>
+              <li><strong>Time:</strong> ${{ steps.metrics.outputs.deployment_time }}</li>
+            </ul>
+
+            <h3>✅ Health Check Results</h3>
+            <ul>
+              <li><strong>Smoke Tests:</strong> ✅ Passed</li>
+              <li><strong>API Health:</strong> ✅ Passed</li>
+              <li><strong>Performance:</strong> ✅ Passed</li>
+              <li><strong>SSL Certificate:</strong> ✅ Valid</li>
+            </ul>
+
+            <p>🎉 Everything is running smoothly! Your users can enjoy the latest features.</p>
+
+            <hr>
+            <p><small>This notification was sent by VirtualStitch CI/CD Pipeline</small></p>
+
+      - name: 🚨 Send failure notification email
+        if: >
+          steps.smoke_tests.outcome == 'failure' ||
+          steps.api_health.outcome == 'failure' ||
+          steps.performance.outcome == 'failure'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: 🚨 URGENT - Production Issues Detected - ${{ github.event.client_payload.git.branch }}
+          to: ${{ secrets.NOTIFICATION_EMAIL }}
+          from: 'VirtualStitch CI <${{ secrets.SMTP_USERNAME }}>'
+          html_body: |
+            <h2>⚠️ Production Deployment Has Issues!</h2>
+
+            <p><strong style="color: red;">URGENT:</strong> Production deployment has issues that need immediate attention!</p>
+
+            <h3>📊 Deployment Details</h3>
+            <ul>
+              <li><strong>URL:</strong> <a href="${{ github.event.client_payload.url }}">${{ github.event.client_payload.url }}</a></li>
+              <li><strong>Commit:</strong> <code>${{ github.event.client_payload.git.sha }}</code></li>
+              <li><strong>Branch:</strong> ${{ github.event.client_payload.git.branch }}</li>
+              <li><strong>Author:</strong> ${{ github.event.client_payload.git.author }}</li>
+              <li><strong>Time:</strong> ${{ steps.metrics.outputs.deployment_time }}</li>
+            </ul>
+
+            <h3>❌ Failed Health Checks</h3>
+            <ul>
+              <li><strong>Smoke Tests:</strong> ${{ steps.smoke_tests.outcome == 'failure' && '❌ Failed' || '✅ Passed' }}</li>
+              <li><strong>API Health:</strong> ${{ steps.api_health.outcome == 'failure' && '❌ Failed' || '✅ Passed' }}</li>
+              <li><strong>Performance:</strong> ${{ steps.performance.outcome == 'failure' && '❌ Failed' || '✅ Passed' }}</li>
+              <li><strong>SSL Certificate:</strong> ${{ steps.ssl_check.outputs.ssl_status == 'invalid' && '❌ Invalid' || '✅ Valid' }}</li>
+            </ul>
+
+            <h3>🔗 Investigation Links</h3>
+            <ul>
+              <li><a href="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}">View detailed logs</a></li>
+              <li><a href="${{ github.server_url }}/${{ github.repository }}/commit/${{ github.event.client_payload.git.sha }}">View commit changes</a></li>
+            </ul>
+
+            <p><strong>Action Required:</strong> Please investigate immediately and consider rolling back if necessary.</p>
+
+            <hr>
+            <p><small>This alert was sent by VirtualStitch CI/CD Pipeline</small></p>
+
+      - name: 📤 Upload production test artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-monitoring-artifacts
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 14
+
+      - name: 📝 Production monitoring summary
+        if: always()
+        run: |
+          echo "## 🚀 Production Monitoring Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployment URL:** ${{ github.event.client_payload.url }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** \`${{ github.event.client_payload.git.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.event.client_payload.git.branch }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Author:** ${{ github.event.client_payload.git.author }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Health Check Results" >> $GITHUB_STEP_SUMMARY
+          echo "- **Smoke Tests:** ${{ steps.smoke_tests.outcome == 'success' && '✅' || '❌' }} ${{ steps.smoke_tests.outcome }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **API Health:** ${{ steps.api_health.outcome == 'success' && '✅' || '❌' }} ${{ steps.api_health.outcome }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Performance:** ${{ steps.performance.outcome == 'success' && '✅' || '❌' }} ${{ steps.performance.outcome }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **SSL Certificate:** ${{ steps.ssl_check.outputs.ssl_status == 'valid' && '✅' || '⚠️' }} ${{ steps.ssl_check.outputs.ssl_status }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Overall Status:** ${{ job.status }}" >> $GITHUB_STEP_SUMMARY

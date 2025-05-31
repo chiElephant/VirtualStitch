@@ -1,0 +1,261 @@
+name: Auto Merge
+
+permissions:
+  contents: write
+  pull-requests: write
+  checks: read
+
+on:
+  # Trigger when check runs complete (this catches your custom check reports)
+  check_run:
+    types: [completed]
+  # Also listen for workflow runs (fallback for GitHub Actions workflows)
+  workflow_run:
+    workflows: ['CI', 'Preview E2E Tests']
+    types: [completed]
+
+jobs:
+  auto-merge:
+    name: Auto Merge PR
+    runs-on: ubuntu-latest
+    if: >
+      (github.event_name == 'check_run' && github.event.check_run.conclusion == 'success') ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Find associated pull request
+        id: find-pr
+        uses: actions/github-script@v7
+        with:
+          script: |
+            let headSha;
+
+            if (context.eventName === 'check_run') {
+              headSha = context.payload.check_run.head_sha;
+            } else if (context.eventName === 'workflow_run') {
+              headSha = context.payload.workflow_run.head_sha;
+            } else {
+              console.log('Unsupported event type');
+              return { found: false };
+            }
+
+            console.log(`Looking for PR with head SHA: ${headSha}`);
+
+            // Find PRs with this head SHA
+            const { data: prs } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              sort: 'updated',
+              direction: 'desc'
+            });
+
+            const pr = prs.find(pr => pr.head.sha === headSha);
+
+            if (!pr) {
+              console.log('No open PR found for this SHA');
+              return { found: false };
+            }
+
+            console.log(`Found PR #${pr.number}: ${pr.title}`);
+            return {
+              found: true,
+              number: pr.number,
+              head_sha: pr.head.sha,
+              base_ref: pr.base.ref,
+              head_ref: pr.head.ref,
+              title: pr.title
+            };
+
+      - name: Check if all required checks pass
+        id: check-status
+        uses: actions/github-script@v7
+        if: fromJSON(steps.find-pr.outputs.result).found
+        with:
+          script: |
+            const pr = ${{ steps.find-pr.outputs.result }};
+
+            // Get all check runs for the head SHA
+            const { data: checkRuns } = await github.rest.checks.listForRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: pr.head_sha,
+              per_page: 100
+            });
+
+            // Required checks that must pass for auto-merge (must match your workflow check names exactly)
+            const requiredChecks = [
+              '✅ ci-checks',  // Your custom CI check
+              'playwright-tests (chromium)',
+              'playwright-tests (firefox)', 
+              'playwright-tests (webkit)'
+            ];
+
+            console.log('All check runs:', checkRuns.check_runs.map(c => 
+              `${c.name}: ${c.status}/${c.conclusion}`
+            ));
+
+            let allChecksPassed = true;
+            const checkResults = {};
+            const missingChecks = [];
+
+            for (const requiredCheck of requiredChecks) {
+              const checkRun = checkRuns.check_runs.find(c => c.name === requiredCheck);
+              
+              if (!checkRun) {
+                console.log(`❌ Required check "${requiredCheck}" not found`);
+                allChecksPassed = false;
+                missingChecks.push(requiredCheck);
+                checkResults[requiredCheck] = 'missing';
+              } else if (checkRun.status !== 'completed') {
+                console.log(`⏳ Required check "${requiredCheck}" still running: ${checkRun.status}`);
+                allChecksPassed = false;
+                checkResults[requiredCheck] = 'in_progress';
+              } else if (checkRun.conclusion !== 'success') {
+                console.log(`❌ Required check "${requiredCheck}" failed: ${checkRun.conclusion}`);
+                allChecksPassed = false;
+                checkResults[requiredCheck] = checkRun.conclusion;
+              } else {
+                console.log(`✅ Required check "${requiredCheck}" passed`);
+                checkResults[requiredCheck] = 'success';
+              }
+            }
+
+            return {
+              should_merge: allChecksPassed,
+              check_results: checkResults,
+              missing_checks: missingChecks,
+              pr_number: pr.number,
+              head_sha: pr.head_sha
+            };
+
+      - name: Auto merge PR
+        if: >
+          fromJSON(steps.find-pr.outputs.result).found && 
+          fromJSON(steps.check-status.outputs.result).should_merge
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const checkStatus = ${{ steps.check-status.outputs.result }};
+            const pr = ${{ steps.find-pr.outputs.result }};
+
+            try {
+              console.log(`🚀 Auto-merging PR #${checkStatus.pr_number}...`);
+              
+              const { data: mergeResult } = await github.rest.pulls.merge({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: checkStatus.pr_number,
+                commit_title: `Auto-merge: ${pr.title}`,
+                commit_message: `
+            🤖 **Automatically merged after all checks passed**
+
+            ✅ **Checks Status:**
+            - CI checks: ✅ Passed
+            - E2E tests (Chromium): ✅ Passed  
+            - E2E tests (Firefox): ✅ Passed
+            - E2E tests (WebKit): ✅ Passed
+
+            Preview was thoroughly tested and is ready for production! 🎉
+                `.trim(),
+                merge_method: 'squash'
+              });
+              
+              console.log(`✅ Successfully auto-merged PR #${checkStatus.pr_number}`);
+              console.log(`📝 Merge SHA: ${mergeResult.sha}`);
+              
+              // Comment on the PR about successful auto-merge
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: checkStatus.pr_number,
+                body: `🎉 **Auto-merge successful!**
+
+            This PR was automatically merged after all required checks passed:
+
+            ✅ **CI checks** - Linting, type checking, Jest tests, and build
+            ✅ **E2E tests** - Comprehensive testing on all browsers (Chromium, Firefox, WebKit)
+
+            The code is now live in production! 🚀`
+              });
+              
+            } catch (error) {
+              console.log(`❌ Failed to auto-merge PR #${checkStatus.pr_number}: ${error.message}`);
+              
+              // Comment on PR about the failure
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: checkStatus.pr_number,
+                body: `🤖 **Auto-merge failed**
+
+            ❌ **Error:** ${error.message}
+
+            All checks passed, but the merge failed. This might be due to:
+            - Merge conflicts with the base branch
+            - Branch protection rules requiring manual review
+            - Repository permissions
+
+            Please merge manually or check the repository settings.`
+              });
+              
+              throw error;
+            }
+
+      - name: Log check status for debugging
+        if: >
+          fromJSON(steps.find-pr.outputs.result).found && 
+          !fromJSON(steps.check-status.outputs.result).should_merge
+        run: |
+          echo "🔍 Auto-merge conditions not met:"
+          echo '${{ steps.check-status.outputs.result }}' | jq -r '
+            "Required checks status:",
+            (.check_results | to_entries[] | "- \(.key): \(.value)"),
+            "",
+            if (.missing_checks | length > 0) then 
+              "Missing checks:", (.missing_checks[] | "- \(.)")
+            else empty end'
+
+      - name: Comment on PR if checks still pending
+        if: >
+          fromJSON(steps.find-pr.outputs.result).found && 
+          !fromJSON(steps.check-status.outputs.result).should_merge
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const checkStatus = ${{ steps.check-status.outputs.result }};
+            const pr = ${{ steps.find-pr.outputs.result }};
+
+            const checkResults = checkStatus.check_results;
+            const pendingChecks = Object.entries(checkResults)
+              .filter(([name, status]) => status === 'in_progress' || status === 'missing')
+              .map(([name, status]) => `- ${name}: ${status === 'missing' ? '⚪ Not started' : '⏳ Running'}`);
+
+            const failedChecks = Object.entries(checkResults)
+              .filter(([name, status]) => status !== 'success' && status !== 'in_progress' && status !== 'missing')
+              .map(([name, status]) => `- ${name}: ❌ ${status}`);
+
+            if (pendingChecks.length > 0 || failedChecks.length > 0) {
+              let body = `🤖 **Auto-merge status update**\n\n`;
+              
+              if (pendingChecks.length > 0) {
+                body += `⏳ **Waiting for checks to complete:**\n${pendingChecks.join('\n')}\n\n`;
+              }
+              
+              if (failedChecks.length > 0) {
+                body += `❌ **Failed checks preventing auto-merge:**\n${failedChecks.join('\n')}\n\n`;
+                body += `Please fix the failed checks for auto-merge to proceed.`;
+              } else {
+                body += `Will auto-merge once all checks pass! 🚀`;
+              }
+              
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: checkStatus.pr_number,
+                body: body
+              });
+            }
