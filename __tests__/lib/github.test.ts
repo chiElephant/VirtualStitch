@@ -24,7 +24,7 @@ jest.mock('@octokit/rest', () => {
   };
 });
 
-describe('github.ts utilities', () => {
+describe.only('github.ts utilities', () => {
   const fakeAppId = '123';
   const fakePrivateKey = 'fake-key';
 
@@ -34,7 +34,13 @@ describe('github.ts utilities', () => {
 
   describe('createOctokitApp', () => {
     it('calls Octokit constructor without installationId', () => {
-      const octokit = createOctokitApp(fakeAppId, fakePrivateKey);
+      const config = {
+        appId: fakeAppId,
+        privateKey: fakePrivateKey,
+      };
+
+      const octokit = createOctokitApp(config);
+
       expect(Octokit).toHaveBeenCalledWith({
         authStrategy: expect.any(Function),
         auth: {
@@ -46,7 +52,14 @@ describe('github.ts utilities', () => {
     });
 
     it('calls Octokit constructor with installationId', () => {
-      const octokit = createOctokitApp(fakeAppId, fakePrivateKey, 456);
+      const config = {
+        appId: fakeAppId,
+        privateKey: fakePrivateKey,
+        installationId: 456,
+      };
+
+      const octokit = createOctokitApp(config);
+
       expect(Octokit).toHaveBeenCalledWith({
         authStrategy: expect.any(Function),
         auth: {
@@ -61,7 +74,11 @@ describe('github.ts utilities', () => {
 
   describe('createCheckRun', () => {
     it('calls octokit.rest.checks.create with options', async () => {
-      const octokit = createOctokitApp(fakeAppId, fakePrivateKey);
+      const config = {
+        appId: fakeAppId,
+        privateKey: fakePrivateKey,
+      };
+      const octokit = createOctokitApp(config);
       const options = {
         owner: 'org',
         repo: 'repo',
@@ -76,7 +93,11 @@ describe('github.ts utilities', () => {
 
   describe('updateCheckRun', () => {
     it('calls octokit.rest.checks.update with options', async () => {
-      const octokit = createOctokitApp(fakeAppId, fakePrivateKey);
+      const config = {
+        appId: fakeAppId,
+        privateKey: fakePrivateKey,
+      };
+      const octokit = createOctokitApp(config);
 
       const options: RestEndpointMethodTypes['checks']['update']['parameters'] =
         {

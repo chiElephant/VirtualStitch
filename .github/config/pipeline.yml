@@ -46,24 +46,6 @@ workflows:
           server: smtp.gmail.com
           port: 587
 
-auto_merge:
-  required_checks:
-    - '✅ ci-checks'
-    - 'playwright-tests (chromium)'
-    - 'playwright-tests (firefox)'
-    - 'playwright-tests (webkit)'
-  merge_method: squash
-  commit_message_template: |
-    🤖 **Automatically merged after all checks passed**
-
-    ✅ **Checks Status:**
-    - CI checks: ✅ Passed
-    - E2E tests (Chromium): ✅ Passed  
-    - E2E tests (Firefox): ✅ Passed
-    - E2E tests (WebKit): ✅ Passed
-
-    Preview was thoroughly tested and is ready for production! 🎉
-
 runners:
   default:
     - self-hosted
