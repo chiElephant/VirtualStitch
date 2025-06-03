@@ -22,6 +22,9 @@ inputs:
     description: 'Initial wait before first check'
     required: false
     default: '30'
+  vercel_bypass_secret:
+    description: 'Vercel automation bypass secret (optional)'
+    required: false
 
 runs:
   using: 'composite'
@@ -46,7 +49,17 @@ runs:
           
           echo "🧪 Attempt $attempt: Testing $url"
           
-          if curl -f --max-time 30 --silent --show-error "$url" > /dev/null 2>&1; then
+          # Build curl command with optional Vercel bypass secret
+          local curl_cmd="curl -f --max-time 30 --silent --show-error"
+          
+          # Add Vercel bypass secret if provided
+          if [ -n "${{ inputs.vercel_bypass_secret }}" ]; then
+            curl_cmd="$curl_cmd -H 'x-vercel-protection-bypass: ${{ inputs.vercel_bypass_secret }}'"
+            echo "  🔑 Using Vercel automation bypass"
+          fi
+          
+          # Execute the curl command
+          if eval "$curl_cmd \"$url\"" > /dev/null 2>&1; then
             echo "✅ Deployment is ready!"
             return 0
           else
@@ -79,5 +92,12 @@ runs:
 
         echo "❌ Deployment failed to become ready after $max_attempts attempts"
         echo "🔍 Final check with verbose output:"
-        curl -v --max-time 30 "${{ inputs.url }}" || true
+
+        # Final verbose check with Vercel bypass if available
+        if [ -n "${{ inputs.vercel_bypass_secret }}" ]; then
+          curl -v --max-time 30 -H "x-vercel-protection-bypass: ${{ inputs.vercel_bypass_secret }}" "${{ inputs.url }}" || true
+        else
+          curl -v --max-time 30 "${{ inputs.url }}" || true
+        fi
+
         exit 1

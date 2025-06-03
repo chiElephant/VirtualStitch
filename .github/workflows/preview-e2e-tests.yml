@@ -74,6 +74,7 @@ jobs:
           check_interval: 10
           max_attempts: 5
           initial_wait: 30
+          vercel_bypass_secret: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
 
       - name: 🧪 Run E2E tests
         id: e2e_tests
