@@ -58,9 +58,6 @@ jobs:
       - name: 📦 Install dependencies
         run: npm ci --legacy-peer-deps
 
-      - name: 🎭 Install Playwright browsers
-        run: npx playwright install --with-deps
-
       - name: ⏳ Wait for production deployment
         uses: ./.github/actions/wait-for-deployment
         with:
