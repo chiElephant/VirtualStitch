@@ -1,3 +1,4 @@
+# File: .github/workflows/preview-e2e-tests.yml
 name: Preview E2E Tests
 
 permissions:
@@ -36,17 +37,14 @@ jobs:
       VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
 
     steps:
-      - name: 🚀 Report playwright in_progress to GitHub App
-        uses: ./.github/actions/report-checks
+      - name: 🚀 Report in_progress status
+        uses: ./.github/actions/report-status
         with:
-          sha: ${{ github.event.client_payload.git.sha }}
+          check_name: playwright-tests (${{ matrix.project }})
           status: in_progress
-          name: playwright-tests (${{ matrix.project }})
           title: 🚧 E2E Tests In Progress (${{ matrix.project }})
           summary: Comprehensive end-to-end tests running on preview deployment...
-          details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          host: ${{ secrets.APP_HOST }}
-          app_secret: ${{ secrets.INTERNAL_APP_SECRET }}
+          sha: ${{ github.event.client_payload.git.sha }}
 
       - name: 🧪 Log GitHub context
         run: echo '${{ toJson(github) }}'
@@ -69,110 +67,93 @@ jobs:
       - name: 🎭 Install Playwright browsers
         run: npx playwright install --with-deps
 
-      - name: ⏳ Wait for preview deployment to be ready
-        run: |
-          echo "🔄 Waiting for preview deployment to be fully ready..."
-          sleep 30
-          echo "🧪 Testing preview URL: ${{ github.event.client_payload.url }}"
-          curl -f ${{ github.event.client_payload.url }} || exit 1
-          echo "✅ Preview deployment is ready!"
+      - name: ⏳ Wait for preview deployment
+        uses: ./.github/actions/wait-for-deployment
+        with:
+          url: ${{ github.event.client_payload.url }}
+          timeout_seconds: 90
+          check_interval: 10
+          max_attempts: 5
+          initial_wait: 30
 
-      - name: 🧪 Run Playwright E2E tests (${{ matrix.project }})
+      - name: 🧪 Run E2E tests
+        id: e2e_tests
         run: npx playwright test --project=${{ matrix.project }} --reporter=list,html
         env:
           CI: true
 
-      - name: 🔍 Run accessibility tests (${{ matrix.project }})
+      - name: 🔍 Run accessibility tests
+        id: accessibility_tests
         run: npx playwright test --grep "@accessibility" --project=${{ matrix.project }}
         continue-on-error: true
         env:
           CI: true
 
-      - name: ⚡ Run performance tests (${{ matrix.project }})
+      - name: ⚡ Run performance tests
+        id: performance_tests
         run: npx playwright test --grep "@performance" --project=${{ matrix.project }}
         continue-on-error: true
         env:
           CI: true
 
-      - name: ❌ Report playwright failure to GitHub App
-        if: always() && failure()
-        uses: ./.github/actions/report-checks
-        with:
-          sha: ${{ github.event.client_payload.git.sha }}
-          status: completed
-          conclusion: failure
-          name: playwright-tests (${{ matrix.project }})
-          title: ❌ E2E Tests Failed (${{ matrix.project }})
-          summary: Some end-to-end tests failed on the preview deployment. Review the logs and artifacts for details.
-          details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          host: ${{ secrets.APP_HOST }}
-          app_secret: ${{ secrets.INTERNAL_APP_SECRET }}
+      - name: 📝 Generate test summary
+        if: always()
+        run: |
+          echo "## E2E Test Summary: ${{ matrix.project }}" >> $GITHUB_STEP_SUMMARY
+          echo "| Test Type | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| E2E Tests | ${{ steps.e2e_tests.outcome == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Accessibility | ${{ steps.accessibility_tests.outcome == 'success' && '✅ Passed' || steps.accessibility_tests.outcome == 'skipped' && '⏭️ Skipped' || '⚠️ Issues Found' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Performance | ${{ steps.performance_tests.outcome == 'success' && '✅ Passed' || steps.performance_tests.outcome == 'skipped' && '⏭️ Skipped' || '⚠️ Issues Found' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Project**: ${{ matrix.project }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Preview URL**: ${{ github.event.client_payload.url }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Overall Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Run ID**: ${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
 
-      - name: ✅ Report playwright success to GitHub App
-        if: always() && success()
-        uses: ./.github/actions/report-checks
-        with:
-          sha: ${{ github.event.client_payload.git.sha }}
-          status: completed
-          conclusion: success
-          name: playwright-tests (${{ matrix.project }})
-          title: ✅ E2E Tests Passed (${{ matrix.project }})
-          summary: All end-to-end tests passed successfully on the preview deployment. Ready for production!
-          details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          host: ${{ secrets.APP_HOST }}
-          app_secret: ${{ secrets.INTERNAL_APP_SECRET }}
-
-      - name: ⚠️ Report playwright cancelled to GitHub App
-        if: always() && cancelled()
-        uses: ./.github/actions/report-checks
-        with:
-          sha: ${{ github.event.client_payload.git.sha }}
-          status: completed
-          conclusion: cancelled
-          name: playwright-tests (${{ matrix.project }})
-          title: ⚠️ E2E Tests Cancelled (${{ matrix.project }})
-          summary: The end-to-end tests run was cancelled.
-          details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          host: ${{ secrets.APP_HOST }}
-          app_secret: ${{ secrets.INTERNAL_APP_SECRET }}
-
-      - name: ⏰ Report playwright timed_out to GitHub App
-        if: always() && failure() && contains(github.event.client_payload.git.message || '', 'timeout')
-        uses: ./.github/actions/report-checks
-        with:
-          sha: ${{ github.event.client_payload.git.sha }}
-          status: completed
-          conclusion: timed_out
-          name: playwright-tests (${{ matrix.project }})
-          title: ⏰ E2E Tests Timed Out (${{ matrix.project }})
-          summary: The end-to-end tests run timed out before completion.
-          details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          host: ${{ secrets.APP_HOST }}
-          app_secret: ${{ secrets.INTERNAL_APP_SECRET }}
-
-      - name: 📤 Upload Playwright artifacts (screenshots, traces, videos)
+      - name: 📤 Upload test artifacts
         if: failure()
         continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
-          name: '${{ github.job }}-playwright-results-${{ matrix.project }}'
+          name: 'playwright-results-${{ matrix.project }}'
           path: test-results/
           retention-days: 7
 
-      - name: 📤 Upload Playwright HTML report
+      - name: 📤 Upload HTML report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: '${{ github.job }}-playwright-html-report-${{ matrix.project }}'
+          name: 'playwright-html-report-${{ matrix.project }}'
           path: playwright-report
           retention-days: 7
 
-      - name: 📝 Summary report for Playwright (${{ matrix.project }})
-        if: always()
-        run: |
-          echo "## E2E Test Summary: ${{ matrix.project }}" >> $GITHUB_STEP_SUMMARY
-          echo "🎭 Comprehensive tests finished running." >> $GITHUB_STEP_SUMMARY
-          echo "- **Project**: ${{ matrix.project }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Preview URL**: ${{ github.event.client_payload.url }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Run ID**: ${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
+      # Unified status reporting for all outcomes
+      - name: ✅ Report success
+        if: always() && success()
+        uses: ./.github/actions/report-status
+        with:
+          check_name: playwright-tests (${{ matrix.project }})
+          status: completed
+          conclusion: success
+          title: ✅ E2E Tests Passed (${{ matrix.project }})
+          summary: All end-to-end tests passed successfully on the preview deployment. Ready for production!
+          sha: ${{ github.event.client_payload.git.sha }}
+
+      - name: ❌ Report failure
+        if: always() && failure()
+        uses: ./.github/actions/report-status
+        with:
+          check_name: playwright-tests (${{ matrix.project }})
+          status: completed
+          conclusion: failure
+          sha: ${{ github.event.client_payload.git.sha }}
+
+      - name: ⚠️ Report cancelled
+        if: always() && cancelled()
+        uses: ./.github/actions/report-status
+        with:
+          check_name: playwright-tests (${{ matrix.project }})
+          status: completed
+          conclusion: cancelled
+          sha: ${{ github.event.client_payload.git.sha }}

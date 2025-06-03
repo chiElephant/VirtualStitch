@@ -1,0 +1,83 @@
+# File: .github/actions/wait-for-deployment/action.yml
+name: 'Wait for Deployment'
+description: 'Intelligently wait for deployment to be ready with retries'
+
+inputs:
+  url:
+    description: 'Deployment URL to check'
+    required: true
+  timeout_seconds:
+    description: 'Maximum time to wait'
+    required: false
+    default: '90'
+  check_interval:
+    description: 'Seconds between checks'
+    required: false
+    default: '10'
+  max_attempts:
+    description: 'Maximum number of attempts'
+    required: false
+    default: '5'
+  initial_wait:
+    description: 'Initial wait before first check'
+    required: false
+    default: '30'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Wait for deployment readiness
+      shell: bash
+      run: |
+        echo "🔄 Waiting for deployment to be ready..."
+        echo "📍 URL: ${{ inputs.url }}"
+        echo "⏱️ Timeout: ${{ inputs.timeout_seconds }}s"
+        echo "🔄 Check interval: ${{ inputs.check_interval }}s"
+        echo "🎯 Max attempts: ${{ inputs.max_attempts }}"
+
+        # Initial wait to let deployment stabilize
+        echo "⏳ Initial wait of ${{ inputs.initial_wait }} seconds..."
+        sleep ${{ inputs.initial_wait }}
+
+        # Function to check if URL is ready
+        check_url() {
+          local url="$1"
+          local attempt="$2"
+          
+          echo "🧪 Attempt $attempt: Testing $url"
+          
+          if curl -f --max-time 30 --silent --show-error "$url" > /dev/null 2>&1; then
+            echo "✅ Deployment is ready!"
+            return 0
+          else
+            echo "⚠️ Deployment not ready yet"
+            return 1
+          fi
+        }
+
+        # Retry logic with exponential backoff
+        attempt=1
+        max_attempts=${{ inputs.max_attempts }}
+        check_interval=${{ inputs.check_interval }}
+
+        while [ $attempt -le $max_attempts ]; do
+          if check_url "${{ inputs.url }}" $attempt; then
+            echo "🎉 Deployment ready after $attempt attempt(s)"
+            exit 0
+          fi
+          
+          if [ $attempt -lt $max_attempts ]; then
+            echo "⏳ Waiting $check_interval seconds before next attempt..."
+            sleep $check_interval
+            
+            # Exponential backoff (up to 30s max)
+            check_interval=$(( check_interval < 30 ? check_interval + 5 : 30 ))
+          fi
+          
+          attempt=$((attempt + 1))
+        done
+
+        echo "❌ Deployment failed to become ready after $max_attempts attempts"
+        echo "🔍 Final check with verbose output:"
+        curl -v --max-time 30 "${{ inputs.url }}" || true
+        exit 1

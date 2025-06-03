@@ -1,3 +1,4 @@
+# File: .github/workflows/ci.yml
 name: CI
 
 permissions:
@@ -44,28 +45,28 @@ jobs:
           node-version: lts/*
           cache: 'npm'
 
-      - name: 🚀 Report ci-checks in_progress to GitHub App
-        uses: ./.github/actions/report-checks
+      - name: 🚀 Report in_progress status
+        uses: ./.github/actions/report-status
         with:
-          sha: ${{ github.event.client_payload.git.sha }}
+          check_name: ✅ ci-checks
           status: in_progress
-          name: ✅ ci-checks
           title: '🚧 CI In Progress'
           summary: 'Running linting, type checks, Jest tests, and build verification...'
-          details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          host: ${{ secrets.APP_HOST }}
-          app_secret: ${{ secrets.INTERNAL_APP_SECRET }}
+          sha: ${{ github.event.client_payload.git.sha }}
 
       - name: 📦 Install dependencies
         run: npm ci --legacy-peer-deps
 
       - name: 🔎 Lint code
+        id: lint
         run: npm run lint
 
       - name: 🔍 TypeScript type check
+        id: typecheck
         run: npm run type-check
 
       - name: 🧪 Run Jest tests with coverage
+        id: test
         run: npm run test:coverage
 
       - name: 📊 Upload coverage reports
@@ -75,9 +76,11 @@ jobs:
           fail_ci_if_error: false
 
       - name: 🏗️ Build application
+        id: build
         run: npm run build
 
       - name: ✅ Verify build output
+        id: verify
         run: |
           if [ ! -d ".next" ] && [ ! -d "dist" ] && [ ! -d "build" ]; then
             echo "❌ Build output directory not found"
@@ -85,70 +88,59 @@ jobs:
           fi
           echo "✅ Build completed successfully"
 
-      - name: ❌ Report ci-checks failure to GitHub App
-        if: always() && failure()
-        uses: ./.github/actions/report-checks
-        with:
-          sha: ${{ github.event.client_payload.git.sha }}
-          status: completed
-          conclusion: failure
-          name: ✅ ci-checks
-          title: '❌ CI Failed'
-          summary: 'One or more CI checks failed. Review the logs for details.'
-          details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          host: ${{ secrets.APP_HOST }}
-          app_secret: ${{ secrets.INTERNAL_APP_SECRET }}
-
-      - name: ✅ Report ci-checks success to GitHub App
-        if: always() && success()
-        uses: ./.github/actions/report-checks
-        with:
-          sha: ${{ github.event.client_payload.git.sha }}
-          status: completed
-          conclusion: success
-          name: ✅ ci-checks
-          title: '✅ CI Passed'
-          summary: 'All linting, type checks, Jest tests, and build verification passed successfully.'
-          details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          host: ${{ secrets.APP_HOST }}
-          app_secret: ${{ secrets.INTERNAL_APP_SECRET }}
-
-      - name: ⚠️ Report ci-checks cancelled to GitHub App
-        if: always() && cancelled()
-        uses: ./.github/actions/report-checks
-        with:
-          sha: ${{ github.event.client_payload.git.sha }}
-          status: completed
-          conclusion: cancelled
-          name: ✅ ci-checks
-          title: '⚠️ CI Cancelled'
-          summary: 'The CI run was cancelled.'
-          details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          host: ${{ secrets.APP_HOST }}
-          app_secret: ${{ secrets.INTERNAL_APP_SECRET }}
-
-      - name: ⏰ Report ci-checks timed_out to GitHub App
-        if: always() && failure() && contains(github.event.client_payload.git.message || '', 'timeout')
-        uses: ./.github/actions/report-checks
-        with:
-          sha: ${{ github.event.client_payload.git.sha }}
-          status: completed
-          conclusion: timed_out
-          name: ✅ ci-checks
-          title: '⏰ CI Timed Out'
-          summary: 'The CI run timed out before completion.'
-          details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          host: ${{ secrets.APP_HOST }}
-          app_secret: ${{ secrets.INTERNAL_APP_SECRET }}
-
-      - name: 📝 Summary report for CI Checks
+      - name: 📝 Generate step summary
         if: always()
         run: |
           echo "## CI Summary" >> $GITHUB_STEP_SUMMARY
-          echo "✅ All CI checks completed." >> $GITHUB_STEP_SUMMARY
-          echo "- **Linting**: ✅ Passed" >> $GITHUB_STEP_SUMMARY
-          echo "- **Type Check**: ✅ Passed" >> $GITHUB_STEP_SUMMARY
-          echo "- **Jest Tests**: ✅ Passed" >> $GITHUB_STEP_SUMMARY
-          echo "- **Build**: ✅ Passed" >> $GITHUB_STEP_SUMMARY
-          echo "- **Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Run ID**: ${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
+          echo "| Step | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Linting | ${{ steps.lint.outcome == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Type Check | ${{ steps.typecheck.outcome == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Jest Tests | ${{ steps.test.outcome == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build | ${{ steps.build.outcome == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Verification | ${{ steps.verify.outcome == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Overall Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Run ID**: ${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: 📤 Upload build artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-build-artifacts
+          path: |
+            .next/
+            dist/
+            build/
+            coverage/
+          retention-days: 7
+
+      # Unified status reporting for all outcomes
+      - name: ✅ Report success
+        if: always() && success()
+        uses: ./.github/actions/report-status
+        with:
+          check_name: ✅ ci-checks
+          status: completed
+          conclusion: success
+          title: '✅ CI Passed'
+          summary: 'All linting, type checks, Jest tests, and build verification passed successfully.'
+          sha: ${{ github.event.client_payload.git.sha }}
+
+      - name: ❌ Report failure
+        if: always() && failure()
+        uses: ./.github/actions/report-status
+        with:
+          check_name: ✅ ci-checks
+          status: completed
+          conclusion: failure
+          sha: ${{ github.event.client_payload.git.sha }}
+
+      - name: ⚠️ Report cancelled
+        if: always() && cancelled()
+        uses: ./.github/actions/report-status
+        with:
+          check_name: ✅ ci-checks
+          status: completed
+          conclusion: cancelled
+          sha: ${{ github.event.client_payload.git.sha }}

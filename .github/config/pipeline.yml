@@ -1,0 +1,83 @@
+# File: .github/config/pipeline.yml
+# Central configuration for the entire CI/CD pipeline
+
+organizations:
+  303DEVS:
+    app_id_env: GITHUB_APP_ID_303DEVS
+    private_key_env: GITHUB_PRIVATE_KEY_303DEVS
+    webhook_secret_env: 303DEVS_GITHUB_WEBHOOK_SECRET
+    identifiers: ['303devs']
+  CHIELEPHANT:
+    app_id_env: GITHUB_APP_ID_CHIELEPHANT
+    private_key_env: GITHUB_PRIVATE_KEY_CHIELEPHANT
+    webhook_secret_env: CHIELEPHANT_GITHUB_WEBHOOK_SECRET
+    identifiers: ['chie']
+
+workflows:
+  ci:
+    name: '✅ ci-checks'
+    timeout_minutes: 10
+    steps:
+      - lint
+      - type_check
+      - test_coverage
+      - build
+      - verify_build
+
+  e2e:
+    timeout_minutes: 35
+    matrix:
+      projects: [chromium, firefox, webkit]
+    test_types:
+      - e2e
+      - accessibility
+      - performance
+
+  production:
+    timeout_minutes: 15
+    health_checks:
+      - smoke_tests
+      - api_health
+      - performance_monitoring
+      - ssl_check
+    notifications:
+      email:
+        enabled: true
+        smtp:
+          server: smtp.gmail.com
+          port: 587
+
+auto_merge:
+  required_checks:
+    - '✅ ci-checks'
+    - 'playwright-tests (chromium)'
+    - 'playwright-tests (firefox)'
+    - 'playwright-tests (webkit)'
+  merge_method: squash
+  commit_message_template: |
+    🤖 **Automatically merged after all checks passed**
+
+    ✅ **Checks Status:**
+    - CI checks: ✅ Passed
+    - E2E tests (Chromium): ✅ Passed  
+    - E2E tests (Firefox): ✅ Passed
+    - E2E tests (WebKit): ✅ Passed
+
+    Preview was thoroughly tested and is ready for production! 🎉
+
+runners:
+  default:
+    - self-hosted
+    - Linux
+    - ARM64
+  github_hosted: ubuntu-latest
+
+retry:
+  max_attempts: 3
+  initial_delay_ms: 2000
+  backoff_multiplier: 2
+
+deployment:
+  wait_timeout_seconds: 90
+  readiness_check_interval_seconds: 10
+  max_readiness_attempts: 5

@@ -1,3 +1,4 @@
+# File: .github/actions/report-checks/action.yml
 name: 'Report Check Result'
 description: 'Send check result to GitHub App using webhook (required for Checks API access)'
 
@@ -29,24 +30,87 @@ inputs:
   app_secret:
     description: 'Internal app secret to authorize the check update'
     required: true
+  max_retries:
+    description: 'Maximum number of retry attempts'
+    required: false
+    default: '3'
+  initial_delay_ms:
+    description: 'Initial delay between retries in milliseconds'
+    required: false
+    default: '2000'
+  backoff_multiplier:
+    description: 'Multiplier for exponential backoff'
+    required: false
+    default: '2'
 
 runs:
   using: 'composite'
   steps:
+    - name: Validate inputs
+      uses: actions/github-script@v7
+      with:
+        script: |
+          // Input validation
+          const requiredInputs = {
+            sha: '${{ inputs.sha }}',
+            status: '${{ inputs.status }}',
+            name: '${{ inputs.name }}',
+            title: '${{ inputs.title }}',
+            summary: '${{ inputs.summary }}',
+            host: '${{ inputs.host }}',
+            app_secret: '${{ inputs.app_secret }}'
+          };
+
+          const missingInputs = Object.entries(requiredInputs)
+            .filter(([key, value]) => !value || value.trim() === '')
+            .map(([key]) => key);
+
+          if (missingInputs.length > 0) {
+            core.setFailed(`Missing required inputs: ${missingInputs.join(', ')}`);
+            return;
+          }
+
+          // Validate SHA format
+          if (!/^[a-f0-9]{40}$/i.test('${{ inputs.sha }}')) {
+            core.setFailed('Invalid SHA format - must be 40 character hex string');
+            return;
+          }
+
+          // Validate status
+          const validStatuses = ['queued', 'in_progress', 'completed'];
+          if (!validStatuses.includes('${{ inputs.status }}')) {
+            core.setFailed(`Invalid status. Must be one of: ${validStatuses.join(', ')}`);
+            return;
+          }
+
+          // Validate conclusion if provided
+          const conclusion = '${{ inputs.conclusion }}';
+          if (conclusion && conclusion.trim() !== '') {
+            const validConclusions = ['action_required', 'cancelled', 'failure', 'neutral', 'success', 'skipped', 'stale', 'timed_out'];
+            if (!validConclusions.includes(conclusion)) {
+              core.setFailed(`Invalid conclusion. Must be one of: ${validConclusions.join(', ')}`);
+              return;
+            }
+          }
+
+          // Validate host format
+          if (!/^[a-zA-Z0-9.-]+$/.test('${{ inputs.host }}')) {
+            core.setFailed('Invalid host format - only alphanumeric characters, dots, and hyphens allowed');
+            return;
+          }
+
+          core.info('✅ All inputs validated successfully');
+
     - name: Report check status via webhook
       uses: actions/github-script@v7
       env:
         INPUT_HOST: ${{ inputs.host }}
         INPUT_APP_SECRET: ${{ inputs.app_secret }}
+        INPUT_MAX_RETRIES: ${{ inputs.max_retries }}
+        INPUT_INITIAL_DELAY_MS: ${{ inputs.initial_delay_ms }}
+        INPUT_BACKOFF_MULTIPLIER: ${{ inputs.backoff_multiplier }}
       with:
         script: |
-          // Input validation
-          const requiredInputs = ['${{ inputs.sha }}', '${{ inputs.status }}', '${{ inputs.name }}'];
-          if (requiredInputs.some(input => !input)) {
-            core.setFailed('Missing required inputs (sha, status, or name)');
-            return;
-          }
-
           const ownerUpper = context.repo.owner.toUpperCase();
           const payload = {
             sha: '${{ inputs.sha }}',
@@ -58,53 +122,136 @@ runs:
             details_url: '${{ inputs.details_url }}'
           };
 
+          // Sanitize payload to prevent XSS
+          Object.keys(payload).forEach(key => {
+            if (typeof payload[key] === 'string') {
+              payload[key] = payload[key]
+                .replace(/[<>'"&]/g, char => ({
+                  '<': '&lt;',
+                  '>': '&gt;',
+                  '"': '&quot;',
+                  "'": '&#x27;',
+                  '&': '&amp;'
+                }[char]));
+            }
+          });
+
           core.info(`📝 Reporting check status for: ${payload.name} (${payload.status})`);
 
-          // Retry logic with exponential backoff
-          const maxRetries = 3;
-          let retryDelay = 2000;
+          // Configuration from environment
+          const maxRetries = parseInt(process.env.INPUT_MAX_RETRIES) || 3;
+          const initialDelay = parseInt(process.env.INPUT_INITIAL_DELAY_MS) || 2000;
+          const backoffMultiplier = parseFloat(process.env.INPUT_BACKOFF_MULTIPLIER) || 2;
+
+          // Circuit breaker implementation
+          class CircuitBreaker {
+            constructor(threshold = 5, timeout = 60000) {
+              this.threshold = threshold;
+              this.timeout = timeout;
+              this.failures = 0;
+              this.lastFailure = null;
+              this.state = 'CLOSED'; // CLOSED, OPEN, HALF_OPEN
+            }
+
+            async execute(fn) {
+              if (this.state === 'OPEN') {
+                if (Date.now() - this.lastFailure < this.timeout) {
+                  throw new Error('Circuit breaker is OPEN');
+                }
+                this.state = 'HALF_OPEN';
+              }
+
+              try {
+                const result = await fn();
+                this.onSuccess();
+                return result;
+              } catch (error) {
+                this.onFailure();
+                throw error;
+              }
+            }
+
+            onSuccess() {
+              this.failures = 0;
+              this.state = 'CLOSED';
+            }
+
+            onFailure() {
+              this.failures++;
+              this.lastFailure = Date.now();
+              if (this.failures >= this.threshold) {
+                this.state = 'OPEN';
+              }
+            }
+          }
+
+          const circuitBreaker = new CircuitBreaker();
+
+          // Retry logic with exponential backoff and circuit breaker
+          let retryDelay = initialDelay;
 
           for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
               core.info(`🚀 Attempting webhook request (attempt ${attempt}/${maxRetries})`);
               
-              const response = await fetch(
-                `https://${process.env.INPUT_HOST}/api/github-webhook/${ownerUpper}/report`,
-                {
-                  method: 'POST',
-                  headers: {
-                    'Authorization': `Bearer ${process.env.INPUT_APP_SECRET}`,
-                    'Content-Type': 'application/json',
-                    'User-Agent': 'GitHub-Actions-CheckReporter/1.0'
-                  },
-                  body: JSON.stringify(payload)
-                }
-              );
-              
-              if (response.ok) {
-                const responseText = await response.text();
-                core.info(`✅ Check status reported successfully (HTTP ${response.status})`);
-                if (responseText) core.info(`Response: ${responseText}`);
-                return;
-              } else {
-                const errorText = await response.text();
-                core.warning(`⚠️ Webhook request failed with HTTP ${response.status}: ${errorText}`);
+              const result = await circuitBreaker.execute(async () => {
+                const response = await fetch(
+                  `https://${process.env.INPUT_HOST}/api/github-webhook/${ownerUpper}/report`,
+                  {
+                    method: 'POST',
+                    headers: {
+                      'Authorization': `Bearer ${process.env.INPUT_APP_SECRET}`,
+                      'Content-Type': 'application/json',
+                      'User-Agent': 'GitHub-Actions-CheckReporter/2.0',
+                      'X-Request-ID': `${context.runId}-${Date.now()}`,
+                    },
+                    body: JSON.stringify(payload)
+                  }
+                );
                 
-                if (attempt < maxRetries) {
-                  core.info(`🔄 Retrying in ${retryDelay}ms...`);
-                  await new Promise(resolve => setTimeout(resolve, retryDelay));
-                  retryDelay *= 2; // Exponential backoff
+                if (!response.ok) {
+                  const errorText = await response.text();
+                  throw new Error(`HTTP ${response.status}: ${errorText}`);
                 }
-              }
-            } catch (error) {
-              core.warning(`⚠️ Webhook request failed with error: ${error.message}`);
+                
+                return response;
+              });
               
-              if (attempt < maxRetries) {
+              const responseText = await result.text();
+              core.info(`✅ Check status reported successfully (HTTP ${result.status})`);
+              if (responseText) core.info(`Response: ${responseText}`);
+              return;
+              
+            } catch (error) {
+              const isLastAttempt = attempt === maxRetries;
+              const errorMessage = error.message || 'Unknown error';
+              
+              if (errorMessage.includes('Circuit breaker is OPEN')) {
+                core.warning(`⚠️ Circuit breaker is open, skipping remaining attempts`);
+                break;
+              }
+              
+              core.warning(`⚠️ Webhook request failed (attempt ${attempt}/${maxRetries}): ${errorMessage}`);
+              
+              if (!isLastAttempt) {
                 core.info(`🔄 Retrying in ${retryDelay}ms...`);
                 await new Promise(resolve => setTimeout(resolve, retryDelay));
-                retryDelay *= 2;
+                retryDelay = Math.min(retryDelay * backoffMultiplier, 30000); // Cap at 30s
               }
             }
           }
 
           core.setFailed(`❌ Failed to report check status after ${maxRetries} attempts`);
+
+          // Add summary for debugging
+          core.summary.addHeading('Check Reporting Failed');
+          core.summary.addTable([
+            ['Property', 'Value'],
+            ['Check Name', payload.name],
+            ['Status', payload.status],
+            ['Conclusion', payload.conclusion || 'N/A'],
+            ['SHA', payload.sha],
+            ['Attempts', maxRetries.toString()],
+            ['Host', process.env.INPUT_HOST]
+          ]);
+          await core.summary.write();

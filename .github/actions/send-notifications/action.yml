@@ -1,0 +1,137 @@
+# File: .github/actions/send-notification/action.yml
+name: 'Send Deployment Notification'
+description: 'Send email notifications for deployment status with templates'
+
+inputs:
+  type:
+    description: 'Notification type: success or failure'
+    required: true
+  deployment_url:
+    description: 'Deployment URL'
+    required: true
+  commit_sha:
+    description: 'Commit SHA'
+    required: true
+  branch:
+    description: 'Branch name'
+    required: true
+  author:
+    description: 'Commit author'
+    required: true
+  smtp_username:
+    description: 'SMTP username'
+    required: true
+  smtp_password:
+    description: 'SMTP password'
+    required: true
+  recipient_email:
+    description: 'Recipient email address'
+    required: true
+  health_checks:
+    description: 'JSON object with health check results'
+    required: false
+    default: '{}'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Generate email content
+      shell: bash
+      run: |
+        # Parse health checks
+        HEALTH_CHECKS='${{ inputs.health_checks }}'
+
+        # Generate timestamp
+        TIMESTAMP=$(date -Iseconds)
+
+        # Set email subject and body based on type
+        if [ "${{ inputs.type }}" = "success" ]; then
+          SUBJECT="✅ Production Deployment Successful - ${{ inputs.branch }}"
+          
+          # Generate health check results for success
+          HEALTH_RESULTS=""
+          if [ "$HEALTH_CHECKS" != "{}" ]; then
+            HEALTH_RESULTS="<h3>✅ Health Check Results</h3><ul>"
+            echo "$HEALTH_CHECKS" | jq -r 'to_entries[] | "<li><strong>\(.key):</strong> ✅ Passed</li>"' | while read line; do
+              HEALTH_RESULTS="${HEALTH_RESULTS}${line}"
+            done
+            HEALTH_RESULTS="${HEALTH_RESULTS}</ul>"
+          fi
+          
+          BODY="<h2>🚀 Production Deployment Successful!</h2>
+          
+          <p>Your latest code changes have been successfully deployed and all health checks passed.</p>
+          
+          <h3>📊 Deployment Details</h3>
+          <ul>
+            <li><strong>URL:</strong> <a href=\"${{ inputs.deployment_url }}\">${{ inputs.deployment_url }}</a></li>
+            <li><strong>Commit:</strong> <code>${{ inputs.commit_sha }}</code></li>
+            <li><strong>Branch:</strong> ${{ inputs.branch }}</li>
+            <li><strong>Author:</strong> ${{ inputs.author }}</li>
+            <li><strong>Time:</strong> ${TIMESTAMP}</li>
+          </ul>
+          
+          ${HEALTH_RESULTS}
+          
+          <p>🎉 Everything is running smoothly! Your users can enjoy the latest features.</p>
+          
+          <hr>
+          <p><small>This notification was sent by VirtualStitch CI/CD Pipeline</small></p>"
+          
+        else
+          SUBJECT="🚨 URGENT - Production Issues Detected - ${{ inputs.branch }}"
+          
+          # Generate health check results for failure
+          HEALTH_RESULTS=""
+          if [ "$HEALTH_CHECKS" != "{}" ]; then
+            HEALTH_RESULTS="<h3>❌ Failed Health Checks</h3><ul>"
+            echo "$HEALTH_CHECKS" | jq -r 'to_entries[] | if .value == "success" then "<li><strong>\(.key):</strong> ✅ Passed</li>" else "<li><strong>\(.key):</strong> ❌ Failed</li>" end' | while read line; do
+              HEALTH_RESULTS="${HEALTH_RESULTS}${line}"
+            done
+            HEALTH_RESULTS="${HEALTH_RESULTS}</ul>"
+          fi
+          
+          BODY="<h2>⚠️ Production Deployment Has Issues!</h2>
+          
+          <p><strong style=\"color: red;\">URGENT:</strong> Production deployment has issues that need immediate attention!</p>
+          
+          <h3>📊 Deployment Details</h3>
+          <ul>
+            <li><strong>URL:</strong> <a href=\"${{ inputs.deployment_url }}\">${{ inputs.deployment_url }}</a></li>
+            <li><strong>Commit:</strong> <code>${{ inputs.commit_sha }}</code></li>
+            <li><strong>Branch:</strong> ${{ inputs.branch }}</li>
+            <li><strong>Author:</strong> ${{ inputs.author }}</li>
+            <li><strong>Time:</strong> ${TIMESTAMP}</li>
+          </ul>
+          
+          ${HEALTH_RESULTS}
+          
+          <h3>🔗 Investigation Links</h3>
+          <ul>
+            <li><a href=\"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\">View detailed logs</a></li>
+            <li><a href=\"${{ github.server_url }}/${{ github.repository }}/commit/${{ inputs.commit_sha }}\">View commit changes</a></li>
+          </ul>
+          
+          <p><strong>Action Required:</strong> Please investigate immediately and consider rolling back if necessary.</p>
+          
+          <hr>
+          <p><small>This alert was sent by VirtualStitch CI/CD Pipeline</small></p>"
+        fi
+
+        # Save to environment for next step
+        echo "EMAIL_SUBJECT=$SUBJECT" >> $GITHUB_ENV
+        echo "EMAIL_BODY<<EOF" >> $GITHUB_ENV
+        echo "$BODY" >> $GITHUB_ENV
+        echo "EOF" >> $GITHUB_ENV
+
+    - name: Send email notification
+      uses: dawidd6/action-send-mail@v3
+      with:
+        server_address: smtp.gmail.com
+        server_port: 587
+        username: ${{ inputs.smtp_username }}
+        password: ${{ inputs.smtp_password }}
+        subject: ${{ env.EMAIL_SUBJECT }}
+        to: ${{ inputs.recipient_email }}
+        from: 'VirtualStitch CI <${{ inputs.smtp_username }}>'
+        html_body: ${{ env.EMAIL_BODY }}

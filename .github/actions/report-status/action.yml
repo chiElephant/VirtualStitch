@@ -1,0 +1,83 @@
+# File: .github/actions/report-status/action.yml
+name: 'Report Check Status'
+description: 'Unified status reporting for all CI/CD checks'
+
+inputs:
+  check_name:
+    description: 'Name of the check to report'
+    required: true
+  status:
+    description: 'Status: queued, in_progress, completed'
+    required: true
+  conclusion:
+    description: 'Conclusion: success, failure, cancelled, timed_out'
+    required: false
+  title:
+    description: 'Title for the check'
+    required: false
+  summary:
+    description: 'Summary description'
+    required: false
+  sha:
+    description: 'Commit SHA (defaults to current)'
+    required: false
+    default: ${{ github.sha }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set default title and summary
+      shell: bash
+      run: |
+        if [ -z "${{ inputs.title }}" ]; then
+          case "${{ inputs.status }}" in
+            "queued")
+              echo "TITLE=🔄 ${{ inputs.check_name }} - Queued" >> $GITHUB_ENV
+              echo "SUMMARY=${{ inputs.check_name }} has been queued and will start shortly." >> $GITHUB_ENV
+              ;;
+            "in_progress")
+              echo "TITLE=🚧 ${{ inputs.check_name }} - In Progress" >> $GITHUB_ENV
+              echo "SUMMARY=${{ inputs.check_name }} is currently running..." >> $GITHUB_ENV
+              ;;
+            "completed")
+              case "${{ inputs.conclusion }}" in
+                "success")
+                  echo "TITLE=✅ ${{ inputs.check_name }} - Passed" >> $GITHUB_ENV
+                  echo "SUMMARY=${{ inputs.check_name }} completed successfully." >> $GITHUB_ENV
+                  ;;
+                "failure")
+                  echo "TITLE=❌ ${{ inputs.check_name }} - Failed" >> $GITHUB_ENV
+                  echo "SUMMARY=${{ inputs.check_name }} failed. Review the logs for details." >> $GITHUB_ENV
+                  ;;
+                "cancelled")
+                  echo "TITLE=⚠️ ${{ inputs.check_name }} - Cancelled" >> $GITHUB_ENV
+                  echo "SUMMARY=${{ inputs.check_name }} was cancelled." >> $GITHUB_ENV
+                  ;;
+                "timed_out")
+                  echo "TITLE=⏰ ${{ inputs.check_name }} - Timed Out" >> $GITHUB_ENV
+                  echo "SUMMARY=${{ inputs.check_name }} timed out before completion." >> $GITHUB_ENV
+                  ;;
+                *)
+                  echo "TITLE=🔄 ${{ inputs.check_name }}" >> $GITHUB_ENV
+                  echo "SUMMARY=${{ inputs.check_name }} status update." >> $GITHUB_ENV
+                  ;;
+              esac
+              ;;
+          esac
+        else
+          echo "TITLE=${{ inputs.title }}" >> $GITHUB_ENV
+          echo "SUMMARY=${{ inputs.summary }}" >> $GITHUB_ENV
+        fi
+
+    - name: Report status
+      uses: ./.github/actions/report-checks
+      with:
+        sha: ${{ inputs.sha }}
+        status: ${{ inputs.status }}
+        conclusion: ${{ inputs.conclusion }}
+        name: ${{ inputs.check_name }}
+        title: ${{ env.TITLE }}
+        summary: ${{ env.SUMMARY }}
+        details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        host: ${{ secrets.APP_HOST }}
+        app_secret: ${{ secrets.INTERNAL_APP_SECRET }}
