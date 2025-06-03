@@ -1,4 +1,3 @@
-# File: .github/config/pipeline.yml
 # Central configuration for the entire CI/CD pipeline
 
 organizations:
