@@ -22,6 +22,12 @@ inputs:
     description: 'Commit SHA (defaults to current)'
     required: false
     default: ${{ github.sha }}
+  host:
+    description: 'The domain to send the POST request to'
+    required: true
+  app_secret:
+    description: 'Internal app secret to authorize the check update'
+    required: true
 
 runs:
   using: 'composite'
@@ -79,5 +85,5 @@ runs:
         title: ${{ env.TITLE }}
         summary: ${{ env.SUMMARY }}
         details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        host: ${{ secrets.APP_HOST }}
-        app_secret: ${{ secrets.INTERNAL_APP_SECRET }}
+        host: ${{ inputs.host }}
+        app_secret: ${{ inputs.app_secret }}

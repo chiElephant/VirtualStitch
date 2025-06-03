@@ -53,6 +53,8 @@ jobs:
           title: '🚧 CI In Progress'
           summary: 'Running linting, type checks, Jest tests, and build verification...'
           sha: ${{ github.event.client_payload.git.sha }}
+          host: ${{ secrets.APP_HOST }}
+          app_secret: ${{ secrets.INTERNAL_APP_SECRET }}
 
       - name: 📦 Install dependencies
         run: npm ci --legacy-peer-deps
@@ -126,6 +128,8 @@ jobs:
           title: '✅ CI Passed'
           summary: 'All linting, type checks, Jest tests, and build verification passed successfully.'
           sha: ${{ github.event.client_payload.git.sha }}
+          host: ${{ secrets.APP_HOST }}
+          app_secret: ${{ secrets.INTERNAL_APP_SECRET }}
 
       - name: ❌ Report failure
         if: always() && failure()
@@ -135,6 +139,8 @@ jobs:
           status: completed
           conclusion: failure
           sha: ${{ github.event.client_payload.git.sha }}
+          host: ${{ secrets.APP_HOST }}
+          app_secret: ${{ secrets.INTERNAL_APP_SECRET }}
 
       - name: ⚠️ Report cancelled
         if: always() && cancelled()
@@ -144,3 +150,5 @@ jobs:
           status: completed
           conclusion: cancelled
           sha: ${{ github.event.client_payload.git.sha }}
+          host: ${{ secrets.APP_HOST }}
+          app_secret: ${{ secrets.INTERNAL_APP_SECRET }}

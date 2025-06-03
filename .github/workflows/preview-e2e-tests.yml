@@ -45,6 +45,8 @@ jobs:
           title: 🚧 E2E Tests In Progress (${{ matrix.project }})
           summary: Comprehensive end-to-end tests running on preview deployment...
           sha: ${{ github.event.client_payload.git.sha }}
+          host: ${{ secrets.APP_HOST }}
+          app_secret: ${{ secrets.INTERNAL_APP_SECRET }}
 
       - name: 🧪 Log GitHub context
         run: echo '${{ toJson(github) }}'
@@ -136,6 +138,8 @@ jobs:
           title: ✅ E2E Tests Passed (${{ matrix.project }})
           summary: All end-to-end tests passed successfully on the preview deployment. Ready for production!
           sha: ${{ github.event.client_payload.git.sha }}
+          host: ${{ secrets.APP_HOST }}
+          app_secret: ${{ secrets.INTERNAL_APP_SECRET }}
 
       - name: ❌ Report failure
         if: always() && failure()
@@ -145,6 +149,8 @@ jobs:
           status: completed
           conclusion: failure
           sha: ${{ github.event.client_payload.git.sha }}
+          host: ${{ secrets.APP_HOST }}
+          app_secret: ${{ secrets.INTERNAL_APP_SECRET }}
 
       - name: ⚠️ Report cancelled
         if: always() && cancelled()
@@ -154,3 +160,5 @@ jobs:
           status: completed
           conclusion: cancelled
           sha: ${{ github.event.client_payload.git.sha }}
+          host: ${{ secrets.APP_HOST }}
+          app_secret: ${{ secrets.INTERNAL_APP_SECRET }}
