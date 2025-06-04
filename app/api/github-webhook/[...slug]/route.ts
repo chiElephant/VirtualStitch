@@ -269,6 +269,35 @@ const redis = new Redis({
 
 const circuitBreaker = new CircuitBreaker();
 
+// Test method to verify route is working
+export async function GET(
+  req: NextRequest,
+  context: { params: Promise<{ slug: string }> }
+) {
+  try {
+    const resolvedParams = await context.params;
+    const slugParam = resolvedParams.slug;
+    const slugArray = slugParam ? slugParam.split('/').filter(Boolean) : [];
+
+    return Response.json({
+      message: 'GET method works - route is accessible',
+      slug: slugParam,
+      slugArray: slugArray,
+      pathname: new URL(req.url).pathname,
+      timestamp: new Date().toISOString(),
+      nextjs_version: '15.3.1',
+    });
+  } catch (error) {
+    return Response.json(
+      {
+        error: 'GET method failed',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 }
+    );
+  }
+}
+
 export async function POST(
   req: NextRequest,
   context: { params: Promise<{ slug: string }> }
