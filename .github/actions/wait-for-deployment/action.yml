@@ -21,7 +21,7 @@ inputs:
   initial_wait:
     description: 'Initial wait before first check'
     required: false
-    default: '30'
+    default: '5'
   vercel_bypass_secret:
     description: 'Vercel automation bypass secret (optional)'
     required: false
