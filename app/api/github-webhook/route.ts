@@ -550,8 +550,10 @@ async function handleWebhookEndpoint(req: NextRequest, requestId: string) {
     const checkNames = [
       config.workflows.ci.name,
       'playwright-tests (chromium)',
-      'playwright-tests (webkit)',
       'playwright-tests (firefox)',
+      'playwright-tests (webkit)',
+      'playwright-tests (mobile-chrome)',
+      'playwright-tests (mobile-safari)',
     ];
 
     console.log(

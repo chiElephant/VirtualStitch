@@ -1,5 +1,5 @@
-# File: .github/workflows/ci.yml
-name: CI
+# File: .github/workflows/preview-e2e-tests.yml
+name: Preview E2E Tests
 
 permissions:
   checks: write
@@ -13,31 +13,46 @@ on:
   repository_dispatch:
     types: [vercel.deployment.success]
 
-env:
-  NODE_ENV: test
-  BASE_URL: ${{ github.event.client_payload.url }}
-  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-  UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
-  UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
-
 jobs:
-  ci-checks:
+  playwright-tests:
     if: github.event_name == 'repository_dispatch' && github.event.client_payload.environment == 'preview'
-    name: ✅ ci-checks
+    name: 🧪 playwright-tests
     runs-on:
       - self-hosted
       - Linux
       - ARM64
-    timeout-minutes: 10
+
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [chromium, firefox, webkit, mobile-chrome, mobile-safari]
+
+    env:
+      NODE_ENV: test
+      BASE_URL: ${{ github.event.client_payload.url }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+      UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
 
     steps:
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.client_payload.git.sha }}
+          fetch-depth: 0
 
-      - name: 🧪 Log GitHub context
-        run: echo '${{ toJson(github) }}'
+      - name: 🚀 Report in_progress status
+        uses: ./.github/actions/report-status
+        with:
+          check_name: playwright-tests (${{ matrix.project }})
+          status: in_progress
+          title: 🚧 E2E Tests In Progress (${{ matrix.project }})
+          summary: Comprehensive end-to-end tests running on preview deployment...
+          sha: ${{ github.event.client_payload.git.sha }}
+          host: ${{ secrets.APP_HOST }}
+          app_secret: ${{ secrets.INTERNAL_APP_SECRET }}
 
       - name: 🔧 Set up Node.js
         uses: actions/setup-node@v4
@@ -45,76 +60,69 @@ jobs:
           node-version: lts/*
           cache: 'npm'
 
-      - name: 🚀 Report in_progress status
-        uses: ./.github/actions/report-status
-        with:
-          check_name: ✅ ci-checks
-          status: in_progress
-          title: '🚧 CI In Progress'
-          summary: 'Running linting, type checks, Jest tests, and build verification...'
-          sha: ${{ github.event.client_payload.git.sha }}
-          host: ${{ secrets.APP_HOST }}
-          app_secret: ${{ secrets.INTERNAL_APP_SECRET }}
-
       - name: 📦 Install dependencies
         run: npm ci --legacy-peer-deps
 
-      - name: 🔎 Lint code
-        id: lint
-        run: npm run lint
-
-      - name: 🔍 TypeScript type check
-        id: typecheck
-        run: npm run type-check
-
-      - name: 🧪 Run Jest tests with coverage
-        id: test
-        run: npm run test:coverage
-
-      - name: 📊 Upload coverage reports
-        uses: codecov/codecov-action@v3
+      - name: ⏳ Wait for preview deployment
+        uses: ./.github/actions/wait-for-deployment
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          fail_ci_if_error: false
+          url: ${{ github.event.client_payload.url }}
+          timeout_seconds: 90
+          check_interval: 10
+          max_attempts: 5
+          initial_wait: 30
+          vercel_bypass_secret: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
 
-      - name: 🏗️ Build application
-        id: build
-        run: npm run build
+      - name: 🧪 Run E2E tests
+        id: e2e_tests
+        run: npm run test:e2e -- --project=${{ matrix.project }} --reporter=list,html
+        env:
+          CI: true
 
-      - name: ✅ Verify build output
-        id: verify
-        run: |
-          if [ ! -d ".next" ] && [ ! -d "dist" ] && [ ! -d "build" ]; then
-            echo "❌ Build output directory not found"
-            exit 1
-          fi
-          echo "✅ Build completed successfully"
+      - name: 🔍 Run accessibility tests
+        id: accessibility_tests
+        run: npm run test:a11y -- --project=${{ matrix.project }}
+        continue-on-error: true
+        env:
+          CI: true
 
-      - name: 📝 Generate step summary
+      - name: ⚡ Run performance tests
+        id: performance_tests
+        run: npm run test:performance -- --project=${{ matrix.project }}
+        continue-on-error: true
+        env:
+          CI: true
+
+      - name: 📝 Generate test summary
         if: always()
         run: |
-          echo "## CI Summary" >> $GITHUB_STEP_SUMMARY
-          echo "| Step | Status |" >> $GITHUB_STEP_SUMMARY
-          echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Linting | ${{ steps.lint.outcome == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Type Check | ${{ steps.typecheck.outcome == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Jest Tests | ${{ steps.test.outcome == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Build | ${{ steps.build.outcome == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Verification | ${{ steps.verify.outcome == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "## E2E Test Summary: ${{ matrix.project }}" >> $GITHUB_STEP_SUMMARY
+          echo "| Test Type | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| E2E Tests | ${{ steps.e2e_tests.outcome == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Accessibility | ${{ steps.accessibility_tests.outcome == 'success' && '✅ Passed' || steps.accessibility_tests.outcome == 'skipped' && '⏭️ Skipped' || '⚠️ Issues Found' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Performance | ${{ steps.performance_tests.outcome == 'success' && '✅ Passed' || steps.performance_tests.outcome == 'skipped' && '⏭️ Skipped' || '⚠️ Issues Found' }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Project**: ${{ matrix.project }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Preview URL**: ${{ github.event.client_payload.url }}" >> $GITHUB_STEP_SUMMARY
           echo "**Overall Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
           echo "**Run ID**: ${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
 
-      - name: 📤 Upload build artifacts
+      - name: 📤 Upload test artifacts
+        if: failure()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: 'playwright-results-${{ matrix.project }}'
+          path: test-results/
+          retention-days: 7
+
+      - name: 📤 Upload HTML report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ci-build-artifacts
-          path: |
-            .next/
-            dist/
-            build/
-            coverage/
+          name: 'playwright-html-report-${{ matrix.project }}'
+          path: playwright-report
           retention-days: 7
 
       # Unified status reporting for all outcomes
@@ -122,11 +130,11 @@ jobs:
         if: always() && success()
         uses: ./.github/actions/report-status
         with:
-          check_name: ✅ ci-checks
+          check_name: playwright-tests (${{ matrix.project }})
           status: completed
           conclusion: success
-          title: '✅ CI Passed'
-          summary: 'All linting, type checks, Jest tests, and build verification passed successfully.'
+          title: ✅ E2E Tests Passed (${{ matrix.project }})
+          summary: All end-to-end tests passed successfully on the preview deployment. Ready for production!
           sha: ${{ github.event.client_payload.git.sha }}
           host: ${{ secrets.APP_HOST }}
           app_secret: ${{ secrets.INTERNAL_APP_SECRET }}
@@ -135,7 +143,7 @@ jobs:
         if: always() && failure()
         uses: ./.github/actions/report-status
         with:
-          check_name: ✅ ci-checks
+          check_name: playwright-tests (${{ matrix.project }})
           status: completed
           conclusion: failure
           sha: ${{ github.event.client_payload.git.sha }}
@@ -146,7 +154,7 @@ jobs:
         if: always() && cancelled()
         uses: ./.github/actions/report-status
         with:
-          check_name: ✅ ci-checks
+          check_name: playwright-tests (${{ matrix.project }})
           status: completed
           conclusion: cancelled
           sha: ${{ github.event.client_payload.git.sha }}

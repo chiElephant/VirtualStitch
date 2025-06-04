@@ -29,7 +29,7 @@ function getProjectConfig(
     | 'Pixel 5'
     | 'iPhone 12'
 ) {
-  if (browser === 'Desktop Chrome') {
+  if (browser === 'Desktop Chrome' || browser === 'Pixel 5') {
     return {
       ...devices[browser],
       baseURL: isCI ? `${ciBaseURL}${bypassQuery}` : localBaseURL,
@@ -63,13 +63,13 @@ export default defineConfig({
   preserveOutput: 'failures-only',
 
   projects: [
-    { name: 'Chromium', use: getProjectConfig('Desktop Chrome') },
-    { name: 'Firefox', use: getProjectConfig('Desktop Firefox') },
-    { name: 'WebKit', use: getProjectConfig('Desktop Safari') },
+    { name: 'chromium', use: getProjectConfig('Desktop Chrome') },
+    { name: 'firefox', use: getProjectConfig('Desktop Firefox') },
+    { name: 'webkit', use: getProjectConfig('Desktop Safari') },
 
     // Mobile testing
-    { name: 'Mobile Chrome', use: getProjectConfig('Pixel 5') },
-    { name: 'Mobile Safari', use: getProjectConfig('iPhone 12') },
+    { name: 'mobile-chrome', use: getProjectConfig('Pixel 5') },
+    { name: 'mobile-safari', use: getProjectConfig('iPhone 12') },
   ],
 
   quiet: isCI,

@@ -36,14 +36,6 @@ jobs:
       VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
 
     steps:
-      - name: 📋 Log production deployment info
-        run: |
-          echo "🚀 Production deployment detected!"
-          echo "📍 URL: ${{ github.event.client_payload.url }}"
-          echo "📦 Commit: ${{ github.event.client_payload.git.sha }}"
-          echo "🌿 Branch: ${{ github.event.client_payload.git.branch }}"
-          echo "👤 Author: ${{ github.event.client_payload.git.author }}"
-
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
         with:
@@ -92,21 +84,17 @@ jobs:
       - name: 🔒 Check SSL certificate
         id: ssl_check
         run: |
-          echo "🔒 Checking SSL certificate..."
-
           # Extract domain from URL
           DOMAIN=$(echo "${{ github.event.client_payload.url }}" | sed -E 's/https?:\/\/([^\/]+).*/\1/')
 
           # Check SSL certificate
           if openssl s_client -connect "${DOMAIN}:443" -servername "${DOMAIN}" < /dev/null 2>/dev/null | openssl x509 -noout -dates 2>/dev/null; then
-            echo "✅ SSL certificate is valid"
             echo "ssl_status=valid" >> $GITHUB_OUTPUT
             
             # Get certificate expiry
             EXPIRY=$(openssl s_client -connect "${DOMAIN}:443" -servername "${DOMAIN}" < /dev/null 2>/dev/null | openssl x509 -noout -enddate 2>/dev/null | cut -d= -f2)
             echo "ssl_expiry=$EXPIRY" >> $GITHUB_OUTPUT
           else
-            echo "⚠️ SSL certificate verification failed"
             echo "ssl_status=invalid" >> $GITHUB_OUTPUT
           fi
         continue-on-error: true
@@ -114,7 +102,6 @@ jobs:
       - name: 📊 Collect deployment metrics
         id: metrics
         run: |
-          echo "📊 Collecting deployment metrics..."
           echo "deployment_time=$(date -Iseconds)" >> $GITHUB_OUTPUT
           echo "commit_sha=${{ github.event.client_payload.git.sha }}" >> $GITHUB_OUTPUT
           echo "deploy_url=${{ github.event.client_payload.url }}" >> $GITHUB_OUTPUT
