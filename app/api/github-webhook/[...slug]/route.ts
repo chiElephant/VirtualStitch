@@ -320,10 +320,13 @@ export async function POST(
       return new Response('Rate limit exceeded', { status: 429 });
     }
 
-    // For catch-all routes [...slug], Next.js provides slug as a string
-    // We need to split it to get the array behavior
+    // For catch-all routes [...slug], Next.js 15 provides slug as an array
+    // Handle both string (old behavior) and array (new behavior)
     const slugParam = resolvedParams.slug;
-    const slugArray = slugParam ? slugParam.split('/').filter(Boolean) : [];
+    const slugArray =
+      Array.isArray(slugParam) ? slugParam
+      : slugParam ? [slugParam]
+      : [];
 
     console.log(
       '[' +
