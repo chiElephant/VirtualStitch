@@ -297,11 +297,18 @@ export async function POST(req: NextRequest) {
         pathname
     );
 
-    const reportMatch = pathname.match(/\/([^\/]+)\/report$/);
+    // Fix the regex to match the correct pattern: /api/github-webhook/ORG/report
+    const reportMatch = pathname.match(
+      /\/api\/github-webhook\/([^\/]+)\/report$/
+    );
     if (reportMatch) {
+      console.log(
+        '[' + requestId + '] Matched report endpoint for org: ' + reportMatch[1]
+      );
       return await handleReportEndpoint(req, requestId, reportMatch[1]);
     }
 
+    // Handle regular webhook endpoint
     return await handleWebhookEndpoint(req, requestId);
   } catch (error) {
     console.error('[' + requestId + '] Unhandled error:', error);
