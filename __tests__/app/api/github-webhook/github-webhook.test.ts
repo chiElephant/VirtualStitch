@@ -1,4 +1,3 @@
-// This is an arbitrary testing comment to be removed upon completion
 import { NextRequest } from 'next/server';
 
 let POST: typeof import('@/app/api/github-webhook/[...slug]/route').POST;
@@ -14,7 +13,6 @@ jest.mock('@upstash/redis', () => {
 
 const getRepoInstallationMock = jest.fn();
 const listForRefMock = jest.fn();
-
 const createMock = jest.fn();
 const updateMock = jest.fn();
 
@@ -37,11 +35,6 @@ jest.mock('@octokit/auth-app', () => ({
   createAppAuth: jest.fn(),
 }));
 
-jest.mock('@/lib/github', () => ({
-  createCheckRun: jest.fn(),
-  updateCheckRun: jest.fn(),
-}));
-
 jest.mock('@octokit/webhooks-methods', () => ({
   verify: jest.fn().mockResolvedValue(true),
 }));
@@ -50,38 +43,24 @@ describe('POST /api/github-webhook', () => {
   const originalEnv = process.env;
   let getMock: jest.Mock;
   let setMock: jest.Mock;
-  let createCheckRunMock: jest.Mock;
-  let updateCheckRunMock: jest.Mock;
   let verifyMock: jest.Mock;
 
   const defaultEnv = {
     'GITHUB_REPOSITORY': '303Devs/VirtualStitch',
-    'GITHUB_REPOSITORY_303DEVS': '303Devs/VirtualStitch',
     'GITHUB_APP_ID_303DEVS': '123',
     'GITHUB_PRIVATE_KEY_303DEVS':
       '-----BEGIN PRIVATE KEY-----\nfake\nkey\n-----END PRIVATE KEY-----',
     '303DEVS_GITHUB_WEBHOOK_SECRET': 'fake_secret',
-    'GITHUB_REPOSITORY_CHIELEPHANT': 'chiElephant/VirtualStitch',
-    'GITHUB_APP_ID_CHIELEPHANT': '123',
+    'GITHUB_APP_ID_CHIELEPHANT': '456',
     'GITHUB_PRIVATE_KEY_CHIELEPHANT':
       '-----BEGIN PRIVATE KEY-----\nfake\nkey\n-----END PRIVATE KEY-----',
-    'CHIELEPHANT_GITHUB_WEBHOOK_SECRET': 'fake_secret',
+    'CHIELEPHANT_GITHUB_WEBHOOK_SECRET': 'fake_secret_2',
     'UPSTASH_REDIS_REST_URL': 'http://localhost:8080',
     'UPSTASH_REDIS_REST_TOKEN': 'token',
-    'OPENAI_API_KEY': 'fake_key',
   };
 
   beforeEach(async () => {
     jest.resetModules();
-
-    jest.doMock('@/lib/github', () => ({
-      createCheckRun: jest.fn(),
-      updateCheckRun: jest.fn(),
-    }));
-
-    const githubLib = await import('@/lib/github');
-    createCheckRunMock = githubLib.createCheckRun as jest.Mock;
-    updateCheckRunMock = githubLib.updateCheckRun as jest.Mock;
 
     process.env = { ...originalEnv, ...defaultEnv };
 
@@ -96,21 +75,18 @@ describe('POST /api/github-webhook', () => {
       listForRefMock,
       getMock,
       setMock,
-      createCheckRunMock,
-      updateCheckRunMock,
-      verifyMock,
       createMock,
       updateMock,
+      verifyMock,
     ].forEach((mock) => mock.mockReset());
 
     // Set default return values
     getRepoInstallationMock.mockResolvedValue({ data: { id: 123 } });
     listForRefMock.mockResolvedValue({
-      data: { check_runs: [{ id: 456, name: 'ci-checks' }] },
+      data: { check_runs: [{ id: 456, name: '✅ ci-checks' }] },
     });
     getMock.mockResolvedValue(null);
     setMock.mockResolvedValue(undefined);
-    updateCheckRunMock.mockResolvedValue({ status: 200 });
     createMock.mockResolvedValue({});
     updateMock.mockResolvedValue({});
     verifyMock.mockResolvedValue(true);
@@ -138,8 +114,11 @@ describe('POST /api/github-webhook', () => {
       }
     ) as unknown as NextRequest;
 
-    // Mock the params that Next.js would provide
-    return { req, params: { slug: [routeOwner, 'report'] } };
+    // Return params as a Promise to match Next.js 15 behavior
+    return {
+      req,
+      params: Promise.resolve({ slug: `${routeOwner}/report` }),
+    };
   }
 
   function makeWebhookRequest(
@@ -156,8 +135,11 @@ describe('POST /api/github-webhook', () => {
       },
     }) as unknown as NextRequest;
 
-    // Mock the params that Next.js would provide for base webhook
-    return { req, params: { slug: [] } };
+    // Return params as a Promise to match Next.js 15 behavior
+    return {
+      req,
+      params: Promise.resolve({ slug: '' }),
+    };
   }
 
   function makeUnknownPathRequest() {
@@ -170,13 +152,16 @@ describe('POST /api/github-webhook', () => {
       }
     ) as unknown as NextRequest;
 
-    return { req, params: { slug: ['unknown', 'path'] } };
+    // Return params as a Promise to match Next.js 15 behavior
+    return {
+      req,
+      params: Promise.resolve({ slug: 'unknown/path' }),
+    };
   }
 
-  // Fixed: Use a valid 40-character SHA
   const defaultReportPayload = {
     sha: '1234567890abcdef1234567890abcdef12345678',
-    name: 'ci-checks',
+    name: '✅ ci-checks',
     status: 'completed',
     conclusion: 'success',
     title: 'Done',
@@ -199,10 +184,7 @@ describe('POST /api/github-webhook', () => {
       expect(await res.text()).toBe('Unsupported owner in route');
     });
 
-    it('accepts valid route owner in mixed case', async () => {
-      // Set the correct repository for CHIELEPHANT
-      process.env.GITHUB_REPOSITORY = 'chiElephant/VirtualStitch';
-
+    it('accepts valid route owner for CHIELEPHANT', async () => {
       const { req, params } = makeReportRequest(
         defaultReportPayload,
         {},
@@ -217,6 +199,103 @@ describe('POST /api/github-webhook', () => {
       const res = await POST(req, { params });
       expect(res.status).toBe(404);
       expect(await res.text()).toBe('Not found');
+    });
+  });
+
+  describe('Payload validation', () => {
+    it('validates SHA format', async () => {
+      const invalidPayload = {
+        ...defaultReportPayload,
+        sha: 'invalid-sha',
+      };
+
+      const { req, params } = makeReportRequest(invalidPayload);
+      const res = await POST(req, { params });
+
+      expect(res.status).toBe(400);
+      expect(await res.text()).toContain('Validation error: Invalid SHA');
+    });
+
+    it('validates status values', async () => {
+      const invalidPayload = {
+        ...defaultReportPayload,
+        status: 'invalid-status',
+      };
+
+      const { req, params } = makeReportRequest(invalidPayload);
+      const res = await POST(req, { params });
+
+      expect(res.status).toBe(400);
+      expect(await res.text()).toContain('Validation error: Invalid status');
+    });
+
+    it('validates conclusion values', async () => {
+      const invalidPayload = {
+        ...defaultReportPayload,
+        conclusion: 'invalid-conclusion',
+      };
+
+      const { req, params } = makeReportRequest(invalidPayload);
+      const res = await POST(req, { params });
+
+      expect(res.status).toBe(400);
+      expect(await res.text()).toContain(
+        'Validation error: Invalid conclusion'
+      );
+    });
+
+    it('validates name length', async () => {
+      const invalidPayload = {
+        ...defaultReportPayload,
+        name: '',
+      };
+
+      const { req, params } = makeReportRequest(invalidPayload);
+      const res = await POST(req, { params });
+
+      expect(res.status).toBe(400);
+      expect(await res.text()).toContain('Validation error: Invalid name');
+    });
+
+    it('validates title length', async () => {
+      const invalidPayload = {
+        ...defaultReportPayload,
+        title: 'x'.repeat(201),
+      };
+
+      const { req, params } = makeReportRequest(invalidPayload);
+      const res = await POST(req, { params });
+
+      expect(res.status).toBe(400);
+      expect(await res.text()).toContain('Validation error: Invalid title');
+    });
+
+    it('validates summary length', async () => {
+      const invalidPayload = {
+        ...defaultReportPayload,
+        summary: 'x'.repeat(1001),
+      };
+
+      const { req, params } = makeReportRequest(invalidPayload);
+      const res = await POST(req, { params });
+
+      expect(res.status).toBe(400);
+      expect(await res.text()).toContain('Validation error: Invalid summary');
+    });
+
+    it('validates details_url format', async () => {
+      const invalidPayload = {
+        ...defaultReportPayload,
+        details_url: 'not-a-url',
+      };
+
+      const { req, params } = makeReportRequest(invalidPayload);
+      const res = await POST(req, { params });
+
+      expect(res.status).toBe(400);
+      expect(await res.text()).toContain(
+        'Validation error: Invalid details_url'
+      );
     });
   });
 
@@ -248,24 +327,25 @@ describe('POST /api/github-webhook', () => {
 
       expect(res.status).toBe(200);
       expect(await res.text()).toBe('✅ Check run updated');
-    });
-
-    it('uses default check name when name is not provided', async () => {
-      const payload = {
-        ...defaultReportPayload,
-        name: 'ci-checks',
-      };
-
-      const { req, params } = makeReportRequest(payload);
-      const res = await POST(req, { params });
-
-      expect(res.status).toBe(200);
+      expect(updateMock).toHaveBeenCalledWith({
+        owner: '303Devs',
+        repo: 'VirtualStitch',
+        check_run_id: 456,
+        status: 'completed',
+        conclusion: 'success',
+        completed_at: expect.any(String),
+        output: {
+          title: 'Done',
+          summary: 'All good',
+        },
+        details_url: 'https://example.com/details',
+      });
     });
 
     it('updates check run without conclusion (skips completed_at)', async () => {
       const payload = {
         sha: '1234567890abcdef1234567890abcdef12345678',
-        name: 'ci-checks',
+        name: '✅ ci-checks',
         status: 'in_progress',
         title: 'Running',
         summary: 'Still checking...',
@@ -276,6 +356,40 @@ describe('POST /api/github-webhook', () => {
       const res = await POST(req, { params });
 
       expect(res.status).toBe(200);
+      expect(updateMock).toHaveBeenCalledWith({
+        owner: '303Devs',
+        repo: 'VirtualStitch',
+        check_run_id: 456,
+        status: 'in_progress',
+        conclusion: undefined,
+        completed_at: undefined,
+        output: {
+          title: 'Running',
+          summary: 'Still checking...',
+        },
+        details_url: 'https://example.com/details',
+      });
+    });
+
+    it('sanitizes HTML in title and summary', async () => {
+      const payload = {
+        ...defaultReportPayload,
+        title: 'Test <script>alert("xss")</script>',
+        summary: 'Summary with "quotes" & ampersand',
+      };
+
+      const { req, params } = makeReportRequest(payload);
+      const res = await POST(req, { params });
+
+      expect(res.status).toBe(200);
+      expect(updateMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          output: {
+            title: 'Test &lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;',
+            summary: 'Summary with &quot;quotes&quot; &amp; ampersand',
+          },
+        })
+      );
     });
 
     describe('Error handling', () => {
@@ -289,7 +403,7 @@ describe('POST /api/github-webhook', () => {
         expect(await res.text()).toBe('Internal error');
       });
 
-      it('returns 500 if updateCheckRun throws an error', async () => {
+      it('returns 500 if update throws an error', async () => {
         updateMock.mockRejectedValue(new Error('Update failed'));
 
         const { req, params } = makeReportRequest(defaultReportPayload);
@@ -299,16 +413,22 @@ describe('POST /api/github-webhook', () => {
         expect(await res.text()).toBe('Internal error');
       });
 
-      it('returns 500 when updateCheckRun throws synchronously', async () => {
-        updateMock.mockImplementation(() => {
-          throw new Error('sync throw');
-        });
+      it('returns 503 when circuit breaker is open', async () => {
+        // Simulate circuit breaker opening by causing multiple failures
+        updateMock.mockRejectedValue(new Error('Service failure'));
 
+        // Make 5 requests to trigger circuit breaker
+        for (let i = 0; i < 5; i++) {
+          const { req, params } = makeReportRequest(defaultReportPayload);
+          await POST(req, { params });
+        }
+
+        // Next request should get circuit breaker response
         const { req, params } = makeReportRequest(defaultReportPayload);
         const res = await POST(req, { params });
 
-        expect(res.status).toBe(500);
-        expect(await res.text()).toBe('Internal error');
+        expect(res.status).toBe(503);
+        expect(await res.text()).toBe('Service temporarily unavailable');
       });
 
       it('handles Redis set failure after successful update', async () => {
@@ -321,16 +441,14 @@ describe('POST /api/github-webhook', () => {
         expect(await res.text()).toBe('Internal error');
       });
 
-      it('handles Redis set synchronous failure', async () => {
-        setMock.mockImplementation(() => {
-          throw new Error('Redis explosion');
-        });
+      it('returns 500 for missing GitHub App credentials', async () => {
+        delete process.env.GITHUB_APP_ID_303DEVS;
 
         const { req, params } = makeReportRequest(defaultReportPayload);
         const res = await POST(req, { params });
 
         expect(res.status).toBe(500);
-        expect(await res.text()).toBe('Internal error');
+        expect(await res.text()).toBe('Configuration error');
       });
     });
   });
@@ -371,7 +489,7 @@ describe('POST /api/github-webhook', () => {
         headers: {},
       }) as unknown as NextRequest;
 
-      const res = await POST(req, { params: { slug: [] } });
+      const res = await POST(req, { params: Promise.resolve({ slug: '' }) });
       expect(res.status).toBe(401);
       expect(await res.text()).toBe('Unauthorized');
     });
@@ -389,18 +507,29 @@ describe('POST /api/github-webhook', () => {
       expect(await res.text()).toBe('Event ignored');
     });
 
+    it('ignores check_suite events that are not "requested"', async () => {
+      const payload = {
+        ...defaultWebhookPayload,
+        action: 'completed',
+      };
+
+      const { req, params } = makeWebhookRequest(payload);
+      const res = await POST(req, { params });
+
+      expect(res.status).toBe(200);
+      expect(await res.text()).toBe('Event ignored');
+    });
+
     it('creates check runs for check_suite event (303devs)', async () => {
       const { req, params } = makeWebhookRequest(defaultWebhookPayload);
       const res = await POST(req, { params });
 
       expect(res.status).toBe(200);
       expect(await res.text()).toBe('✅ All check runs created');
+      expect(createMock).toHaveBeenCalledTimes(6); // ci + 5 playwright tests
     });
 
     it('creates check runs for CHIELEPHANT org', async () => {
-      // Set the correct repository for CHIELEPHANT
-      process.env.GITHUB_REPOSITORY = 'chiElephant/VirtualStitch';
-
       const payload = {
         ...defaultWebhookPayload,
         repository: { owner: { login: 'ChiElephant' }, name: 'VirtualStitch' },
@@ -421,7 +550,7 @@ describe('POST /api/github-webhook', () => {
 
       expect(res.status).toBe(200);
       expect(await res.text()).toBe('⏭️ Checks already created for this SHA.');
-      expect(createCheckRunMock).not.toHaveBeenCalled();
+      expect(createMock).not.toHaveBeenCalled();
     });
 
     describe('Webhook validation errors', () => {
@@ -451,7 +580,7 @@ describe('POST /api/github-webhook', () => {
     });
 
     describe('Webhook error handling', () => {
-      it('returns 500 if createCheckRun fails', async () => {
+      it('returns 500 if createMock fails', async () => {
         getMock.mockResolvedValue(false);
         createMock.mockRejectedValue(new Error('Failed to create'));
 
@@ -461,6 +590,54 @@ describe('POST /api/github-webhook', () => {
         expect(res.status).toBe(500);
         expect(await res.text()).toBe('Internal error');
       });
+
+      it('returns 503 when circuit breaker is open for webhook', async () => {
+        // Simulate circuit breaker opening by causing multiple failures
+        createMock.mockRejectedValue(new Error('Service failure'));
+
+        // Make 5 requests to trigger circuit breaker
+        for (let i = 0; i < 5; i++) {
+          const { req, params } = makeWebhookRequest(defaultWebhookPayload);
+          await POST(req, { params });
+        }
+
+        // Next request should get circuit breaker response
+        const { req, params } = makeWebhookRequest(defaultWebhookPayload);
+        const res = await POST(req, { params });
+
+        expect(res.status).toBe(503);
+        expect(await res.text()).toBe('Service temporarily unavailable');
+      });
+
+      it('returns 500 for missing GitHub App credentials in webhook', async () => {
+        delete process.env.GITHUB_APP_ID_303DEVS;
+
+        const { req, params } = makeWebhookRequest(defaultWebhookPayload);
+        const res = await POST(req, { params });
+
+        expect(res.status).toBe(500);
+        expect(await res.text()).toBe('Configuration error');
+      });
+    });
+  });
+
+  describe('Rate limiting', () => {
+    it('handles rate limiting', async () => {
+      // The actual rate limiter uses a Map, but for testing we'll simulate
+      // by making many requests quickly
+      const requests = [];
+      for (let i = 0; i < 101; i++) {
+        const { req, params } = makeReportRequest(defaultReportPayload);
+        requests.push(POST(req, { params }));
+      }
+
+      const responses = await Promise.all(requests);
+
+      // At least one should be rate limited (429)
+      const rateLimitedResponses = responses.filter(
+        (res) => res.status === 429
+      );
+      expect(rateLimitedResponses.length).toBeGreaterThan(0);
     });
   });
 });

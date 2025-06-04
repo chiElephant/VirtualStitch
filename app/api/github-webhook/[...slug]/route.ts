@@ -271,7 +271,7 @@ const circuitBreaker = new CircuitBreaker();
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { slug: string[] } }
+  context: { params: Promise<{ slug: string }> }
 ) {
   const requestId = generateRequestId();
   const startTime = Date.now();
@@ -280,6 +280,7 @@ export async function POST(
     await ConfigManager.getConfig();
 
     const { pathname } = new URL(req.url);
+    const resolvedParams = await context.params;
     const clientIp =
       req.headers.get('x-forwarded-for') ||
       req.headers.get('x-real-ip') ||
@@ -290,6 +291,11 @@ export async function POST(
       return new Response('Rate limit exceeded', { status: 429 });
     }
 
+    // For catch-all routes [...slug], Next.js provides slug as a string
+    // We need to split it to get the array behavior
+    const slugParam = resolvedParams.slug;
+    const slugArray = slugParam ? slugParam.split('/').filter(Boolean) : [];
+
     console.log(
       '[' +
         requestId +
@@ -298,16 +304,12 @@ export async function POST(
         ' to ' +
         pathname +
         ' with slug: ' +
-        JSON.stringify(params.slug)
+        JSON.stringify(slugArray)
     );
 
     // Handle /api/github-webhook/ORG/report
-    if (
-      params.slug &&
-      params.slug.length === 2 &&
-      params.slug[1] === 'report'
-    ) {
-      const routeOwner = params.slug[0];
+    if (slugArray.length === 2 && slugArray[1] === 'report') {
+      const routeOwner = slugArray[0];
       console.log(
         '[' + requestId + '] Matched report endpoint for org: ' + routeOwner
       );
@@ -315,7 +317,7 @@ export async function POST(
     }
 
     // Handle /api/github-webhook (regular webhook)
-    if (!params.slug || params.slug.length === 0) {
+    if (slugArray.length === 0) {
       console.log('[' + requestId + '] Handling regular webhook endpoint');
       return await handleWebhookEndpoint(req, requestId);
     }
