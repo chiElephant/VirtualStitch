@@ -1,7 +1,7 @@
 // This is an arbitrary testing comment to be removed upon completion
 import { NextRequest } from 'next/server';
 
-let POST: typeof import('@/app/api/github-webhook/route').POST;
+let POST: typeof import('@/app/api/github-webhook/[...slug]/route').POST;
 
 jest.mock('@upstash/redis', () => {
   const get = jest.fn();
@@ -115,7 +115,7 @@ describe('POST /api/github-webhook', () => {
     updateMock.mockResolvedValue({});
     verifyMock.mockResolvedValue(true);
 
-    const route = await import('@/app/api/github-webhook/route');
+    const route = await import('@/app/api/github-webhook/[...slug]/route');
     POST = route.POST;
   });
 
@@ -129,7 +129,7 @@ describe('POST /api/github-webhook', () => {
     headers = {},
     routeOwner = '303DEVS'
   ) {
-    return new Request(
+    const req = new Request(
       `http://localhost/api/github-webhook/${routeOwner}/report`,
       {
         method: 'POST',
@@ -137,6 +137,9 @@ describe('POST /api/github-webhook', () => {
         headers: { 'Content-Type': 'application/json', ...headers },
       }
     ) as unknown as NextRequest;
+
+    // Mock the params that Next.js would provide
+    return { req, params: { slug: [routeOwner, 'report'] } };
   }
 
   function makeWebhookRequest(
@@ -144,7 +147,7 @@ describe('POST /api/github-webhook', () => {
     event = 'check_suite',
     signature = 'valid'
   ) {
-    return new Request('http://localhost/api/github-webhook', {
+    const req = new Request('http://localhost/api/github-webhook', {
       method: 'POST',
       body: JSON.stringify(payload),
       headers: {
@@ -152,6 +155,22 @@ describe('POST /api/github-webhook', () => {
         'x-github-event': event,
       },
     }) as unknown as NextRequest;
+
+    // Mock the params that Next.js would provide for base webhook
+    return { req, params: { slug: [] } };
+  }
+
+  function makeUnknownPathRequest() {
+    const req = new Request(
+      'http://localhost/api/github-webhook/unknown/path',
+      {
+        method: 'POST',
+        body: JSON.stringify({}),
+        headers: { 'Content-Type': 'application/json' },
+      }
+    ) as unknown as NextRequest;
+
+    return { req, params: { slug: ['unknown', 'path'] } };
   }
 
   // Fixed: Use a valid 40-character SHA
@@ -174,8 +193,8 @@ describe('POST /api/github-webhook', () => {
 
   describe('Route validation', () => {
     it('handles unsupported route owner', async () => {
-      const req = makeReportRequest({}, {}, 'UNKNOWN');
-      const res = await POST(req);
+      const { req, params } = makeReportRequest({}, {}, 'UNKNOWN');
+      const res = await POST(req, { params });
       expect(res.status).toBe(400);
       expect(await res.text()).toBe('Unsupported owner in route');
     });
@@ -184,9 +203,20 @@ describe('POST /api/github-webhook', () => {
       // Set the correct repository for CHIELEPHANT
       process.env.GITHUB_REPOSITORY = 'chiElephant/VirtualStitch';
 
-      const req = makeReportRequest(defaultReportPayload, {}, 'ChIeLePhAnT');
-      const res = await POST(req);
+      const { req, params } = makeReportRequest(
+        defaultReportPayload,
+        {},
+        'CHIELEPHANT'
+      );
+      const res = await POST(req, { params });
       expect(res.status).not.toBe(400);
+    });
+
+    it('returns 404 for unknown paths', async () => {
+      const { req, params } = makeUnknownPathRequest();
+      const res = await POST(req, { params });
+      expect(res.status).toBe(404);
+      expect(await res.text()).toBe('Not found');
     });
   });
 
@@ -194,27 +224,27 @@ describe('POST /api/github-webhook', () => {
     it('skips duplicate check updates', async () => {
       getMock.mockResolvedValueOnce(true);
 
-      const req = makeReportRequest(defaultReportPayload);
-      const res = await POST(req);
+      const { req, params } = makeReportRequest(defaultReportPayload);
+      const res = await POST(req, { params });
 
       expect(res.status).toBe(200);
       expect(await res.text()).toBe('⏭️ Duplicate check update skipped.');
-      expect(updateCheckRunMock).not.toHaveBeenCalled();
+      expect(updateMock).not.toHaveBeenCalled();
     });
 
-    it('returns 404 if no check run is found', async () => {
+    it('returns 500 if no check run is found', async () => {
       listForRefMock.mockResolvedValue({ data: { check_runs: [] } });
 
-      const req = makeReportRequest(defaultReportPayload);
-      const res = await POST(req);
+      const { req, params } = makeReportRequest(defaultReportPayload);
+      const res = await POST(req, { params });
 
-      expect(res.status).toBe(500); // Changed to 500 because the error gets caught and wrapped
+      expect(res.status).toBe(500);
       expect(await res.text()).toBe('Internal error');
     });
 
     it('updates check run successfully', async () => {
-      const req = makeReportRequest(defaultReportPayload);
-      const res = await POST(req);
+      const { req, params } = makeReportRequest(defaultReportPayload);
+      const res = await POST(req, { params });
 
       expect(res.status).toBe(200);
       expect(await res.text()).toBe('✅ Check run updated');
@@ -226,8 +256,8 @@ describe('POST /api/github-webhook', () => {
         name: 'ci-checks',
       };
 
-      const req = makeReportRequest(payload);
-      const res = await POST(req);
+      const { req, params } = makeReportRequest(payload);
+      const res = await POST(req, { params });
 
       expect(res.status).toBe(200);
     });
@@ -242,8 +272,8 @@ describe('POST /api/github-webhook', () => {
         details_url: 'https://example.com/details',
       };
 
-      const req = makeReportRequest(payload);
-      const res = await POST(req);
+      const { req, params } = makeReportRequest(payload);
+      const res = await POST(req, { params });
 
       expect(res.status).toBe(200);
     });
@@ -252,8 +282,8 @@ describe('POST /api/github-webhook', () => {
       it('returns 500 if installation ID is missing', async () => {
         getRepoInstallationMock.mockResolvedValue({ data: {} });
 
-        const req = makeReportRequest(defaultReportPayload);
-        const res = await POST(req);
+        const { req, params } = makeReportRequest(defaultReportPayload);
+        const res = await POST(req, { params });
 
         expect(res.status).toBe(500);
         expect(await res.text()).toBe('Internal error');
@@ -262,8 +292,8 @@ describe('POST /api/github-webhook', () => {
       it('returns 500 if updateCheckRun throws an error', async () => {
         updateMock.mockRejectedValue(new Error('Update failed'));
 
-        const req = makeReportRequest(defaultReportPayload);
-        const res = await POST(req);
+        const { req, params } = makeReportRequest(defaultReportPayload);
+        const res = await POST(req, { params });
 
         expect(res.status).toBe(500);
         expect(await res.text()).toBe('Internal error');
@@ -274,8 +304,8 @@ describe('POST /api/github-webhook', () => {
           throw new Error('sync throw');
         });
 
-        const req = makeReportRequest(defaultReportPayload);
-        const res = await POST(req);
+        const { req, params } = makeReportRequest(defaultReportPayload);
+        const res = await POST(req, { params });
 
         expect(res.status).toBe(500);
         expect(await res.text()).toBe('Internal error');
@@ -284,8 +314,8 @@ describe('POST /api/github-webhook', () => {
       it('handles Redis set failure after successful update', async () => {
         setMock.mockRejectedValue(new Error('Redis failure'));
 
-        const req = makeReportRequest(defaultReportPayload);
-        const res = await POST(req);
+        const { req, params } = makeReportRequest(defaultReportPayload);
+        const res = await POST(req, { params });
 
         expect(res.status).toBe(500);
         expect(await res.text()).toBe('Internal error');
@@ -296,8 +326,8 @@ describe('POST /api/github-webhook', () => {
           throw new Error('Redis explosion');
         });
 
-        const req = makeReportRequest(defaultReportPayload);
-        const res = await POST(req);
+        const { req, params } = makeReportRequest(defaultReportPayload);
+        const res = await POST(req, { params });
 
         expect(res.status).toBe(500);
         expect(await res.text()).toBe('Internal error');
@@ -309,12 +339,12 @@ describe('POST /api/github-webhook', () => {
     it('handles invalid webhook signature', async () => {
       verifyMock.mockResolvedValue(false);
 
-      const req = makeWebhookRequest(
+      const { req, params } = makeWebhookRequest(
         defaultWebhookPayload,
         'check_suite',
         'invalid'
       );
-      const res = await POST(req);
+      const res = await POST(req, { params });
 
       expect(res.status).toBe(401);
       expect(await res.text()).toBe('Unauthorized');
@@ -325,8 +355,8 @@ describe('POST /api/github-webhook', () => {
         throw new Error('bad secret');
       });
 
-      const req = makeWebhookRequest(defaultWebhookPayload);
-      const res = await POST(req);
+      const { req, params } = makeWebhookRequest(defaultWebhookPayload);
+      const res = await POST(req, { params });
 
       expect(res.status).toBe(401);
       expect(await res.text()).toBe('Unauthorized');
@@ -341,7 +371,7 @@ describe('POST /api/github-webhook', () => {
         headers: {},
       }) as unknown as NextRequest;
 
-      const res = await POST(req);
+      const res = await POST(req, { params: { slug: [] } });
       expect(res.status).toBe(401);
       expect(await res.text()).toBe('Unauthorized');
     });
@@ -349,16 +379,19 @@ describe('POST /api/github-webhook', () => {
 
   describe('Webhook event handling', () => {
     it('ignores non-check_suite webhook event', async () => {
-      const req = makeWebhookRequest({ action: 'completed' }, 'push');
-      const res = await POST(req);
+      const { req, params } = makeWebhookRequest(
+        { action: 'completed' },
+        'push'
+      );
+      const res = await POST(req, { params });
 
       expect(res.status).toBe(200);
       expect(await res.text()).toBe('Event ignored');
     });
 
     it('creates check runs for check_suite event (303devs)', async () => {
-      const req = makeWebhookRequest(defaultWebhookPayload);
-      const res = await POST(req);
+      const { req, params } = makeWebhookRequest(defaultWebhookPayload);
+      const res = await POST(req, { params });
 
       expect(res.status).toBe(200);
       expect(await res.text()).toBe('✅ All check runs created');
@@ -373,8 +406,8 @@ describe('POST /api/github-webhook', () => {
         repository: { owner: { login: 'ChiElephant' }, name: 'VirtualStitch' },
       };
 
-      const req = makeWebhookRequest(payload);
-      const res = await POST(req);
+      const { req, params } = makeWebhookRequest(payload);
+      const res = await POST(req, { params });
 
       expect(res.status).toBe(200);
       expect(await res.text()).toBe('✅ All check runs created');
@@ -383,8 +416,8 @@ describe('POST /api/github-webhook', () => {
     it('skips creating check runs if already created', async () => {
       getMock.mockResolvedValue(true);
 
-      const req = makeWebhookRequest(defaultWebhookPayload);
-      const res = await POST(req);
+      const { req, params } = makeWebhookRequest(defaultWebhookPayload);
+      const res = await POST(req, { params });
 
       expect(res.status).toBe(200);
       expect(await res.text()).toBe('⏭️ Checks already created for this SHA.');
@@ -393,11 +426,11 @@ describe('POST /api/github-webhook', () => {
 
     describe('Webhook validation errors', () => {
       it('returns 400 if check_suite payload is missing required fields', async () => {
-        const req = makeWebhookRequest({
+        const { req, params } = makeWebhookRequest({
           action: 'requested',
           check_suite: {},
         });
-        const res = await POST(req);
+        const res = await POST(req, { params });
 
         expect(res.status).toBe(400);
         expect(await res.text()).toBe('Missing required payload data');
@@ -409,8 +442,8 @@ describe('POST /api/github-webhook', () => {
           repository: { owner: { login: 'unknown' }, name: 'repo' },
         };
 
-        const req = makeWebhookRequest(payload);
-        const res = await POST(req);
+        const { req, params } = makeWebhookRequest(payload);
+        const res = await POST(req, { params });
 
         expect(res.status).toBe(400);
         expect(await res.text()).toBe('Unsupported repository owner');
@@ -422,8 +455,8 @@ describe('POST /api/github-webhook', () => {
         getMock.mockResolvedValue(false);
         createMock.mockRejectedValue(new Error('Failed to create'));
 
-        const req = makeWebhookRequest(defaultWebhookPayload);
-        const res = await POST(req);
+        const { req, params } = makeWebhookRequest(defaultWebhookPayload);
+        const res = await POST(req, { params });
 
         expect(res.status).toBe(500);
         expect(await res.text()).toBe('Internal error');
