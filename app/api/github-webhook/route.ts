@@ -224,13 +224,13 @@ class ConfigManager {
             app_id_env: 'GITHUB_APP_ID_303DEVS',
             private_key_env: 'GITHUB_PRIVATE_KEY_303DEVS',
             webhook_secret_env: '303DEVS_GITHUB_WEBHOOK_SECRET',
-            identifiers: ['303devs'],
+            identifiers: ['303devs', '303DEVS'],
           },
           'CHIELEPHANT': {
             app_id_env: 'GITHUB_APP_ID_CHIELEPHANT',
             private_key_env: 'GITHUB_PRIVATE_KEY_CHIELEPHANT',
             webhook_secret_env: 'CHIELEPHANT_GITHUB_WEBHOOK_SECRET',
-            identifiers: ['chie'],
+            identifiers: ['chie', 'chielephant', 'CHIELEPHANT'],
           },
         },
         workflows: {

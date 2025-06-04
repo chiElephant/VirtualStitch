@@ -1,3 +1,4 @@
+# File: .github/actions/report-checks/action.yml
 name: 'Report Check Result'
 description: 'Send check result to GitHub App using webhook (required for Checks API access)'
 
@@ -136,6 +137,9 @@ runs:
           });
 
           core.info(`📝 Reporting check status for: ${payload.name} (${payload.status})`);
+          core.info(`🔗 Target URL: https://${process.env.INPUT_HOST}/api/github-webhook/${ownerUpper}/report`);
+          core.info(`🏢 Owner Upper: ${ownerUpper}`);
+          core.info(`🏠 Host: ${process.env.INPUT_HOST}`);
 
           // Configuration from environment
           const maxRetries = parseInt(process.env.INPUT_MAX_RETRIES) || 3;
