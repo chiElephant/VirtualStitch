@@ -139,7 +139,7 @@ jobs:
           steps.smoke_tests.outcome == 'success' &&
           steps.api_health.outcome == 'success' &&
           steps.performance.outcome == 'success'
-        uses: ./.github/actions/send-notification
+        uses: ./.github/actions/send-notifications
         with:
           type: success
           deployment_url: ${{ github.event.client_payload.url }}
@@ -156,7 +156,7 @@ jobs:
           steps.smoke_tests.outcome == 'failure' ||
           steps.api_health.outcome == 'failure' ||
           steps.performance.outcome == 'failure'
-        uses: ./.github/actions/send-notification
+        uses: ./.github/actions/send-notifications
         with:
           type: failure
           deployment_url: ${{ github.event.client_payload.url }}
