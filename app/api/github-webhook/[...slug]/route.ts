@@ -1,4 +1,4 @@
-// File: app/api/github-webhook/route.ts
+// File: app/api/github-webhook/[...slug]/route.ts
 import { NextRequest } from 'next/server';
 import { verify } from '@octokit/webhooks-methods';
 import { Octokit } from '@octokit/rest';
@@ -269,15 +269,17 @@ const redis = new Redis({
 
 const circuitBreaker = new CircuitBreaker();
 
-export async function POST(req: NextRequest) {
+export async function POST(
+  req: NextRequest,
+  { params }: { params: { slug: string[] } }
+) {
   const requestId = generateRequestId();
   const startTime = Date.now();
 
   try {
     await ConfigManager.getConfig();
 
-    const url = new URL(req.url);
-    const pathname = url.pathname;
+    const { pathname } = new URL(req.url);
     const clientIp =
       req.headers.get('x-forwarded-for') ||
       req.headers.get('x-real-ip') ||
@@ -294,22 +296,33 @@ export async function POST(req: NextRequest) {
         '] Incoming webhook request from ' +
         clientIp +
         ' to ' +
-        pathname
+        pathname +
+        ' with slug: ' +
+        JSON.stringify(params.slug)
     );
 
-    // Fix the regex to match the correct pattern: /api/github-webhook/ORG/report
-    const reportMatch = pathname.match(
-      /\/api\/github-webhook\/([^\/]+)\/report$/
-    );
-    if (reportMatch) {
+    // Handle /api/github-webhook/ORG/report
+    if (
+      params.slug &&
+      params.slug.length === 2 &&
+      params.slug[1] === 'report'
+    ) {
+      const routeOwner = params.slug[0];
       console.log(
-        '[' + requestId + '] Matched report endpoint for org: ' + reportMatch[1]
+        '[' + requestId + '] Matched report endpoint for org: ' + routeOwner
       );
-      return await handleReportEndpoint(req, requestId, reportMatch[1]);
+      return await handleReportEndpoint(req, requestId, routeOwner);
     }
 
-    // Handle regular webhook endpoint
-    return await handleWebhookEndpoint(req, requestId);
+    // Handle /api/github-webhook (regular webhook)
+    if (!params.slug || params.slug.length === 0) {
+      console.log('[' + requestId + '] Handling regular webhook endpoint');
+      return await handleWebhookEndpoint(req, requestId);
+    }
+
+    // Unknown path
+    console.warn('[' + requestId + '] Unknown path: ' + pathname);
+    return new Response('Not found', { status: 404 });
   } catch (error) {
     console.error('[' + requestId + '] Unhandled error:', error);
     return new Response('Internal server error', { status: 500 });
