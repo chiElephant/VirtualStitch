@@ -28,7 +28,7 @@ jobs:
     timeout-minutes: 15
 
     env:
-      NODE_ENV: production
+      NODE_ENV: test
       BASE_URL: ${{ github.event.client_payload.url }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
@@ -70,21 +70,21 @@ jobs:
 
       - name: 🧪 Run critical smoke tests
         id: smoke_tests
-        run: npm run test:smoke
+        run: npx playwright test --grep "@smoke" --reporter=list
         env:
           CI: true
         continue-on-error: true
 
       - name: 🏥 Run API health checks
         id: api_health
-        run: npm run test:api-health
+        run: npx playwright test --grep "@api-health" --reporter=list
         env:
           CI: true
         continue-on-error: true
 
       - name: ⚡ Run performance monitoring
         id: performance
-        run: npm run test:performance-monitoring
+        run: npx playwright test --grep "@performance-monitoring" --reporter=list
         env:
           CI: true
         continue-on-error: true
