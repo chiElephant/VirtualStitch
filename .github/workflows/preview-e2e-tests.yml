@@ -78,20 +78,20 @@ jobs:
 
       - name: 🧪 Run E2E tests
         id: e2e_tests
-        run: npx playwright test --project=${{ matrix.project }} --reporter=list,html
+        run: npm run test:e2e -- --project=${{ matrix.project }} --reporter=list,html
         env:
           CI: true
 
       - name: 🔍 Run accessibility tests
         id: accessibility_tests
-        run: npx playwright test --grep "@accessibility" --project=${{ matrix.project }}
+        run: npm run test:a11y -- --project=${{ matrix.project }}
         continue-on-error: true
         env:
           CI: true
 
       - name: ⚡ Run performance tests
         id: performance_tests
-        run: npx playwright test --grep "@performance" --project=${{ matrix.project }}
+        run: npm run test:performance -- --project=${{ matrix.project }}
         continue-on-error: true
         env:
           CI: true

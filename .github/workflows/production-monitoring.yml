@@ -55,7 +55,7 @@ jobs:
           node-version: lts/*
           cache: 'npm'
 
-      - name: 📦 Install dependencies
+      - name: 💾 Install dependencies
         run: npm ci --legacy-peer-deps
 
       - name: ⏳ Wait for production deployment
@@ -70,27 +70,21 @@ jobs:
 
       - name: 🧪 Run critical smoke tests
         id: smoke_tests
-        run: |
-          echo "🚀 Running critical smoke tests on production..."
-          npx playwright test --grep "@smoke" --reporter=list
+        run: npm run test:smoke
         env:
           CI: true
         continue-on-error: true
 
       - name: 🏥 Run API health checks
         id: api_health
-        run: |
-          echo "🏥 Running API health checks..."
-          npx playwright test --grep "@api-health" --reporter=list
+        run: npm run test:api-health
         env:
           CI: true
         continue-on-error: true
 
       - name: ⚡ Run performance monitoring
         id: performance
-        run: |
-          echo "⚡ Running performance monitoring..."
-          npx playwright test --grep "@performance-monitoring" --reporter=list
+        run: npm run test:performance-monitoring
         env:
           CI: true
         continue-on-error: true
