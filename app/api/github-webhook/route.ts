@@ -108,10 +108,10 @@ export async function POST(req: NextRequest) {
     const event = req.headers.get('x-github-event') || '';
 
     // Verify webhook signature
-    const webhookSecret = process.env.GITHUB_APP_SECRET;
+    const webhookSecret = process.env.GH_APP_SECRET;
     if (!webhookSecret) {
       console.error(
-        '[' + requestId + '] Missing GITHUB_APP_SECRET environment variable'
+        '[' + requestId + '] Missing GH_APP_SECRET environment variable'
       );
       return new Response('Configuration error', { status: 500 });
     }
@@ -150,10 +150,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Verify this webhook is for the correct repository
-    const expectedRepo = process.env.GITHUB_REPOSITORY;
+    const expectedRepo = process.env.GH_REPOSITORY;
     if (!expectedRepo) {
       console.error(
-        '[' + requestId + '] Missing GITHUB_REPOSITORY environment variable'
+        '[' + requestId + '] Missing GH_REPOSITORY environment variable'
       );
       return new Response('Configuration error', { status: 500 });
     }
@@ -186,11 +186,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Get GitHub App credentials
-    const appId = process.env.GITHUB_APP_ID;
-    const privateKey = process.env.GITHUB_APP_PRIVATE_KEY?.replace(
-      /\\n/g,
-      '\n'
-    );
+    const appId = process.env.GH_APP_ID;
+    const privateKey = process.env.GH_APP_PRIVATE_KEY?.replace(/\\n/g, '\n');
 
     if (!appId || !privateKey) {
       console.error('[' + requestId + '] Missing GitHub App credentials');

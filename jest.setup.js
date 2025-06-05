@@ -62,10 +62,10 @@ jest.mock('@/store', () => ({
 }));
 
 // Mock environment variables for webhook tests
-process.env.GITHUB_APP_SECRET = 'test-secret';
-process.env.GITHUB_REPOSITORY = '303Devs/VirtualStitch';
-process.env.GITHUB_APP_ID = '123456';
-process.env.GITHUB_APP_PRIVATE_KEY =
+process.env.GH_APP_SECRET = 'test-secret';
+process.env.GH_REPOSITORY = '303Devs/VirtualStitch';
+process.env.GH_APP_ID = '123456';
+process.env.GH_APP_PRIVATE_KEY =
   '-----BEGIN RSA PRIVATE KEY-----\ntest-key\n-----END RSA PRIVATE KEY-----';
 
 // Mock FileReader for file upload tests

@@ -130,9 +130,9 @@ describe('POST /api/github-webhook', () => {
   });
 
   describe('Webhook signature validation', () => {
-    it('returns 500 for missing GITHUB_APP_SECRET environment variable', async () => {
-      const originalSecret = process.env.GITHUB_APP_SECRET;
-      delete process.env.GITHUB_APP_SECRET;
+    it('returns 500 for missing GH_APP_SECRET environment variable', async () => {
+      const originalSecret = process.env.GH_APP_SECRET;
+      delete process.env.GH_APP_SECRET;
 
       const body: WebhookPayload = {
         action: 'requested',
@@ -148,7 +148,7 @@ describe('POST /api/github-webhook', () => {
       expect(await res.text()).toBe('Configuration error');
 
       // Restore
-      process.env.GITHUB_APP_SECRET = originalSecret;
+      process.env.GH_APP_SECRET = originalSecret;
     });
 
     it('returns 401 for invalid signature', async () => {
@@ -284,9 +284,9 @@ describe('POST /api/github-webhook', () => {
       expect(await res.text()).toBe('Missing required payload data');
     });
 
-    it('returns 500 for missing GITHUB_REPOSITORY environment variable', async () => {
-      const originalRepo = process.env.GITHUB_REPOSITORY;
-      delete process.env.GITHUB_REPOSITORY;
+    it('returns 500 for missing GH_REPOSITORY environment variable', async () => {
+      const originalRepo = process.env.GH_REPOSITORY;
+      delete process.env.GH_REPOSITORY;
 
       const body: WebhookPayload = {
         action: 'requested',
@@ -302,7 +302,7 @@ describe('POST /api/github-webhook', () => {
       expect(await res.text()).toBe('Configuration error');
 
       // Restore
-      process.env.GITHUB_REPOSITORY = originalRepo;
+      process.env.GH_REPOSITORY = originalRepo;
     });
   });
 
@@ -325,11 +325,11 @@ describe('POST /api/github-webhook', () => {
     });
 
     it('returns 500 for missing GitHub App credentials', async () => {
-      const originalAppId = process.env.GITHUB_APP_ID;
-      const originalPrivateKey = process.env.GITHUB_APP_PRIVATE_KEY;
+      const originalAppId = process.env.GH_APP_ID;
+      const originalPrivateKey = process.env.GH_APP_PRIVATE_KEY;
 
-      delete process.env.GITHUB_APP_ID;
-      delete process.env.GITHUB_APP_PRIVATE_KEY;
+      delete process.env.GH_APP_ID;
+      delete process.env.GH_APP_PRIVATE_KEY;
 
       const body: WebhookPayload = {
         action: 'requested',
@@ -345,8 +345,8 @@ describe('POST /api/github-webhook', () => {
       expect(await res.text()).toBe('Configuration error');
 
       // Restore
-      process.env.GITHUB_APP_ID = originalAppId;
-      process.env.GITHUB_APP_PRIVATE_KEY = originalPrivateKey;
+      process.env.GH_APP_ID = originalAppId;
+      process.env.GH_APP_PRIVATE_KEY = originalPrivateKey;
     });
 
     it('handles rate limiting', async () => {

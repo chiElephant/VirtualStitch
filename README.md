@@ -124,9 +124,9 @@ UPSTASH_REDIS_REST_URL=your_redis_url
 UPSTASH_REDIS_REST_TOKEN=your_redis_token
 
 # GitHub App Integration (Optional)
-GITHUB_APP_ID_303DEVS=your_app_id
-GITHUB_PRIVATE_KEY_303DEVS=your_private_key
-303DEVS_GITHUB_WEBHOOK_SECRET=your_webhook_secret
+GH_APP_ID_303DEVS=your_app_id
+GH_PRIVATE_KEY_303DEVS=your_private_key
+303DEVS_GH_WEBHOOK_SECRET=your_webhook_secret
 
 # Testing Environment
 CI=false

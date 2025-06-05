@@ -283,25 +283,22 @@ export async function POST(req: NextRequest) {
     );
 
     // Get GitHub App credentials
-    const appId = process.env.GITHUB_APP_ID;
-    const privateKey = process.env.GITHUB_APP_PRIVATE_KEY?.replace(
-      /\\n/g,
-      '\n'
-    );
+    const appId = process.env.GH_APP_ID;
+    const privateKey = process.env.GH_APP_PRIVATE_KEY?.replace(/\\n/g, '\n');
 
     if (!appId || !privateKey) {
       console.error('[' + requestId + '] Missing GitHub App credentials');
       return new Response('Configuration error', { status: 500 });
     }
 
-    if (!process.env.GITHUB_REPOSITORY) {
+    if (!process.env.GH_REPOSITORY) {
       console.error(
-        '[' + requestId + '] Missing GITHUB_REPOSITORY environment variable'
+        '[' + requestId + '] Missing GH_REPOSITORY environment variable'
       );
       return new Response('Configuration error', { status: 500 });
     }
 
-    const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
+    const [owner, repo] = process.env.GH_REPOSITORY.split('/');
 
     // Update check run
     const result = await circuitBreaker.execute(async () => {
