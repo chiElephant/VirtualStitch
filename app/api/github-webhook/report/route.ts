@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { Octokit } from '@octokit/rest';
 import { createAppAuth } from '@octokit/auth-app';
 import { Redis } from '@upstash/redis';
@@ -203,7 +203,7 @@ const circuitBreaker = new CircuitBreaker();
 
 // Test endpoint
 export async function GET() {
-  return Response.json({
+  return NextResponse.json({
     message: 'GitHub webhook report endpoint is accessible',
     timestamp: new Date().toISOString(),
     status: 'ready',

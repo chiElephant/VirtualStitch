@@ -471,4 +471,277 @@ describe('POST /api/github-webhook', () => {
       expect(await res.text()).toBe('✅ All check runs created');
     });
   });
+
+  // Add these tests to the end of your existing __tests__/app/api/github-webhook/github-webhook.test.ts file
+  // Just before the final closing });
+
+  describe('Additional Edge Cases for GitHub Webhook', () => {
+    describe('Rate Limiting Edge Cases', () => {
+      it('handles rapid sequential requests from same IP', async () => {
+        const body: WebhookPayload = {
+          action: 'requested',
+          check_suite: { head_sha: 'abc123' },
+          repository: { name: 'VirtualStitch', owner: { login: '303Devs' } },
+          installation: { id: 123456 },
+        };
+
+        // Make many rapid requests to potentially trigger rate limiting
+        const requests = Array.from({ length: 10 }, () =>
+          createWebhookRequest(body)
+        );
+
+        const responses = await Promise.all(requests.map((req) => POST(req)));
+
+        // At least one should succeed, some might be rate limited
+        const statuses = responses.map((res) => res.status);
+        expect(statuses).toContain(200); // At least one success
+
+        // This covers rate limiting logic paths
+      });
+    });
+
+    describe('GitHub API Error Scenarios', () => {
+      it('handles GitHub API network timeouts', async () => {
+        // Mock a network timeout error
+        mockCreateCheck.mockRejectedValue(new Error('Request timeout'));
+
+        const body: WebhookPayload = {
+          action: 'requested',
+          check_suite: { head_sha: 'timeout123' },
+          repository: { name: 'VirtualStitch', owner: { login: '303Devs' } },
+          installation: { id: 123456 },
+        };
+
+        const req = createWebhookRequest(body);
+        const res = await POST(req);
+
+        expect(res.status).toBe(500);
+        expect(await res.text()).toBe('Internal error');
+      });
+
+      it('handles GitHub API authentication errors', async () => {
+        // Mock an authentication error
+        mockCreateCheck.mockRejectedValue(new Error('Bad credentials'));
+
+        const body: WebhookPayload = {
+          action: 'requested',
+          check_suite: { head_sha: 'auth123' },
+          repository: { name: 'VirtualStitch', owner: { login: '303Devs' } },
+          installation: { id: 123456 },
+        };
+
+        const req = createWebhookRequest(body);
+        const res = await POST(req);
+
+        expect(res.status).toBe(500);
+        expect(await res.text()).toBe('Internal error');
+      });
+
+      it('handles GitHub API rate limiting errors', async () => {
+        // Mock GitHub API rate limit error
+        const rateLimitError = new Error('API rate limit exceeded');
+        (rateLimitError as any).status = 403;
+        mockCreateCheck.mockRejectedValue(rateLimitError);
+
+        const body: WebhookPayload = {
+          action: 'requested',
+          check_suite: { head_sha: 'ratelimit123' },
+          repository: { name: 'VirtualStitch', owner: { login: '303Devs' } },
+          installation: { id: 123456 },
+        };
+
+        const req = createWebhookRequest(body);
+        const res = await POST(req);
+
+        expect(res.status).toBe(500);
+        expect(await res.text()).toBe('Internal error');
+      });
+    });
+
+    describe('Payload Edge Cases', () => {
+      it('handles webhook with minimal payload', async () => {
+        // Test with minimal required fields only
+        const minimalBody = {
+          action: 'requested',
+          check_suite: { head_sha: 'minimal123' },
+          repository: { name: 'VirtualStitch', owner: { login: '303Devs' } },
+          installation: { id: 123456 },
+        };
+
+        const req = createWebhookRequest(minimalBody);
+        const res = await POST(req);
+
+        expect(res.status).toBe(200);
+        expect(await res.text()).toBe('✅ All check runs created');
+      });
+
+      it('handles webhook with extra unexpected fields', async () => {
+        const bodyWithExtra = {
+          action: 'requested',
+          check_suite: { head_sha: 'extra123' },
+          repository: { name: 'VirtualStitch', owner: { login: '303Devs' } },
+          installation: { id: 123456 },
+          // Extra fields that shouldn't break anything
+          extra_field: 'should be ignored',
+          another_field: { nested: 'data' },
+        };
+
+        const req = createWebhookRequest(bodyWithExtra);
+        const res = await POST(req);
+
+        expect(res.status).toBe(200);
+        expect(await res.text()).toBe('✅ All check runs created');
+      });
+    });
+
+    describe('Environment Configuration Edge Cases', () => {
+      it('handles malformed GitHub repository configuration', async () => {
+        const originalRepo = process.env.GH_REPOSITORY;
+
+        // Set malformed repository (missing owner/repo split)
+        process.env.GH_REPOSITORY = 'malformed-repo-name';
+
+        const body: WebhookPayload = {
+          action: 'requested',
+          check_suite: { head_sha: 'malformed123' },
+          repository: { name: 'VirtualStitch', owner: { login: '303Devs' } },
+          installation: { id: 123456 },
+        };
+
+        const req = createWebhookRequest(body);
+        const res = await POST(req);
+
+        // Should handle gracefully (might be a 500 or repository mismatch)
+        expect([400, 500]).toContain(res.status);
+
+        // Restore
+        process.env.GH_REPOSITORY = originalRepo;
+      });
+
+      it('handles empty GitHub App credentials', async () => {
+        const originalAppId = process.env.GH_APP_ID;
+        const originalPrivateKey = process.env.GH_APP_PRIVATE_KEY;
+
+        // Set empty credentials
+        process.env.GH_APP_ID = '';
+        process.env.GH_APP_PRIVATE_KEY = '';
+
+        const body: WebhookPayload = {
+          action: 'requested',
+          check_suite: { head_sha: 'empty123' },
+          repository: { name: 'VirtualStitch', owner: { login: '303Devs' } },
+          installation: { id: 123456 },
+        };
+
+        const req = createWebhookRequest(body);
+        const res = await POST(req);
+
+        expect(res.status).toBe(500);
+        expect(await res.text()).toBe('Configuration error');
+
+        // Restore
+        process.env.GH_APP_ID = originalAppId;
+        process.env.GH_APP_PRIVATE_KEY = originalPrivateKey;
+      });
+    });
+
+    describe('Redis Edge Cases', () => {
+      it('handles Redis connection intermittent failures', async () => {
+        // Reset modules for clean Redis mock
+        jest.resetModules();
+
+        // Mock Redis to fail on get but succeed on set
+        jest.doMock('@upstash/redis', () => ({
+          Redis: jest.fn().mockImplementation(() => ({
+            get: jest.fn().mockRejectedValue(new Error('Redis GET failed')),
+            set: jest.fn().mockResolvedValue('OK'),
+          })),
+        }));
+
+        const { POST } = await import('@/app/api/github-webhook/route');
+
+        const body: WebhookPayload = {
+          action: 'requested',
+          check_suite: { head_sha: 'redis123' },
+          repository: { name: 'VirtualStitch', owner: { login: '303Devs' } },
+          installation: { id: 123456 },
+        };
+
+        const req = createWebhookRequest(body);
+        const res = await POST(req);
+
+        // Redis failures during check creation cause the operation to fail
+        expect(res.status).toBe(500);
+        expect(await res.text()).toBe('Internal error');
+      });
+
+      it('handles Redis SET operation failures', async () => {
+        // Reset modules for clean Redis mock
+        jest.resetModules();
+
+        // Mock Redis to succeed on get but fail on set
+        jest.doMock('@upstash/redis', () => ({
+          Redis: jest.fn().mockImplementation(() => ({
+            get: jest.fn().mockResolvedValue(null),
+            set: jest.fn().mockRejectedValue(new Error('Redis SET failed')),
+          })),
+        }));
+
+        const { POST } = await import('@/app/api/github-webhook/route');
+
+        const body: WebhookPayload = {
+          action: 'requested',
+          check_suite: { head_sha: 'redisset123' },
+          repository: { name: 'VirtualStitch', owner: { login: '303Devs' } },
+          installation: { id: 123456 },
+        };
+
+        const req = createWebhookRequest(body);
+        const res = await POST(req);
+
+        // Redis SET failures also cause operation to fail
+        expect(res.status).toBe(500);
+        expect(await res.text()).toBe('Internal error');
+      });
+    });
+
+    describe('Signature Verification Edge Cases', () => {
+      it('handles signature verification with unusual payloads', async () => {
+        const body = {
+          action: 'requested',
+          check_suite: { head_sha: 'unusual123' },
+          repository: { name: 'VirtualStitch', owner: { login: '303Devs' } },
+          installation: { id: 123456 },
+          // Add some unusual characters
+          description: 'Test with émojis 🚀 and special chars: àáâ',
+        };
+
+        const req = createWebhookRequest(body);
+        const res = await POST(req);
+
+        expect(res.status).toBe(200);
+      });
+
+      it('handles empty request body edge case', async () => {
+        const request = new Request(
+          'http://localhost:3000/api/github-webhook',
+          {
+            method: 'POST',
+            headers: {
+              'content-type': 'application/json',
+              'x-github-event': 'check_suite',
+              'x-hub-signature-256': 'sha256=invalid',
+            },
+            body: '',
+          }
+        );
+
+        const res = await POST(request as unknown as NextRequest);
+
+        // Empty body causes JSON parsing to fail, returning 500
+        expect(res.status).toBe(500);
+        expect(await res.text()).toBe('Internal error');
+      });
+    });
+  });
 });
