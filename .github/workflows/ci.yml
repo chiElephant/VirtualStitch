@@ -2,27 +2,29 @@ name: CI
 
 permissions:
   checks: write
+  contents: read
+  pull-requests: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main]
   workflow_dispatch:
-  repository_dispatch:
-    types: [vercel.deployment.success]
 
 env:
   NODE_ENV: test
-  BASE_URL: ${{ github.event.client_payload.url }}
   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
   UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
   UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
 
 jobs:
   ci-checks:
-    if: github.event_name == 'repository_dispatch' && github.event.client_payload.environment == 'preview'
-    name: ✅ ci-checks
+    name: ✅ CI Checks
     runs-on:
       - self-hosted
       - Linux
@@ -30,30 +32,52 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - name: 🧪 Log GitHub context
-        run: echo '${{ toJson(github) }}'
-
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
+
+      - name: 🎯 Determine context
+        id: context
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "check_name=CI Checks" >> $GITHUB_OUTPUT
+            echo "is_pr=true" >> $GITHUB_OUTPUT
+            echo "target_env=preview" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "check_name=CI Checks" >> $GITHUB_OUTPUT
+            echo "is_pr=false" >> $GITHUB_OUTPUT
+            echo "target_env=production" >> $GITHUB_OUTPUT
+          else
+            echo "check_name=CI Checks" >> $GITHUB_OUTPUT
+            echo "is_pr=false" >> $GITHUB_OUTPUT
+            echo "target_env=preview" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 📝 Create GitHub Check
+        uses: actions/github-script@v7
+        id: check_run
         with:
-          ref: ${{ github.event.client_payload.git.sha }}
+          script: |
+            const checkName = '${{ steps.context.outputs.check_name }}';
+            const { data: checkRun } = await github.rest.checks.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: checkName,
+              head_sha: context.sha,
+              status: 'in_progress',
+              started_at: new Date().toISOString(),
+              output: {
+                title: '🚧 CI checks starting...',
+                summary: 'Running linting, type checks, Jest tests, and build verification...'
+              }
+            });
+            core.info(`✅ Created check: ${checkName} (ID: ${checkRun.id})`);
+            return checkRun.id;
 
       - name: 🔧 Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: lts/*
           cache: 'npm'
-
-      - name: 🚀 Report in_progress status
-        uses: ./.github/actions/report-status
-        with:
-          check_name: ✅ ci-checks
-          status: in_progress
-          title: '🚧 CI In Progress'
-          summary: 'Running linting, type checks, Jest tests, and build verification...'
-          sha: ${{ github.event.client_payload.git.sha }}
-          host: ${{ secrets.APP_HOST }}
-          app_secret: ${{ secrets.INTERNAL_APP_SECRET }}
 
       - name: 📦 Install dependencies
         run: npm ci --legacy-peer-deps
@@ -70,16 +94,6 @@ jobs:
         id: test
         run: npm run test:coverage
 
-      - name: 📊 Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          file: ./test-results/coverage/lcov.info
-          directory: ./test-results/coverage/
-          flags: unittests
-          name: codecov-umbrella
-          fail_ci_if_error: false
-
       - name: 🏗️ Build application
         id: build
         run: npm run build
@@ -92,6 +106,17 @@ jobs:
             exit 1
           fi
           echo "✅ Build completed successfully"
+
+      - name: 📊 Upload coverage (PR only)
+        if: github.event_name == 'pull_request'
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: ./test-results/coverage/lcov.info
+          directory: ./test-results/coverage/
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
 
       - name: 📝 Generate step summary
         if: always()
@@ -106,13 +131,14 @@ jobs:
           echo "| Verification | ${{ steps.verify.outcome == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Overall Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Target Environment**: ${{ steps.context.outputs.target_env }}" >> $GITHUB_STEP_SUMMARY
           echo "**Run ID**: ${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
 
       - name: 📤 Upload build artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ci-build-artifacts
+          name: ci-build-artifacts-${{ github.run_id }}
           path: |
             .next/
             dist/
@@ -120,38 +146,89 @@ jobs:
             test-results/
           retention-days: 7
 
-      # Unified status reporting for all outcomes
-      - name: ✅ Report success
-        if: always() && success()
-        uses: ./.github/actions/report-status
+      - name: ✅ Update Check on Success
+        if: success()
+        uses: actions/github-script@v7
         with:
-          check_name: ✅ ci-checks
-          status: completed
-          conclusion: success
-          title: '✅ CI Passed'
-          summary: 'All linting, type checks, Jest tests, and build verification passed successfully.'
-          sha: ${{ github.event.client_payload.git.sha }}
-          host: ${{ secrets.APP_HOST }}
-          app_secret: ${{ secrets.INTERNAL_APP_SECRET }}
+          script: |
+            const summary = [
+              '✅ **All CI checks passed successfully!**',
+              '',
+              '| Check | Status |',
+              '|-------|--------|',
+              '| Linting | ✅ Passed |',
+              '| Type Check | ✅ Passed |', 
+              '| Jest Tests | ✅ Passed |',
+              '| Build | ✅ Passed |',
+              '| Verification | ✅ Passed |',
+              '',
+              '**Next steps:**',
+              '${{ github.event_name == 'pull_request' && '- E2E tests will run once Vercel preview deployment is ready' || '- Production deployment monitoring will begin' }}'
+            ].join('\n');
 
-      - name: ❌ Report failure
-        if: always() && failure()
-        uses: ./.github/actions/report-status
-        with:
-          check_name: ✅ ci-checks
-          status: completed
-          conclusion: failure
-          sha: ${{ github.event.client_payload.git.sha }}
-          host: ${{ secrets.APP_HOST }}
-          app_secret: ${{ secrets.INTERNAL_APP_SECRET }}
+            await github.rest.checks.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              check_run_id: ${{ steps.check_run.outputs.result }},
+              status: 'completed',
+              conclusion: 'success',
+              completed_at: new Date().toISOString(),
+              output: {
+                title: '✅ All CI checks passed',
+                summary: summary
+              }
+            });
 
-      - name: ⚠️ Report cancelled
-        if: always() && cancelled()
-        uses: ./.github/actions/report-status
+      - name: ❌ Update Check on Failure
+        if: failure()
+        uses: actions/github-script@v7
         with:
-          check_name: ✅ ci-checks
-          status: completed
-          conclusion: cancelled
-          sha: ${{ github.event.client_payload.git.sha }}
-          host: ${{ secrets.APP_HOST }}
-          app_secret: ${{ secrets.INTERNAL_APP_SECRET }}
+          script: |
+            const failedSteps = [];
+            if ('${{ steps.lint.outcome }}' === 'failure') failedSteps.push('Linting');
+            if ('${{ steps.typecheck.outcome }}' === 'failure') failedSteps.push('Type Check');
+            if ('${{ steps.test.outcome }}' === 'failure') failedSteps.push('Jest Tests');
+            if ('${{ steps.build.outcome }}' === 'failure') failedSteps.push('Build');
+            if ('${{ steps.verify.outcome }}' === 'failure') failedSteps.push('Verification');
+
+            const summary = [
+              '❌ **CI checks failed**',
+              '',
+              `**Failed steps:** ${failedSteps.join(', ')}`,
+              '',
+              '**Next steps:**',
+              '1. Check the [workflow logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for detailed error messages',
+              '2. Fix the issues locally',
+              '3. Push your changes to re-run the checks'
+            ].join('\n');
+
+            await github.rest.checks.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              check_run_id: ${{ steps.check_run.outputs.result }},
+              status: 'completed',
+              conclusion: 'failure',
+              completed_at: new Date().toISOString(),
+              output: {
+                title: '❌ CI checks failed',
+                summary: summary
+              }
+            });
+
+      - name: ⚠️ Update Check on Cancellation
+        if: cancelled()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.checks.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              check_run_id: ${{ steps.check_run.outputs.result }},
+              status: 'completed',
+              conclusion: 'cancelled',
+              completed_at: new Date().toISOString(),
+              output: {
+                title: '⚠️ CI checks cancelled',
+                summary: 'The CI workflow was cancelled before completion.'
+              }
+            });

@@ -8,19 +8,73 @@ concurrency:
   cancel-in-progress: true
 
 on:
-  workflow_dispatch:
   repository_dispatch:
     types: [vercel.deployment.success]
+  workflow_dispatch:
 
 jobs:
+  determine-context:
+    if: github.event_name == 'repository_dispatch'
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.check.outputs.should_run }}
+      is_preview: ${{ steps.check.outputs.is_preview }}
+      pr_number: ${{ steps.check.outputs.pr_number }}
+      branch_name: ${{ steps.check.outputs.branch_name }}
+    steps:
+      - name: 🔍 Determine if E2E should run
+        id: check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const payload = context.payload.client_payload;
+            const environment = payload.environment;
+            const branch = payload.git.branch;
+
+            core.info(`Deployment environment: ${environment}`);
+            core.info(`Branch: ${branch}`);
+
+            // Only run E2E for preview deployments (not main branch)
+            const isPreview = environment === 'preview';
+            const shouldRun = isPreview && branch !== 'main';
+
+            core.setOutput('should_run', shouldRun);
+            core.setOutput('is_preview', isPreview);
+            core.setOutput('branch_name', branch);
+
+            if (shouldRun) {
+              core.info(`✅ E2E tests should run for preview deployment of branch: ${branch}`);
+              
+              // Try to find associated PR
+              try {
+                const { data: prs } = await github.rest.pulls.list({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  head: `${context.repo.owner}:${branch}`,
+                  state: 'open'
+                });
+                
+                if (prs.length > 0) {
+                  core.setOutput('pr_number', prs[0].number);
+                  core.info(`Found associated PR #${prs[0].number} for branch ${branch}`);
+                } else {
+                  core.info(`No open PR found for branch ${branch}`);
+                }
+              } catch (error) {
+                core.warning(`Failed to search for PRs: ${error.message}`);
+              }
+            } else {
+              core.info(`⏭️ Skipping E2E tests - environment: ${environment}, branch: ${branch}`);
+            }
+
   playwright-tests:
-    if: github.event_name == 'repository_dispatch' && github.event.client_payload.environment == 'preview'
-    name: 🧪 playwright-tests
+    needs: determine-context
+    if: needs.determine-context.outputs.should_run == 'true'
+    name: 🧪 E2E Tests
     runs-on:
       - self-hosted
       - Linux
       - ARM64
-
     timeout-minutes: 35
     strategy:
       fail-fast: false
@@ -40,18 +94,73 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.client_payload.git.sha }}
-          fetch-depth: 0
 
-      - name: 🚀 Report in_progress status
-        uses: ./.github/actions/report-status
+      - name: 📝 Create GitHub Check
+        uses: actions/github-script@v7
+        id: check_run
         with:
-          check_name: playwright-tests (${{ matrix.project }})
-          status: in_progress
-          title: 🚧 E2E Tests In Progress (${{ matrix.project }})
-          summary: Comprehensive end-to-end tests running on preview deployment...
-          sha: ${{ github.event.client_payload.git.sha }}
-          host: ${{ secrets.APP_HOST }}
-          app_secret: ${{ secrets.INTERNAL_APP_SECRET }}
+          script: |
+            const checkName = 'E2E Tests (${{ matrix.project }})';
+            const { data: checkRun } = await github.rest.checks.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: checkName,
+              head_sha: '${{ github.event.client_payload.git.sha }}',
+              status: 'in_progress',
+              started_at: new Date().toISOString(),
+              output: {
+                title: '🚧 E2E tests starting (${{ matrix.project }})...',
+                summary: 'Waiting for CI checks to complete, then running comprehensive end-to-end tests...'
+              }
+            });
+            core.info(`✅ Created check: ${checkName} (ID: ${checkRun.id})`);
+            return checkRun.id;
+
+      - name: ⏳ Wait for CI to complete
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const sha = '${{ github.event.client_payload.git.sha }}';
+            let attempts = 0;
+            const maxAttempts = 30; // 10 minutes
+
+            core.info('🔍 Waiting for CI checks to complete...');
+
+            while (attempts < maxAttempts) {
+              const { data: checkRuns } = await github.rest.checks.listForRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: sha
+              });
+              
+              // Look for CI check
+              const ciCheck = checkRuns.check_runs.find(check => 
+                check.name === 'CI Checks'
+              );
+              
+              if (ciCheck && ciCheck.status === 'completed') {
+                if (ciCheck.conclusion === 'success') {
+                  core.info(`✅ CI checks passed, proceeding with E2E tests`);
+                  break;
+                } else {
+                  core.setFailed(`❌ CI checks failed with conclusion: ${ciCheck.conclusion}`);
+                  return;
+                }
+              }
+              
+              if (ciCheck) {
+                core.info(`⏳ CI checks status: ${ciCheck.status} (${attempts + 1}/${maxAttempts})`);
+              } else {
+                core.info(`⏳ Waiting for CI checks to appear... (${attempts + 1}/${maxAttempts})`);
+              }
+              
+              await new Promise(resolve => setTimeout(resolve, 20000)); // Wait 20s
+              attempts++;
+            }
+
+            if (attempts >= maxAttempts) {
+              core.setFailed('⏰ Timeout waiting for CI checks to complete');
+            }
 
       - name: 🔧 Set up Node.js
         uses: actions/setup-node@v4
@@ -62,7 +171,7 @@ jobs:
       - name: 📦 Install dependencies
         run: npm ci --legacy-peer-deps
 
-      - name: ⏳ Wait for preview deployment
+      - name: ⏳ Wait for deployment readiness
         uses: ./.github/actions/wait-for-deployment
         with:
           url: ${{ github.event.client_payload.url }}
@@ -104,6 +213,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Project**: ${{ matrix.project }}" >> $GITHUB_STEP_SUMMARY
           echo "**Preview URL**: ${{ github.event.client_payload.url }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch**: ${{ needs.determine-context.outputs.branch_name }}" >> $GITHUB_STEP_SUMMARY
           echo "**Overall Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
           echo "**Run ID**: ${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
 
@@ -112,7 +222,7 @@ jobs:
         continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
-          name: 'playwright-results-${{ matrix.project }}'
+          name: 'playwright-results-${{ matrix.project }}-${{ github.run_id }}'
           path: test-results/playwright/${{ matrix.project }}/
           retention-days: 7
 
@@ -120,42 +230,94 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: 'playwright-html-report-${{ matrix.project }}'
+          name: 'playwright-html-report-${{ matrix.project }}-${{ github.run_id }}'
           path: test-results/playwright/html-report/
           retention-days: 7
 
-      # Unified status reporting for all outcomes
-      - name: ✅ Report success
-        if: always() && success()
-        uses: ./.github/actions/report-status
+      - name: ✅ Update Check on Success
+        if: success()
+        uses: actions/github-script@v7
         with:
-          check_name: playwright-tests (${{ matrix.project }})
-          status: completed
-          conclusion: success
-          title: ✅ E2E Tests Passed (${{ matrix.project }})
-          summary: All end-to-end tests passed successfully on the preview deployment. Ready for production!
-          sha: ${{ github.event.client_payload.git.sha }}
-          host: ${{ secrets.APP_HOST }}
-          app_secret: ${{ secrets.INTERNAL_APP_SECRET }}
+          script: |
+            const summary = [
+              '✅ **All E2E tests passed successfully!**',
+              '',
+              '| Test Type | Status |',
+              '|-----------|--------|',
+              '| E2E Tests | ✅ Passed |',
+              '| Accessibility | ${{ steps.accessibility_tests.outcome == 'success' && '✅ Passed' || '⚠️ Issues Found' }} |',
+              '| Performance | ${{ steps.performance_tests.outcome == 'success' && '✅ Passed' || '⚠️ Issues Found' }} |',
+              '',
+              '**Preview URL:** ${{ github.event.client_payload.url }}',
+              '**Browser:** ${{ matrix.project }}',
+              '',
+              '🎉 Ready for production!'
+            ].join('\n');
 
-      - name: ❌ Report failure
-        if: always() && failure()
-        uses: ./.github/actions/report-status
-        with:
-          check_name: playwright-tests (${{ matrix.project }})
-          status: completed
-          conclusion: failure
-          sha: ${{ github.event.client_payload.git.sha }}
-          host: ${{ secrets.APP_HOST }}
-          app_secret: ${{ secrets.INTERNAL_APP_SECRET }}
+            await github.rest.checks.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              check_run_id: ${{ steps.check_run.outputs.result }},
+              status: 'completed',
+              conclusion: 'success',
+              completed_at: new Date().toISOString(),
+              output: {
+                title: '✅ E2E tests passed (${{ matrix.project }})',
+                summary: summary
+              }
+            });
 
-      - name: ⚠️ Report cancelled
-        if: always() && cancelled()
-        uses: ./.github/actions/report-status
+      - name: ❌ Update Check on Failure
+        if: failure()
+        uses: actions/github-script@v7
         with:
-          check_name: playwright-tests (${{ matrix.project }})
-          status: completed
-          conclusion: cancelled
-          sha: ${{ github.event.client_payload.git.sha }}
-          host: ${{ secrets.APP_HOST }}
-          app_secret: ${{ secrets.INTERNAL_APP_SECRET }}
+          script: |
+            const failedSteps = [];
+            if ('${{ steps.e2e_tests.outcome }}' === 'failure') failedSteps.push('E2E Tests');
+            if ('${{ steps.accessibility_tests.outcome }}' === 'failure') failedSteps.push('Accessibility');
+            if ('${{ steps.performance_tests.outcome }}' === 'failure') failedSteps.push('Performance');
+
+            const summary = [
+              '❌ **E2E tests failed**',
+              '',
+              `**Failed components:** ${failedSteps.join(', ')}`,
+              '',
+              '**Preview URL:** ${{ github.event.client_payload.url }}',
+              '**Browser:** ${{ matrix.project }}',
+              '',
+              '**Next steps:**',
+              '1. Check the [test artifacts](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})',
+              '2. Review the detailed logs for failure information',
+              '3. Fix the issues and push changes to re-run tests'
+            ].join('\n');
+
+            await github.rest.checks.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              check_run_id: ${{ steps.check_run.outputs.result }},
+              status: 'completed',
+              conclusion: 'failure',
+              completed_at: new Date().toISOString(),
+              output: {
+                title: '❌ E2E tests failed (${{ matrix.project }})',
+                summary: summary
+              }
+            });
+
+      - name: ⚠️ Update Check on Cancellation
+        if: cancelled()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.checks.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              check_run_id: ${{ steps.check_run.outputs.result }},
+              status: 'completed',
+              conclusion: 'cancelled',
+              completed_at: new Date().toISOString(),
+              output: {
+                title: '⚠️ E2E tests cancelled (${{ matrix.project }})',
+                summary: 'The E2E test workflow was cancelled before completion.'
+              }
+            });

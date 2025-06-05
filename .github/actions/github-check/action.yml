@@ -1,0 +1,195 @@
+name: 'GitHub Check'
+description: 'Create or update GitHub checks using the native Checks API'
+
+inputs:
+  check_name:
+    description: 'Name of the check'
+    required: true
+  action:
+    description: 'Action to perform: create, update'
+    required: true
+    default: 'create'
+  check_run_id:
+    description: 'Check run ID (required for update action)'
+    required: false
+  status:
+    description: 'Status: queued, in_progress, completed'
+    required: true
+  conclusion:
+    description: 'Conclusion: success, failure, cancelled, neutral, skipped, timed_out, action_required'
+    required: false
+  title:
+    description: 'Title for the check'
+    required: false
+  summary:
+    description: 'Summary description'
+    required: false
+  details_url:
+    description: 'URL for more details'
+    required: false
+  sha:
+    description: 'Commit SHA (defaults to current)'
+    required: false
+    default: ${{ github.sha }}
+
+outputs:
+  check_run_id:
+    description: 'The ID of the created/updated check run'
+    value: ${{ steps.github_check.outputs.check_run_id }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Validate inputs
+      shell: bash
+      run: |
+        # Validate action
+        if [[ "${{ inputs.action }}" != "create" && "${{ inputs.action }}" != "update" ]]; then
+          echo "❌ Invalid action: ${{ inputs.action }}. Must be 'create' or 'update'"
+          exit 1
+        fi
+
+        # Validate status
+        case "${{ inputs.status }}" in
+          "queued"|"in_progress"|"completed")
+            echo "✅ Valid status: ${{ inputs.status }}"
+            ;;
+          *)
+            echo "❌ Invalid status: ${{ inputs.status }}. Must be 'queued', 'in_progress', or 'completed'"
+            exit 1
+            ;;
+        esac
+
+        # Validate conclusion if provided
+        if [[ -n "${{ inputs.conclusion }}" ]]; then
+          case "${{ inputs.conclusion }}" in
+            "success"|"failure"|"cancelled"|"neutral"|"skipped"|"timed_out"|"action_required")
+              echo "✅ Valid conclusion: ${{ inputs.conclusion }}"
+              ;;
+            *)
+              echo "❌ Invalid conclusion: ${{ inputs.conclusion }}"
+              exit 1
+              ;;
+          esac
+        fi
+
+        # Validate SHA format
+        if [[ ! "${{ inputs.sha }}" =~ ^[a-f0-9]{40}$ ]]; then
+          echo "❌ Invalid SHA format: ${{ inputs.sha }}"
+          exit 1
+        fi
+
+        echo "✅ All inputs validated successfully"
+
+    - name: Set default title and summary
+      shell: bash
+      run: |
+        if [[ -z "${{ inputs.title }}" ]]; then
+          case "${{ inputs.status }}" in
+            "queued")
+              echo "DEFAULT_TITLE=🔄 ${{ inputs.check_name }} - Queued" >> $GITHUB_ENV
+              echo "DEFAULT_SUMMARY=${{ inputs.check_name }} has been queued and will start shortly." >> $GITHUB_ENV
+              ;;
+            "in_progress")
+              echo "DEFAULT_TITLE=🚧 ${{ inputs.check_name }} - In Progress" >> $GITHUB_ENV
+              echo "DEFAULT_SUMMARY=${{ inputs.check_name }} is currently running..." >> $GITHUB_ENV
+              ;;
+            "completed")
+              case "${{ inputs.conclusion }}" in
+                "success")
+                  echo "DEFAULT_TITLE=✅ ${{ inputs.check_name }} - Passed" >> $GITHUB_ENV
+                  echo "DEFAULT_SUMMARY=${{ inputs.check_name }} completed successfully." >> $GITHUB_ENV
+                  ;;
+                "failure")
+                  echo "DEFAULT_TITLE=❌ ${{ inputs.check_name }} - Failed" >> $GITHUB_ENV
+                  echo "DEFAULT_SUMMARY=${{ inputs.check_name }} failed. Review the logs for details." >> $GITHUB_ENV
+                  ;;
+                "cancelled")
+                  echo "DEFAULT_TITLE=⚠️ ${{ inputs.check_name }} - Cancelled" >> $GITHUB_ENV
+                  echo "DEFAULT_SUMMARY=${{ inputs.check_name }} was cancelled." >> $GITHUB_ENV
+                  ;;
+                "timed_out")
+                  echo "DEFAULT_TITLE=⏰ ${{ inputs.check_name }} - Timed Out" >> $GITHUB_ENV
+                  echo "DEFAULT_SUMMARY=${{ inputs.check_name }} timed out before completion." >> $GITHUB_ENV
+                  ;;
+                *)
+                  echo "DEFAULT_TITLE=🔄 ${{ inputs.check_name }}" >> $GITHUB_ENV
+                  echo "DEFAULT_SUMMARY=${{ inputs.check_name }} status update." >> $GITHUB_ENV
+                  ;;
+              esac
+              ;;
+          esac
+        else
+          echo "DEFAULT_TITLE=${{ inputs.title }}" >> $GITHUB_ENV
+          echo "DEFAULT_SUMMARY=${{ inputs.summary }}" >> $GITHUB_ENV
+        fi
+
+    - name: Create or update GitHub check
+      id: github_check
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const action = '${{ inputs.action }}';
+          const checkName = '${{ inputs.check_name }}';
+          const status = '${{ inputs.status }}';
+          const conclusion = '${{ inputs.conclusion }}' || null;
+          const title = '${{ inputs.title }}' || process.env.DEFAULT_TITLE;
+          const summary = '${{ inputs.summary }}' || process.env.DEFAULT_SUMMARY;
+          const detailsUrl = '${{ inputs.details_url }}' || `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+          const sha = '${{ inputs.sha }}';
+
+          try {
+            if (action === 'create') {
+              core.info(`Creating check run: ${checkName}`);
+              
+              const { data: checkRun } = await github.rest.checks.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: checkName,
+                head_sha: sha,
+                status: status,
+                conclusion: status === 'completed' ? conclusion : undefined,
+                started_at: new Date().toISOString(),
+                completed_at: status === 'completed' ? new Date().toISOString() : undefined,
+                output: {
+                  title: title,
+                  summary: summary
+                },
+                details_url: detailsUrl
+              });
+              
+              core.info(`✅ Created check run with ID: ${checkRun.id}`);
+              core.setOutput('check_run_id', checkRun.id);
+              return checkRun.id;
+              
+            } else if (action === 'update') {
+              const checkRunId = '${{ inputs.check_run_id }}';
+              if (!checkRunId) {
+                core.setFailed('check_run_id is required for update action');
+                return;
+              }
+              
+              core.info(`Updating check run: ${checkRunId}`);
+              
+              await github.rest.checks.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                check_run_id: parseInt(checkRunId),
+                status: status,
+                conclusion: status === 'completed' ? conclusion : undefined,
+                completed_at: status === 'completed' ? new Date().toISOString() : undefined,
+                output: {
+                  title: title,
+                  summary: summary
+                },
+                details_url: detailsUrl
+              });
+              
+              core.info(`✅ Updated check run: ${checkRunId}`);
+              core.setOutput('check_run_id', checkRunId);
+              return checkRunId;
+            }
+          } catch (error) {
+            core.setFailed(`Failed to ${action} check run: ${error.message}`);
+            throw error;
+          }

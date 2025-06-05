@@ -1,25 +1,52 @@
 # Central configuration for the entire CI/CD pipeline
+# Updated to use GitHub native Checks API and proper workflow coordination
+
 workflows:
+  pr_check_init:
+    name: 'Initialize PR Checks'
+    description: 'Creates GitHub check runs when PR is opened'
+    triggers:
+      - pull_request: [opened, reopened, synchronize]
+    timeout_minutes: 5
+
   ci:
-    name: '✅ ci-checks'
+    name: 'CI Checks'
+    description: 'Linting, type checking, testing, and building'
+    triggers:
+      - pull_request: [opened, synchronize, reopened]
+      - push: [main]
     timeout_minutes: 10
     steps:
+      - checkout
+      - setup_node
+      - install_dependencies
       - lint
       - type_check
       - test_coverage
       - build
       - verify_build
+    github_check: true
 
   e2e:
+    name: 'E2E Tests'
+    description: 'End-to-end testing on preview deployments'
+    triggers:
+      - repository_dispatch: [vercel.deployment.success]
     timeout_minutes: 35
+    depends_on: [ci]
     matrix:
       projects: [chromium, firefox, webkit, mobile-chrome, mobile-safari]
     test_types:
       - e2e
       - accessibility
       - performance
+    github_check: true
 
   production:
+    name: 'Production Monitoring'
+    description: 'Health checks and monitoring for production deployments'
+    triggers:
+      - repository_dispatch: [vercel.deployment.success]
     timeout_minutes: 15
     health_checks:
       - smoke_tests
@@ -33,6 +60,44 @@ workflows:
           server: smtp.gmail.com
           port: 587
 
+# GitHub integration settings
+github:
+  checks:
+    # These check names must match branch protection rules
+    required_checks:
+      - 'CI Checks'
+      - 'E2E Tests (chromium)'
+      - 'E2E Tests (firefox)'
+      - 'E2E Tests (webkit)'
+      - 'E2E Tests (mobile-chrome)'
+      - 'E2E Tests (mobile-safari)'
+
+    # Auto-create checks on PR open
+    auto_create: true
+
+    # Use native GitHub Checks API instead of webhooks
+    use_native_api: true
+
+# Branch protection configuration
+branch_protection:
+  main:
+    required_status_checks:
+      strict: true
+      checks:
+        - context: 'CI Checks'
+        - context: 'E2E Tests (chromium)'
+        - context: 'E2E Tests (firefox)'
+        - context: 'E2E Tests (webkit)'
+        - context: 'E2E Tests (mobile-chrome)'
+        - context: 'E2E Tests (mobile-safari)'
+    required_pull_request_reviews:
+      required_approving_review_count: 0
+      dismiss_stale_reviews: true
+    enforce_admins: false
+    allow_auto_merge: true
+    restrictions: null
+
+# Runner configuration
 runners:
   default:
     - self-hosted
@@ -40,12 +105,68 @@ runners:
     - ARM64
   github_hosted: ubuntu-latest
 
+  # Use GitHub hosted for lightweight operations
+  lightweight_jobs:
+    - pr-check-init
+
+  # Use self-hosted for resource-intensive operations
+  heavy_jobs:
+    - ci-checks
+    - playwright-tests
+    - production-monitoring
+
+# Retry and reliability settings
 retry:
   max_attempts: 3
   initial_delay_ms: 2000
   backoff_multiplier: 2
 
+# Deployment settings
 deployment:
   wait_timeout_seconds: 90
   readiness_check_interval_seconds: 10
   max_readiness_attempts: 5
+
+  # Vercel specific settings
+  vercel:
+    preview_environment: 'preview'
+    production_environment: 'production'
+    use_bypass_secret: true
+
+# Artifact retention
+artifacts:
+  build_artifacts:
+    retention_days: 7
+  test_results:
+    retention_days: 7
+  production_monitoring:
+    retention_days: 14
+
+# Notification settings
+notifications:
+  production_success:
+    enabled: true
+    template: 'success'
+  production_failure:
+    enabled: true
+    template: 'failure'
+    priority: 'urgent'
+
+# Feature flags
+features:
+  use_github_checks_api: true
+  webhook_reporting: false # Deprecated in favor of GitHub Checks API
+  workflow_coordination: true
+  auto_merge: true
+  branch_protection: true
+
+# Migration notes
+migration:
+  from_webhook_to_checks_api:
+    date: '2025-06-05'
+    description: 'Migrated from custom webhook reporting to GitHub Checks API for better integration'
+    benefits:
+      - 'Native GitHub UI integration'
+      - 'Proper branch protection support'
+      - 'Better PR status visibility'
+      - 'Reduced external dependencies'

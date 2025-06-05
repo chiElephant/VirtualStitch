@@ -1,0 +1,97 @@
+name: Initialize PR Checks
+
+permissions:
+  checks: write
+  pull-requests: read
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+jobs:
+  initialize-checks:
+    name: 🚀 Initialize PR Checks
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: 📝 Create initial check runs
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const checkNames = [
+              'CI Checks',
+              'E2E Tests (chromium)',
+              'E2E Tests (firefox)', 
+              'E2E Tests (webkit)',
+              'E2E Tests (mobile-chrome)',
+              'E2E Tests (mobile-safari)'
+            ];
+
+            const sha = context.payload.pull_request.head.sha;
+
+            core.info(`Creating initial check runs for PR #${context.payload.pull_request.number}`);
+            core.info(`SHA: ${sha}`);
+
+            // Create all check runs in parallel
+            const checkPromises = checkNames.map(async (checkName) => {
+              try {
+                const { data: checkRun } = await github.rest.checks.create({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: checkName,
+                  head_sha: sha,
+                  status: 'queued',
+                  output: {
+                    title: `🔄 ${checkName} - Queued`,
+                    summary: `${checkName} has been queued and will start when ready.`
+                  },
+                  details_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/pull/${context.payload.pull_request.number}`
+                });
+                
+                core.info(`✅ Created check: ${checkName} (ID: ${checkRun.id})`);
+                return { name: checkName, id: checkRun.id, status: 'created' };
+              } catch (error) {
+                core.error(`❌ Failed to create check ${checkName}: ${error.message}`);
+                return { name: checkName, status: 'failed', error: error.message };
+              }
+            });
+
+            const results = await Promise.all(checkPromises);
+
+            // Log results
+            const successful = results.filter(r => r.status === 'created');
+            const failed = results.filter(r => r.status === 'failed');
+
+            core.info(`Successfully created ${successful.length} check runs`);
+            if (failed.length > 0) {
+              core.warning(`Failed to create ${failed.length} check runs`);
+              failed.forEach(f => core.warning(`  - ${f.name}: ${f.error}`));
+            }
+
+            // Create summary
+            await core.summary
+              .addHeading('PR Check Initialization')
+              .addTable([
+                ['Check Name', 'Status'],
+                ...results.map(r => [
+                  r.name, 
+                  r.status === 'created' ? '✅ Created' : '❌ Failed'
+                ])
+              ])
+              .addQuote(`PR #${context.payload.pull_request.number} is ready for CI/CD pipeline`)
+              .write();
+
+      - name: 📋 Log PR information
+        run: |
+          echo "## PR Information" >> $GITHUB_STEP_SUMMARY
+          echo "- **PR Number:** #${{ github.event.pull_request.number }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Title:** ${{ github.event.pull_request.title }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Head SHA:** ${{ github.event.pull_request.head.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Base Branch:** ${{ github.event.pull_request.base.ref }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Head Branch:** ${{ github.event.pull_request.head.ref }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Next steps:**" >> $GITHUB_STEP_SUMMARY
+          echo "1. CI checks will run automatically" >> $GITHUB_STEP_SUMMARY
+          echo "2. E2E tests will run after Vercel preview deployment" >> $GITHUB_STEP_SUMMARY
+          echo "3. Auto-merge will trigger when all checks pass" >> $GITHUB_STEP_SUMMARY
