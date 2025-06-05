@@ -3,6 +3,8 @@
  * without rendering the UI, focusing on maximum coverage with minimal complexity.
  */
 
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
+
 import { toast } from 'react-toastify';
 import state from '@/store';
 
@@ -10,23 +12,75 @@ import state from '@/store';
 global.fetch = jest.fn();
 const mockFetch = fetch as jest.MockedFunction<typeof fetch>;
 
-// Mock FileReader
-global.FileReader = class MockFileReader {
-  result: string | null = null;
-  onload: ((this: FileReader, ev: ProgressEvent<FileReader>) => void) | null =
+// Simple FileReader mock
+class MockFileReader {
+  static readonly EMPTY = 0;
+  static readonly LOADING = 1;
+  static readonly DONE = 2;
+
+  readonly EMPTY = 0;
+  readonly LOADING = 1;
+  readonly DONE = 2;
+
+  readyState: 0 | 1 | 2 = 0;
+  result: string | ArrayBuffer | null = null;
+  error: DOMException | null = null;
+
+  onabort: ((this: FileReader, ev: ProgressEvent<FileReader>) => void) | null =
     null;
   onerror: ((this: FileReader, ev: ProgressEvent<FileReader>) => void) | null =
     null;
+  onload: ((this: FileReader, ev: ProgressEvent<FileReader>) => void) | null =
+    null;
+  onloadend:
+    | ((this: FileReader, ev: ProgressEvent<FileReader>) => void)
+    | null = null;
+  onloadstart:
+    | ((this: FileReader, ev: ProgressEvent<FileReader>) => void)
+    | null = null;
+  onprogress:
+    | ((this: FileReader, ev: ProgressEvent<FileReader>) => void)
+    | null = null;
 
-  readAsDataURL() {
+  abort(): void {
+    // Mock implementation
+  }
+
+  readAsArrayBuffer(): void {
+    // Mock implementation
+  }
+
+  readAsBinaryString(): void {
+    // Mock implementation
+  }
+
+  readAsDataURL(): void {
     setTimeout(() => {
       this.result = 'data:image/png;base64,mockImageData';
       if (this.onload) {
-        this.onload({} as ProgressEvent<FileReader>);
+        (this.onload as any)({} as ProgressEvent<FileReader>);
       }
     }, 10);
   }
-} as any;
+
+  readAsText(): void {
+    // Mock implementation
+  }
+
+  addEventListener(): void {
+    // Mock implementation
+  }
+
+  removeEventListener(): void {
+    // Mock implementation
+  }
+
+  dispatchEvent(): boolean {
+    return true;
+  }
+}
+
+global.FileReader = MockFileReader as any;
 
 // Mock toast
 jest.mock('react-toastify', () => ({
@@ -57,9 +111,7 @@ jest.mock('@/store', () => {
 
 // Mock helpers
 jest.mock('@/config/helpers', () => ({
-  reader: jest.fn((file: File) =>
-    Promise.resolve('data:image/png;base64,mockImageData')
-  ),
+  reader: jest.fn(() => Promise.resolve('data:image/png;base64,mockImageData')),
   getContrastingColor: jest.fn(() => '#000000'),
 }));
 
@@ -129,7 +181,6 @@ describe('Customizer Logic Tests', () => {
 
     it('handles successful AI generation for logo type', async () => {
       const prompt = 'cool logo design';
-      const type = 'logo';
 
       // Mock successful API response
       mockFetch.mockResolvedValueOnce({
@@ -183,7 +234,6 @@ describe('Customizer Logic Tests', () => {
 
     it('handles successful AI generation for full type', async () => {
       const prompt = 'cool pattern design';
-      const type = 'full';
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -341,7 +391,7 @@ describe('Customizer Logic Tests', () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ prompt }),
         });
-      } catch (error) {
+      } catch {
         toast.error('Failed to fetch image 📸 ', {
           position: 'bottom-right',
           autoClose: 5000,
@@ -368,12 +418,11 @@ describe('Customizer Logic Tests', () => {
 
     it('handles file reading for logo type', async () => {
       const mockReader = jest.requireMock('@/config/helpers').reader;
-      const file = new File(['test'], 'test.png', { type: 'image/png' });
-      const type = 'logo';
+      const testFile = new File(['test'], 'test.png', { type: 'image/png' });
 
       // Simulate readFile function logic
-      if (file) {
-        const result = await mockReader(file);
+      if (testFile) {
+        const result = await mockReader(testFile);
 
         // Simulate handleDecals call
         state.logoDecal = result;
@@ -381,7 +430,7 @@ describe('Customizer Logic Tests', () => {
         state.isFullTexture = false;
       }
 
-      expect(mockReader).toHaveBeenCalledWith(file);
+      expect(mockReader).toHaveBeenCalledWith(testFile);
       expect(state.logoDecal).toBe('data:image/png;base64,mockImageData');
       expect(state.isLogoTexture).toBe(true);
       expect(state.isFullTexture).toBe(false);
@@ -389,11 +438,10 @@ describe('Customizer Logic Tests', () => {
 
     it('handles file reading for full type', async () => {
       const mockReader = jest.requireMock('@/config/helpers').reader;
-      const file = new File(['test'], 'test.png', { type: 'image/png' });
-      const type = 'full';
+      const testFile = new File(['test'], 'test.png', { type: 'image/png' });
 
-      if (file) {
-        const result = await mockReader(file);
+      if (testFile) {
+        const result = await mockReader(testFile);
 
         // Simulate handleDecals for full type
         state.fullDecal = result;
@@ -408,10 +456,10 @@ describe('Customizer Logic Tests', () => {
 
     it('handles readFile when no file is selected', async () => {
       const mockReader = jest.requireMock('@/config/helpers').reader;
-      const file = null;
+      const testFile = null;
 
       // Simulate early return when no file
-      if (!file) {
+      if (!testFile) {
         return;
       }
 
@@ -506,22 +554,22 @@ describe('Customizer Logic Tests', () => {
       });
     });
 
-    it('handles decal type mapping logic', () => {
+    it('handles decal mapping logic', () => {
       // Test DecalTypes mapping logic used in handleDecals
       const decalTypes = {
         logo: { stateProperty: 'logoDecal', filterTab: 'logoShirt' },
         full: { stateProperty: 'fullDecal', filterTab: 'stylishShirt' },
       };
 
-      // Test logo type
-      const logoType = decalTypes['logo'];
-      expect(logoType.stateProperty).toBe('logoDecal');
-      expect(logoType.filterTab).toBe('logoShirt');
+      // Test logo mapping
+      const logoMapping = decalTypes['logo'];
+      expect(logoMapping.stateProperty).toBe('logoDecal');
+      expect(logoMapping.filterTab).toBe('logoShirt');
 
-      // Test full type
-      const fullType = decalTypes['full'];
-      expect(fullType.stateProperty).toBe('fullDecal');
-      expect(fullType.filterTab).toBe('stylishShirt');
+      // Test full mapping
+      const fullMapping = decalTypes['full'];
+      expect(fullMapping.stateProperty).toBe('fullDecal');
+      expect(fullMapping.filterTab).toBe('stylishShirt');
     });
   });
 
@@ -531,44 +579,44 @@ describe('Customizer Logic Tests', () => {
      */
 
     it('manages file state', () => {
-      let file: File | null = null;
+      let selectedFile: File | null = null;
 
       // Set file
       const testFile = new File(['test'], 'test.png', { type: 'image/png' });
-      file = testFile;
+      selectedFile = testFile;
 
-      expect(file).toBe(testFile);
-      expect(file.name).toBe('test.png');
-      expect(file.type).toBe('image/png');
+      expect(selectedFile).toBe(testFile);
+      expect(selectedFile.name).toBe('test.png');
+      expect(selectedFile.size).toBeGreaterThan(0);
 
       // Clear file
-      file = null;
-      expect(file).toBe(null);
+      selectedFile = null;
+      expect(selectedFile).toBe(null);
     });
 
     it('manages prompt state', () => {
-      let prompt = '';
+      let userPrompt = '';
 
       // Set prompt
-      prompt = 'cool design';
-      expect(prompt).toBe('cool design');
-      expect(prompt.length).toBeGreaterThan(0);
+      userPrompt = 'cool design';
+      expect(userPrompt).toBe('cool design');
+      expect(userPrompt.length).toBeGreaterThan(0);
 
       // Clear prompt
-      prompt = '';
-      expect(prompt).toBe('');
+      userPrompt = '';
+      expect(userPrompt).toBe('');
     });
 
     it('manages generating state', () => {
-      let generatingImg = false;
+      let isGenerating = false;
 
       // Start generating
-      generatingImg = true;
-      expect(generatingImg).toBe(true);
+      isGenerating = true;
+      expect(isGenerating).toBe(true);
 
       // Finish generating
-      generatingImg = false;
-      expect(generatingImg).toBe(false);
+      isGenerating = false;
+      expect(isGenerating).toBe(false);
     });
 
     it('manages active editor tab state', () => {
@@ -610,10 +658,10 @@ describe('Customizer Logic Tests', () => {
 
   describe('Integration Workflows', () => {
     it('completes full AI generation workflow', async () => {
-      const prompt = 'awesome logo';
+      const workflowPrompt = 'awesome logo';
 
       // Validate prompt
-      expect(prompt.length).toBeGreaterThan(0);
+      expect(workflowPrompt.length).toBeGreaterThan(0);
 
       // API call
       mockFetch.mockResolvedValueOnce({
@@ -624,7 +672,7 @@ describe('Customizer Logic Tests', () => {
       const response = await fetch('/api/custom-logo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt: workflowPrompt }),
       });
 
       const data = await response.json();
@@ -644,10 +692,10 @@ describe('Customizer Logic Tests', () => {
 
     it('completes full file upload workflow', async () => {
       const mockReader = jest.requireMock('@/config/helpers').reader;
-      const file = new File(['test'], 'logo.png', { type: 'image/png' });
+      const uploadFile = new File(['test'], 'logo.png', { type: 'image/png' });
 
       // Read file
-      const result = await mockReader(file);
+      const result = await mockReader(uploadFile);
 
       // Apply to state
       state.logoDecal = result;
