@@ -10,6 +10,7 @@ interface OrganizationConfig {
   app_id_env: string;
   private_key_env: string;
   webhook_secret_env: string;
+  repository_env: string;
   identifiers: string[];
 }
 
@@ -223,13 +224,15 @@ class ConfigManager {
           '303DEVS': {
             app_id_env: 'GITHUB_APP_ID_303DEVS',
             private_key_env: 'GITHUB_PRIVATE_KEY_303DEVS',
-            webhook_secret_env: '303DEVS_GITHUB_WEBHOOK_SECRET',
+            webhook_secret_env: 'GITHUB_WEBHOOK_SECRET_303DEVS',
+            repository_env: 'GITHUB_REPOSITORY_303DEVS',
             identifiers: ['303devs', '303DEVS'],
           },
           'CHIELEPHANT': {
             app_id_env: 'GITHUB_APP_ID_CHIELEPHANT',
             private_key_env: 'GITHUB_PRIVATE_KEY_CHIELEPHANT',
-            webhook_secret_env: 'CHIELEPHANT_GITHUB_WEBHOOK_SECRET',
+            webhook_secret_env: 'GITHUB_WEBHOOK_SECRET_CHIELEPHANT',
+            repository_env: 'GITHUB_REPOSITORY_CHIELEPHANT',
             identifiers: ['chie', 'chielephant', 'CHIELEPHANT'],
           },
         },
@@ -404,7 +407,8 @@ async function handleReportEndpoint(
       return new Response('Configuration error', { status: 500 });
     }
 
-    const [owner, repo] = process.env.GITHUB_REPOSITORY!.split('/');
+    const [owner, repo] =
+      process.env[organization.config.repository_env]!.split('/');
 
     console.log(
       '[' +

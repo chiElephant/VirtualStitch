@@ -36,6 +36,8 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+.303devs.env*
+.chiElephant.env*
 
 # vercel
 .vercel
