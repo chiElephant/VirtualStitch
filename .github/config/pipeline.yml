@@ -1,5 +1,4 @@
 # Central configuration for the entire CI/CD pipeline
-
 workflows:
   ci:
     name: '✅ ci-checks'

@@ -1,4 +1,3 @@
-// File: app/api/github-webhook/report/route.ts
 import { NextRequest } from 'next/server';
 import { Octokit } from '@octokit/rest';
 import { createAppAuth } from '@octokit/auth-app';

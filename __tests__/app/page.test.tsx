@@ -1,4 +1,3 @@
-// __tests__/app/page.test.tsx
 import { render, screen } from '@testing-library/react';
 import App from '@/app/page';
 
@@ -15,7 +14,9 @@ jest.mock('@/canvas/Backdrop', () => ({
 
 jest.mock('@/canvas/CameraRig', () => ({
   __esModule: true,
-  default: ({ children }) => <div data-testid='camera-rig'>{children}</div>,
+  default: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid='camera-rig'>{children}</div>
+  ),
 }));
 
 jest.mock('@/canvas/Shirt', () => ({

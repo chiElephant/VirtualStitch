@@ -1,5 +1,3 @@
-// tests/accessibility.spec.ts - Remove the color-contrast filter
-
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 

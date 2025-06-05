@@ -1,4 +1,3 @@
-// tests/performance-monitoring.spec.ts - Fixed TypeScript issues
 import { test, expect } from '@playwright/test';
 
 interface PerformanceVitals {
