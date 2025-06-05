@@ -1,6 +1,4 @@
 /**
- * Customizer Logic Tests
- *
  * This file tests the core business logic of the Customizer component
  * without rendering the UI, focusing on maximum coverage with minimal complexity.
  */
