@@ -70,10 +70,14 @@ jobs:
         id: test
         run: npm run test:coverage
 
-      - name: 📊 Upload coverage reports
+      - name: 📊 Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          file: ./test-results/coverage/lcov.info
+          directory: ./test-results/coverage/
+          flags: unittests
+          name: codecov-umbrella
           fail_ci_if_error: false
 
       - name: 🏗️ Build application
@@ -113,7 +117,7 @@ jobs:
             .next/
             dist/
             build/
-            coverage/
+            test-results/
           retention-days: 7
 
       # Unified status reporting for all outcomes

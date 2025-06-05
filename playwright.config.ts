@@ -59,28 +59,61 @@ export default defineConfig({
   fullyParallel: true,
   globalTimeout: isCI ? 30 * 60 * 1000 : undefined,
   maxFailures: isCI ? 1 : 0,
-  outputDir: 'test-results/',
+
+  // Updated output directory structure
+  outputDir: './test-results/playwright/artifacts',
   preserveOutput: 'failures-only',
 
   projects: [
-    { name: 'chromium', use: getProjectConfig('Desktop Chrome') },
-    { name: 'firefox', use: getProjectConfig('Desktop Firefox') },
-    { name: 'webkit', use: getProjectConfig('Desktop Safari') },
-
-    // Mobile testing
-    { name: 'mobile-chrome', use: getProjectConfig('Pixel 5') },
-    { name: 'mobile-safari', use: getProjectConfig('iPhone 12') },
+    {
+      name: 'chromium',
+      use: getProjectConfig('Desktop Chrome'),
+      outputDir: './test-results/playwright/chromium',
+    },
+    {
+      name: 'firefox',
+      use: getProjectConfig('Desktop Firefox'),
+      outputDir: './test-results/playwright/firefox',
+    },
+    {
+      name: 'webkit',
+      use: getProjectConfig('Desktop Safari'),
+      outputDir: './test-results/playwright/webkit',
+    },
+    {
+      name: 'mobile-chrome',
+      use: getProjectConfig('Pixel 5'),
+      outputDir: './test-results/playwright/mobile-chrome',
+    },
+    {
+      name: 'mobile-safari',
+      use: getProjectConfig('iPhone 12'),
+      outputDir: './test-results/playwright/mobile-safari',
+    },
   ],
 
   quiet: isCI,
   reportSlowTests: { max: 2, threshold: 5 * 60 * 1000 },
 
+  // Updated reporter configuration
   reporter:
     isCI ?
-      [['github'], ['json', { outputFile: './test-results/test-results.json' }]]
+      [
+        ['github'],
+        ['html', { outputFolder: './test-results/playwright/html-report' }],
+        ['junit', { outputFile: './test-results/playwright/junit.xml' }],
+        ['json', { outputFile: './test-results/playwright/results.json' }],
+      ]
     : [
         ['line', { FORCE_COLOR: true }],
-        ['json', { outputFile: './test-results/test-results.json' }],
+        [
+          'html',
+          {
+            outputFolder: './test-results/playwright/html-report',
+            open: 'never',
+          },
+        ],
+        ['json', { outputFile: './test-results/playwright/results.json' }],
       ],
 
   retries: isCI ? 1 : 0,
@@ -95,11 +128,12 @@ export default defineConfig({
     },
     trace: 'on-first-retry',
     video: 'on-first-retry',
+    // Screenshots go to project-specific outputDir
+    screenshot: 'only-on-failure',
   },
 
   workers: isCI ? 1 : undefined,
 
-  // Run local dev server before starting tests (for local development)
   webServer:
     process.env.CI ?
       undefined

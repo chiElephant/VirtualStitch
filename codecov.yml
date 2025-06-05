@@ -1,0 +1,33 @@
+coverage:
+  status:
+    project:
+      default:
+        target: 75%
+        threshold: 1%
+        base: auto
+    patch:
+      default:
+        target: 75%
+        threshold: 1%
+
+  precision: 2
+  round: down
+  range: '70...100'
+
+ignore:
+  - '**/*.test.ts'
+  - '**/*.test.tsx'
+  - '**/__tests__/**'
+  - '**/tests/**'
+  - '**/*.config.*'
+  - '**/coverage/**'
+  - '**/test-results/**'
+  - '**/node_modules/**'
+  - '**/.next/**'
+  - '**/public/**'
+  - '**/*.d.ts'
+
+comment:
+  layout: 'reach,diff,flags,tree'
+  behavior: default
+  require_changes: false

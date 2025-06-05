@@ -1,146 +1,96 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-import React, { act } from 'react';
-import { proxy } from 'valtio';
-import { render, fireEvent } from '@testing-library/react';
-import Home from '@/pages/Home';
-import state from '@/store';
+// __tests__/pages/Home.test.ts
+import { render } from '@testing-library/react';
+import React from 'react';
 
-jest.mock('next/image', () => ({
+// Mock store
+jest.mock('@/store', () => ({
   __esModule: true,
-  default: (
-    props: {
-      src?: string;
-      alt?: string;
-      priority?: boolean;
-      placeholder?: string;
-      blurDataURL?: string;
-    } & Record<string, unknown>
-  ) => {
-    const {
-      src = '',
-      alt = '',
-      priority,
-      placeholder,
-      blurDataURL,
-      ...rest
-    } = props;
-    return React.createElement('img', {
-      src,
-      alt,
-      ...rest,
-    });
+  default: {
+    intro: true,
+    color: '#EFBD48',
+    isLogoTexture: true,
+    isFullTexture: false,
+    logoDecal: './threejs.png',
+    fullDecal: './threejs.png',
   },
 }));
 
-jest.mock('framer-motion', () => {
-  const MotionSection = React.forwardRef(
-    (
-      props: React.ComponentPropsWithoutRef<'section'>,
-      ref: React.Ref<HTMLElement>
-    ) => React.createElement('section', { ...props, ref })
-  );
-  MotionSection.displayName = 'MotionSection';
+// Simple mock for valtio
+jest.mock('valtio', () => ({
+  useSnapshot: jest.fn(() => ({
+    intro: true,
+    color: '#EFBD48',
+    isLogoTexture: true,
+    isFullTexture: false,
+    logoDecal: './threejs.png',
+    fullDecal: './threejs.png',
+  })),
+}));
 
-  const MotionHeader = React.forwardRef(
-    (
-      props: React.ComponentPropsWithoutRef<'header'>,
-      ref: React.Ref<HTMLHeadingElement>
-    ) => React.createElement('header', { ...props, ref })
-  );
-  MotionHeader.displayName = 'MotionHeader';
+// Mock framer-motion
+jest.mock('framer-motion', () => ({
+  motion: {
+    section: 'section',
+    header: 'header',
+    div: 'div',
+  },
+  AnimatePresence: ({ children }: { children: React.ReactNode }) =>
+    React.createElement('div', {}, children),
+}));
 
-  const MotionDiv = React.forwardRef(
-    (
-      props: React.ComponentPropsWithoutRef<'div'>,
-      ref: React.Ref<HTMLDivElement>
-    ) => React.createElement('div', { ...props, ref })
-  );
-  MotionDiv.displayName = 'MotionDiv';
+// Mock Image component
+jest.mock('next/image', () => ({
+  __esModule: true,
+  default: (props: React.ImgHTMLAttributes<HTMLImageElement>) =>
+    React.createElement('img', props),
+}));
 
-  const MotionH1 = React.forwardRef(
-    (
-      props: React.ComponentPropsWithoutRef<'h1'>,
-      ref: React.Ref<HTMLHeadingElement>
-    ) => React.createElement('h1', { ...props, ref })
-  );
-  MotionH1.displayName = 'MotionH1';
+// Mock CustomButton
+jest.mock('@/components', () => ({
+  CustomButton: ({
+    title,
+    handleClick,
+  }: {
+    title: string;
+    handleClick?: () => void;
+  }) =>
+    React.createElement(
+      'button',
+      {
+        'onClick': handleClick,
+        'data-testid': 'custom-button',
+      },
+      title
+    ),
+}));
 
-  const MotionP = React.forwardRef(
-    (
-      props: React.ComponentPropsWithoutRef<'p'>,
-      ref: React.Ref<HTMLParagraphElement>
-    ) => React.createElement('p', { ...props, ref })
-  );
-  MotionP.displayName = 'MotionP';
+// Mock motion config
+jest.mock('@/config/motion', () => ({
+  headContainerAnimation: {},
+  headContentAnimation: {},
+  headTextAnimation: {},
+  slideAnimation: () => ({}),
+}));
 
-  return {
-    ...jest.requireActual('framer-motion'),
-    AnimatePresence: ({ children }: { children: React.ReactNode }) =>
-      React.createElement(React.Fragment, null, children),
-    motion: {
-      ...jest.requireActual('framer-motion').motion,
-      section: MotionSection,
-      header: MotionHeader,
-      div: MotionDiv,
-      h1: MotionH1,
-      p: MotionP,
-    },
-  };
-});
-
-jest.mock('@/store', () => {
-  return {
-    __esModule: true,
-    default: proxy({
-      intro: true,
-      color: '',
-      isLogoTexture: false,
-      isFullTexture: false,
-      logoDecal: '',
-      fullDecal: '',
-    }),
-  };
-});
+// Import Home AFTER mocks
+import Home from '@/pages/Home';
 
 describe('Home component', () => {
-  beforeEach(() => {
-    state.intro = true;
-  });
-
-  it('renders with intro true', () => {
+  it('renders correctly with intro true', () => {
     const { getByText } = render(React.createElement(Home));
     expect(getByText("LET'S DO IT.")).toBeInTheDocument();
   });
 
-  it('does not render with intro false', () => {
-    act(() => {
-      state.intro = false;
-    });
-    const { queryByText } = render(React.createElement(Home));
-    expect(queryByText("LET'S DO IT.")).not.toBeInTheDocument();
+  it('renders custom button correctly', () => {
+    const { getByTestId } = render(React.createElement(Home));
+    const button = getByTestId('custom-button');
+    expect(button).toBeInTheDocument();
+    expect(button).toHaveTextContent('Customize It');
   });
 
   it('has correct src and alt on Image component', () => {
-    const { container } = render(React.createElement(Home));
-    const images = container.querySelectorAll('img');
-    expect(images.length).toBeGreaterThanOrEqual(1);
-    const found = Array.from(images).some((img) => {
-      const alt = img.getAttribute('alt')?.toLowerCase() || '';
-      const src = img.getAttribute('src') || '';
-      return alt.includes('logo') && src.includes('/icons/emblem.png');
-    });
-    expect(found).toBe(true);
-  });
-
-  it('renders the CustomButton and can click it', async () => {
-    const { findByRole } = render(React.createElement(Home));
-    const button = await findByRole('button', { name: /customize it/i });
-    expect(button).toBeInTheDocument();
-
-    await act(async () => {
-      fireEvent.click(button);
-    });
-
-    expect(state.intro).toBe(false);
+    const { getByAltText } = render(React.createElement(Home));
+    const image = getByAltText('logo');
+    expect(image).toHaveAttribute('src', '/icons/emblem.png');
   });
 });

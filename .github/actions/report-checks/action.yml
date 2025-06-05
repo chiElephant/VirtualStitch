@@ -110,7 +110,6 @@ runs:
         INPUT_BACKOFF_MULTIPLIER: ${{ inputs.backoff_multiplier }}
       with:
         script: |
-          const ownerUpper = context.repo.owner.toUpperCase();
           const payload = {
             sha: '${{ inputs.sha }}',
             status: '${{ inputs.status }}',
@@ -136,8 +135,7 @@ runs:
           });
 
           core.info(`📝 Reporting check status for: ${payload.name} (${payload.status})`);
-          core.info(`🔗 Target URL: https://${process.env.INPUT_HOST}/api/github-webhook/${ownerUpper}/report`);
-          core.info(`🏢 Owner Upper: ${ownerUpper}`);
+          core.info(`🔗 Target URL: https://${process.env.INPUT_HOST}/api/github-webhook/report`);
           core.info(`🏠 Host: ${process.env.INPUT_HOST}`);
 
           // Configuration from environment
@@ -198,7 +196,7 @@ runs:
               
               const result = await circuitBreaker.execute(async () => {
                 const response = await fetch(
-                  `https://${process.env.INPUT_HOST}/api/github-webhook/${ownerUpper}/report`,
+                  `https://${process.env.INPUT_HOST}/api/github-webhook/report`,
                   {
                     method: 'POST',
                     headers: {

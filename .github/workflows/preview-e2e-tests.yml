@@ -1,4 +1,3 @@
-# File: .github/workflows/preview-e2e-tests.yml
 name: Preview E2E Tests
 
 permissions:
@@ -114,7 +113,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: 'playwright-results-${{ matrix.project }}'
-          path: test-results/
+          path: test-results/playwright/${{ matrix.project }}/
           retention-days: 7
 
       - name: 📤 Upload HTML report
@@ -122,7 +121,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: 'playwright-html-report-${{ matrix.project }}'
-          path: playwright-report
+          path: test-results/playwright/html-report/
           retention-days: 7
 
       # Unified status reporting for all outcomes
