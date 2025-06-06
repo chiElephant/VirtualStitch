@@ -28,19 +28,24 @@ jobs:
         with:
           script: |
             const payload = context.payload.client_payload;
-            const environment = payload.environment;
-            const branch = payload.git.branch;
+
+            // Log the full payload for debugging
+            core.info('Full webhook payload:');
+            core.info(JSON.stringify(payload, null, 2));
+
+            const environment = payload?.environment;
+            const branch = payload?.git?.branch;
 
             core.info(`Deployment environment: ${environment}`);
             core.info(`Branch: ${branch}`);
 
             // Only run E2E for preview deployments (not main branch)
             const isPreview = environment === 'preview';
-            const shouldRun = isPreview && branch !== 'main';
+            const shouldRun = isPreview && branch !== 'main' && branch !== undefined;
 
             core.setOutput('should_run', shouldRun);
             core.setOutput('is_preview', isPreview);
-            core.setOutput('branch_name', branch);
+            core.setOutput('branch_name', branch || 'unknown');
 
             if (shouldRun) {
               core.info(`✅ E2E tests should run for preview deployment of branch: ${branch}`);
@@ -64,7 +69,15 @@ jobs:
                 core.warning(`Failed to search for PRs: ${error.message}`);
               }
             } else {
-              core.info(`⏭️ Skipping E2E tests - environment: ${environment}, branch: ${branch}`);
+              if (environment === 'production') {
+                core.info(`⏭️ Skipping E2E tests - this is a production deployment (production monitoring will handle health checks)`);
+              } else if (branch === 'main') {
+                core.info(`⏭️ Skipping E2E tests - this is main branch (production monitoring will handle health checks)`);
+              } else if (!isPreview) {
+                core.info(`⏭️ Skipping E2E tests - environment: ${environment} (not preview)`);
+              } else {
+                core.info(`⏭️ Skipping E2E tests - environment: ${environment}, branch: ${branch}`);
+              }
             }
 
   playwright-tests:
