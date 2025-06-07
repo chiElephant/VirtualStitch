@@ -5,10 +5,48 @@ import { toast } from 'react-toastify';
 import Customizer from '@/pages/Customizer';
 import state from '@/store';
 import * as helpers from '@/config/helpers';
+import { useSnapshot } from 'valtio';
 
 // Mock fetch globally
 global.fetch = jest.fn();
 const mockFetch = fetch as jest.MockedFunction<typeof fetch>;
+
+interface MotionProps {
+  children: React.ReactNode;
+  [key: string]: unknown;
+}
+
+interface AIPickerProps {
+  prompt: string;
+  setPrompt: (prompt: string) => void;
+  generatingImg: boolean;
+  handleSubmit: (type: string) => void;
+}
+
+interface FilePickerProps {
+  file: File | null;
+  setFile: (file: File | null) => void;
+  readFile: (type: string) => void;
+}
+
+interface ImageDownloadProps {
+  activeFilterTab: string;
+}
+
+interface TabProps {
+  tab: { name: string; icon: string };
+  handleClick: () => void;
+  isFilterTab?: boolean;
+  isActiveTab?: boolean;
+  [key: string]: unknown;
+}
+
+interface CustomButtonProps {
+  title: string;
+  handleClick: () => void;
+  type: string;
+  [key: string]: unknown;
+}
 
 // Mock toast
 jest.mock('react-toastify', () => ({
@@ -24,7 +62,9 @@ jest.mock('react-toastify', () => ({
 // Mock framer-motion
 jest.mock('framer-motion', () => ({
   motion: {
-    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+    div: ({ children, ...props }: MotionProps) => (
+      <div {...props}>{children}</div>
+    ),
   },
   AnimatePresence: ({ children }: { children: React.ReactNode }) => (
     <>{children}</>
@@ -83,7 +123,12 @@ jest.mock('@/config/motion', () => ({
 
 // Mock components
 jest.mock('@/components', () => ({
-  AIPicker: ({ prompt, setPrompt, generatingImg, handleSubmit }: any) => (
+  AIPicker: ({
+    prompt,
+    setPrompt,
+    generatingImg,
+    handleSubmit,
+  }: AIPickerProps) => (
     <div data-testid='ai-picker'>
       <input
         data-testid='ai-prompt'
@@ -106,7 +151,7 @@ jest.mock('@/components', () => ({
     </div>
   ),
   ColorPicker: () => <div data-testid='color-picker'>Color Picker</div>,
-  FilePicker: ({ file, setFile, readFile }: any) => (
+  FilePicker: ({ file, setFile, readFile }: FilePickerProps) => (
     <div data-testid='file-picker'>
       <input
         data-testid='file-input'
@@ -126,10 +171,10 @@ jest.mock('@/components', () => ({
       <span data-testid='file-name'>{file?.name || 'No file'}</span>
     </div>
   ),
-  ImageDownload: ({ activeFilterTab }: any) => (
+  ImageDownload: ({ activeFilterTab }: ImageDownloadProps) => (
     <div data-testid='image-download'>Download for {activeFilterTab}</div>
   ),
-  Tab: ({ tab, handleClick, isFilterTab, isActiveTab, ...props }: any) => (
+  Tab: ({ tab, handleClick, isFilterTab, isActiveTab, ...props }: TabProps) => (
     <button
       data-testid={`tab-${tab.name}`}
       onClick={handleClick}
@@ -139,7 +184,7 @@ jest.mock('@/components', () => ({
       {tab.name}
     </button>
   ),
-  CustomButton: ({ title, handleClick, type, ...props }: any) => (
+  CustomButton: ({ title, handleClick, type, ...props }: CustomButtonProps) => (
     <button
       data-testid={`custom-button-${title.toLowerCase().replace(/\s+/g, '-')}`}
       onClick={handleClick}
@@ -151,7 +196,7 @@ jest.mock('@/components', () => ({
 }));
 
 describe('Customizer Component', () => {
-  const mockValtioUseSnapshot = require('valtio').useSnapshot as jest.Mock;
+  const mockValtioUseSnapshot = useSnapshot as jest.Mock;
   const mockReader = helpers.reader as jest.Mock;
 
   beforeEach(() => {

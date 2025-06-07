@@ -1,4 +1,4 @@
-name: Preview E2E Tests
+name: E2E Tests
 
 permissions:
   checks: write
@@ -19,8 +19,10 @@ jobs:
     outputs:
       should_run: ${{ steps.check.outputs.should_run }}
       is_preview: ${{ steps.check.outputs.is_preview }}
+      is_production: ${{ steps.check.outputs.is_production }}
       pr_number: ${{ steps.check.outputs.pr_number }}
       branch_name: ${{ steps.check.outputs.branch_name }}
+      environment_type: ${{ steps.check.outputs.environment_type }}
     steps:
       - name: 🔍 Determine if E2E should run
         id: check
@@ -29,55 +31,48 @@ jobs:
           script: |
             const payload = context.payload.client_payload;
 
-            // Log the full payload for debugging
-            core.info('Full webhook payload:');
-            core.info(JSON.stringify(payload, null, 2));
-
             const environment = payload?.environment;
             const branch = payload?.git?.branch;
 
             core.info(`Deployment environment: ${environment}`);
             core.info(`Branch: ${branch}`);
 
-            // Only run E2E for preview deployments (not main branch)
+            // Run E2E tests for both preview AND production deployments
             const isPreview = environment === 'preview';
-            const shouldRun = isPreview && branch !== 'main' && branch !== undefined;
+            const isProduction = environment === 'production';
+            const shouldRun = isPreview || isProduction;
 
             core.setOutput('should_run', shouldRun);
             core.setOutput('is_preview', isPreview);
+            core.setOutput('is_production', isProduction);
             core.setOutput('branch_name', branch || 'unknown');
+            core.setOutput('environment_type', environment);
 
             if (shouldRun) {
-              core.info(`✅ E2E tests should run for preview deployment of branch: ${branch}`);
-              
-              // Try to find associated PR
-              try {
-                const { data: prs } = await github.rest.pulls.list({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  head: `${context.repo.owner}:${branch}`,
-                  state: 'open'
-                });
+              if (isProduction) {
+                core.info(`✅ E2E tests will run for PRODUCTION deployment of main branch`);
+              } else {
+                core.info(`✅ E2E tests will run for PREVIEW deployment of branch: ${branch}`);
                 
-                if (prs.length > 0) {
-                  core.setOutput('pr_number', prs[0].number);
-                  core.info(`Found associated PR #${prs[0].number} for branch ${branch}`);
-                } else {
-                  core.info(`No open PR found for branch ${branch}`);
+                // Try to find associated PR for preview deployments
+                try {
+                  const { data: prs } = await github.rest.pulls.list({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    head: `${context.repo.owner}:${branch}`,
+                    state: 'open'
+                  });
+                  
+                  if (prs.length > 0) {
+                    core.setOutput('pr_number', prs[0].number);
+                    core.info(`Found associated PR #${prs[0].number} for branch ${branch}`);
+                  }
+                } catch (error) {
+                  core.warning(`Failed to search for PRs: ${error.message}`);
                 }
-              } catch (error) {
-                core.warning(`Failed to search for PRs: ${error.message}`);
               }
             } else {
-              if (environment === 'production') {
-                core.info(`⏭️ Skipping E2E tests - this is a production deployment (production monitoring will handle health checks)`);
-              } else if (branch === 'main') {
-                core.info(`⏭️ Skipping E2E tests - this is main branch (production monitoring will handle health checks)`);
-              } else if (!isPreview) {
-                core.info(`⏭️ Skipping E2E tests - environment: ${environment} (not preview)`);
-              } else {
-                core.info(`⏭️ Skipping E2E tests - environment: ${environment}, branch: ${branch}`);
-              }
+              core.info(`⏭️ Skipping E2E tests - environment: ${environment} (not preview or production)`);
             }
 
   playwright-tests:
@@ -114,6 +109,8 @@ jobs:
         with:
           script: |
             const checkName = 'E2E Tests (${{ matrix.project }})';
+            const isProduction = '${{ needs.determine-context.outputs.is_production }}' === 'true';
+
             const { data: checkRun } = await github.rest.checks.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -122,14 +119,17 @@ jobs:
               status: 'in_progress',
               started_at: new Date().toISOString(),
               output: {
-                title: '🚧 E2E tests starting (${{ matrix.project }})...',
-                summary: 'Waiting for CI checks to complete, then running comprehensive end-to-end tests...'
+                title: `🚧 E2E tests starting (${{ matrix.project }})...`,
+                summary: isProduction 
+                  ? 'Production deployment detected. Running comprehensive end-to-end tests on live environment...'
+                  : 'Preview deployment detected. Running comprehensive end-to-end tests...'
               }
             });
             core.info(`✅ Created check: ${checkName} (ID: ${checkRun.id})`);
             return checkRun.id;
 
-      - name: ⏳ Wait for CI to complete
+      - name: ⏳ Wait for CI to complete (Preview deployments only)
+        if: needs.determine-context.outputs.is_preview == 'true'
         uses: actions/github-script@v7
         with:
           script: |
@@ -188,10 +188,10 @@ jobs:
         uses: ./.github/actions/wait-for-deployment
         with:
           url: ${{ github.event.client_payload.url }}
-          timeout_seconds: 90
-          check_interval: 10
-          max_attempts: 5
-          initial_wait: 30
+          timeout_seconds: ${{ needs.determine-context.outputs.is_production == 'true' && '120' || '90' }}
+          check_interval: ${{ needs.determine-context.outputs.is_production == 'true' && '15' || '10' }}
+          max_attempts: ${{ needs.determine-context.outputs.is_production == 'true' && '8' || '5' }}
+          initial_wait: ${{ needs.determine-context.outputs.is_production == 'true' && '60' || '30' }}
           vercel_bypass_secret: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
 
       - name: 🧪 Run E2E tests
@@ -225,17 +225,17 @@ jobs:
           echo "| Performance | ${{ steps.performance_tests.outcome == 'success' && '✅ Passed' || steps.performance_tests.outcome == 'skipped' && '⏭️ Skipped' || '⚠️ Issues Found' }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Project**: ${{ matrix.project }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Preview URL**: ${{ github.event.client_payload.url }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment**: ${{ needs.determine-context.outputs.environment_type }}" >> $GITHUB_STEP_SUMMARY
+          echo "**URL**: ${{ github.event.client_payload.url }}" >> $GITHUB_STEP_SUMMARY
           echo "**Branch**: ${{ needs.determine-context.outputs.branch_name }}" >> $GITHUB_STEP_SUMMARY
           echo "**Overall Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Run ID**: ${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
 
       - name: 📤 Upload test artifacts
         if: failure()
         continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
-          name: 'playwright-results-${{ matrix.project }}-${{ github.run_id }}'
+          name: 'e2e-results-${{ needs.determine-context.outputs.environment_type }}-${{ matrix.project }}-${{ github.run_id }}'
           path: test-results/playwright/${{ matrix.project }}/
           retention-days: 7
 
@@ -243,7 +243,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: 'playwright-html-report-${{ matrix.project }}-${{ github.run_id }}'
+          name: 'e2e-html-report-${{ needs.determine-context.outputs.environment_type }}-${{ matrix.project }}-${{ github.run_id }}'
           path: test-results/playwright/html-report/
           retention-days: 7
 
@@ -252,6 +252,9 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
+            const isProduction = '${{ needs.determine-context.outputs.is_production }}' === 'true';
+            const envType = '${{ needs.determine-context.outputs.environment_type }}';
+
             const summary = [
               '✅ **All E2E tests passed successfully!**',
               '',
@@ -261,10 +264,11 @@ jobs:
               '| Accessibility | ${{ steps.accessibility_tests.outcome == 'success' && '✅ Passed' || '⚠️ Issues Found' }} |',
               '| Performance | ${{ steps.performance_tests.outcome == 'success' && '✅ Passed' || '⚠️ Issues Found' }} |',
               '',
-              '**Preview URL:** ${{ github.event.client_payload.url }}',
+              `**Environment:** ${envType}`,
+              '**URL:** ${{ github.event.client_payload.url }}',
               '**Browser:** ${{ matrix.project }}',
               '',
-              '🎉 Ready for production!'
+              isProduction ? '🚀 Production deployment verified!' : '🎉 Ready for merge!'
             ].join('\n');
 
             await github.rest.checks.update({
@@ -275,7 +279,7 @@ jobs:
               conclusion: 'success',
               completed_at: new Date().toISOString(),
               output: {
-                title: '✅ E2E tests passed (${{ matrix.project }})',
+                title: `✅ E2E tests passed (${{ matrix.project }})`,
                 summary: summary
               }
             });
@@ -290,18 +294,22 @@ jobs:
             if ('${{ steps.accessibility_tests.outcome }}' === 'failure') failedSteps.push('Accessibility');
             if ('${{ steps.performance_tests.outcome }}' === 'failure') failedSteps.push('Performance');
 
+            const isProduction = '${{ needs.determine-context.outputs.is_production }}' === 'true';
+            const envType = '${{ needs.determine-context.outputs.environment_type }}';
+
             const summary = [
               '❌ **E2E tests failed**',
               '',
               `**Failed components:** ${failedSteps.join(', ')}`,
               '',
-              '**Preview URL:** ${{ github.event.client_payload.url }}',
+              `**Environment:** ${envType}`,
+              '**URL:** ${{ github.event.client_payload.url }}',
               '**Browser:** ${{ matrix.project }}',
               '',
               '**Next steps:**',
               '1. Check the [test artifacts](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})',
               '2. Review the detailed logs for failure information',
-              '3. Fix the issues and push changes to re-run tests'
+              isProduction ? '3. Consider rolling back if critical issues detected' : '3. Fix the issues and push changes to re-run tests'
             ].join('\n');
 
             await github.rest.checks.update({
@@ -312,7 +320,7 @@ jobs:
               conclusion: 'failure',
               completed_at: new Date().toISOString(),
               output: {
-                title: '❌ E2E tests failed (${{ matrix.project }})',
+                title: `❌ E2E tests failed (${{ matrix.project }})`,
                 summary: summary
               }
             });

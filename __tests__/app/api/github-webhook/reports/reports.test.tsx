@@ -1,3 +1,7 @@
+interface PayloadData {
+  [key: string]: unknown;
+}
+
 // CRITICAL: Mock ALL external modules BEFORE any imports
 jest.mock(
   '@octokit/rest',
@@ -41,12 +45,6 @@ jest.mock(
   }),
   { virtual: true }
 );
-
-// Mock Next.js Response globally since Response.json doesn't exist in Node.js
-interface MockResponseOptions {
-  status?: number;
-  headers?: Record<string, string>;
-}
 
 class MockResponse {
   public body: string;
@@ -836,6 +834,7 @@ describe('POST /api/github-webhook/report', () => {
             await FreshPOST(req);
           } catch (error) {
             // Ignore errors, we're testing circuit breaker
+            console.error(error);
           }
         }
 
@@ -922,7 +921,7 @@ describe('POST /api/github-webhook/report', () => {
           status: 'in_progress',
           // No conclusion field
         };
-        delete (payload as any).conclusion;
+        delete (payload as PayloadData).conclusion;
 
         const req = createReportRequest(payload);
         const res = await POST(req);
@@ -942,7 +941,7 @@ describe('POST /api/github-webhook/report', () => {
           ...validPayload,
           status: 'queued',
         };
-        delete (payload as any).conclusion;
+        delete (payload as PayloadData).conclusion;
 
         const req = createReportRequest(payload);
         const res = await POST(req);

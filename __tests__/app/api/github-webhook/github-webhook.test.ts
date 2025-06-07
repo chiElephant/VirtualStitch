@@ -539,8 +539,14 @@ describe('POST /api/github-webhook', () => {
 
       it('handles GitHub API rate limiting errors', async () => {
         // Mock GitHub API rate limit error
-        const rateLimitError = new Error('API rate limit exceeded');
-        (rateLimitError as any).status = 403;
+        interface ErrorWithStatus extends Error {
+          status?: number;
+        }
+
+        const rateLimitError = new Error(
+          'API rate limit exceeded'
+        ) as ErrorWithStatus;
+        rateLimitError.status = 403;
         mockCreateCheck.mockRejectedValue(rateLimitError);
 
         const body: WebhookPayload = {
