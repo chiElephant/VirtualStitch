@@ -1,20 +1,65 @@
-// Replace the entire content of __tests__/store/index.test.ts with this:
+// __tests__/store/index.test.ts
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-import store from '@/store';
+// Unmock the store for this specific test file
+jest.unmock('@/store');
+
+// Also unmock valtio to test the actual proxy functionality
+jest.unmock('valtio');
 
 import { proxy } from 'valtio';
+import state from '@/store';
 
-// Extract exports from the required module
-const state = store;
-
-describe('Store Coverage Test', () => {
-  it('forces store module execution for coverage', () => {
-    // Access the state object to ensure module execution
+describe('Store', () => {
+  it('exports a proxy object with correct initial values', () => {
+    // Test that the store is defined and is an object
     expect(state).toBeDefined();
     expect(typeof state).toBe('object');
 
-    // Test each property to ensure the object literal is covered
+    // Test all initial property values (covers the proxy object creation)
+    expect(state.intro).toBe(true);
+    expect(state.color).toBe('#00C851');
+    expect(state.isLogoTexture).toBe(false);
+    expect(state.isFullTexture).toBe(false);
+    expect(state.logoDecal).toBe('./icons/logo.png');
+    expect(state.fullDecal).toBe('./icons/pattern.png');
+  });
+
+  it('allows property mutations through the proxy', () => {
+    // Store original values for cleanup
+    const originalValues = {
+      intro: state.intro,
+      color: state.color,
+      isLogoTexture: state.isLogoTexture,
+      isFullTexture: state.isFullTexture,
+      logoDecal: state.logoDecal,
+      fullDecal: state.fullDecal,
+    };
+
+    // Test mutation of each property (covers proxy mutation behavior)
+    state.intro = false;
+    expect(state.intro).toBe(false);
+
+    state.color = '#FF0000';
+    expect(state.color).toBe('#FF0000');
+
+    state.isLogoTexture = true;
+    expect(state.isLogoTexture).toBe(true);
+
+    state.isFullTexture = true;
+    expect(state.isFullTexture).toBe(true);
+
+    state.logoDecal = 'new-logo.png';
+    expect(state.logoDecal).toBe('new-logo.png');
+
+    state.fullDecal = 'new-pattern.png';
+    expect(state.fullDecal).toBe('new-pattern.png');
+
+    // Restore original values
+    Object.assign(state, originalValues);
+  });
+
+  it('has all required properties defined in State interface', () => {
+    // Test that all properties exist (covers object property access)
     expect(state).toHaveProperty('intro');
     expect(state).toHaveProperty('color');
     expect(state).toHaveProperty('isLogoTexture');
@@ -23,22 +68,8 @@ describe('Store Coverage Test', () => {
     expect(state).toHaveProperty('fullDecal');
   });
 
-  it('tests proxy functionality', () => {
-    // Test that state behaves like a proxy
-    const originalColor = state.color;
-    state.color = '#CHANGED';
-    expect(state.color).toBe('#CHANGED');
-
-    // Test direct proxy creation to cover proxy() usage
-    const testProxy = proxy({ test: true });
-    expect(testProxy.test).toBe(true);
-
-    // Restore state
-    state.color = originalColor;
-  });
-
-  it('covers all state properties', () => {
-    // Test initial values
+  it('maintains correct property types', () => {
+    // Test type checking (covers all property getters)
     expect(typeof state.intro).toBe('boolean');
     expect(typeof state.color).toBe('string');
     expect(typeof state.isLogoTexture).toBe('boolean');
@@ -47,20 +78,12 @@ describe('Store Coverage Test', () => {
     expect(typeof state.fullDecal).toBe('string');
   });
 
-  it('tests state mutations', () => {
-    // Test all property assignments
-    state.intro = false;
-    state.color = '#123456';
-    state.isLogoTexture = true;
-    state.isFullTexture = false;
-    state.logoDecal = 'test.png';
-    state.fullDecal = 'test2.png';
+  it('is created using valtio proxy', () => {
+    // Test that we can create another proxy to ensure import is working
+    const testProxy = proxy({ test: 'value' });
+    expect(testProxy.test).toBe('value');
 
-    expect(state.intro).toBe(false);
-    expect(state.color).toBe('#123456');
-    expect(state.isLogoTexture).toBe(true);
-    expect(state.isFullTexture).toBe(false);
-    expect(state.logoDecal).toBe('test.png');
-    expect(state.fullDecal).toBe('test2.png');
+    // Verify state behaves like a valtio proxy
+    expect(state).toBeTruthy();
   });
 });

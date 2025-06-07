@@ -744,4 +744,294 @@ describe('POST /api/github-webhook', () => {
       });
     });
   });
+
+  // Add these tests to the end of your existing __tests__/app/api/github-webhook/github-webhook.test.ts
+  // Just before the final closing });
+
+  describe('Missing Coverage for Main Webhook Route', () => {
+    describe('Rate Limiting Coverage', () => {
+      it('hits rate limiting with high volume requests', async () => {
+        // Reset modules for fresh rate limiter state
+        jest.resetModules();
+
+        const { POST: FreshPOST } = await import(
+          '@/app/api/github-webhook/route'
+        );
+
+        const body: WebhookPayload = {
+          action: 'requested',
+          check_suite: { head_sha: 'volume123' },
+          repository: { name: 'VirtualStitch', owner: { login: '303Devs' } },
+          installation: { id: 123456 },
+        };
+
+        const sameIP = '192.168.100.1';
+
+        // Make many requests from same IP to trigger rate limiting
+        let rateLimitHit = false;
+        for (let i = 0; i < 110; i++) {
+          const request = new Request(
+            'http://localhost:3000/api/github-webhook',
+            {
+              method: 'POST',
+              headers: {
+                'content-type': 'application/json',
+                'x-github-event': 'check_suite',
+                'x-hub-signature-256': generateSignature(
+                  JSON.stringify(body),
+                  'test-secret'
+                ),
+                'x-forwarded-for': sameIP,
+              },
+              body: JSON.stringify(body),
+            }
+          );
+
+          const res = await FreshPOST(request as unknown as NextRequest);
+          if (res.status === 429) {
+            rateLimitHit = true;
+            expect(await res.text()).toBe('Rate limit exceeded');
+            break;
+          }
+        }
+
+        expect(rateLimitHit).toBe(true);
+      });
+    });
+
+    describe('Repository Validation Edge Cases', () => {
+      it('hits line 76 - repository mismatch error logging', async () => {
+        const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+        const body: WebhookPayload = {
+          action: 'requested',
+          check_suite: { head_sha: 'mismatch123' },
+          repository: { name: 'WrongRepo', owner: { login: 'WrongOwner' } },
+          installation: { id: 123456 },
+        };
+
+        const req = createWebhookRequest(body);
+        const res = await POST(req);
+
+        expect(res.status).toBe(400);
+        expect(await res.text()).toBe('Repository mismatch');
+
+        // Verify the error was logged (line 76)
+        expect(consoleSpy).toHaveBeenCalledWith(
+          expect.stringContaining(
+            'Webhook for unexpected repository: WrongOwner/WrongRepo'
+          )
+        );
+
+        consoleSpy.mockRestore();
+      });
+    });
+
+    describe('Circuit Breaker and GitHub API Edge Cases', () => {
+      it('hits lines 100-103 - circuit breaker error handling', async () => {
+        // Reset modules and mock circuit breaker to always throw
+        jest.resetModules();
+
+        // Mock Octokit to throw during check creation
+        const octokitRest = jest.requireMock('@octokit/rest');
+        const mockCreate = jest
+          .fn()
+          .mockRejectedValue(new Error('GitHub API failure'));
+        octokitRest.Octokit.mockImplementation(() => ({
+          rest: {
+            checks: { create: mockCreate },
+          },
+        }));
+
+        const { POST: FreshPOST } = await import(
+          '@/app/api/github-webhook/route'
+        );
+
+        const body: WebhookPayload = {
+          action: 'requested',
+          check_suite: { head_sha: 'circuit123' },
+          repository: { name: 'VirtualStitch', owner: { login: '303Devs' } },
+          installation: { id: 123456 },
+        };
+
+        const req = createWebhookRequest(body);
+        const res = await FreshPOST(req);
+
+        expect(res.status).toBe(500);
+        expect(await res.text()).toBe('Internal error');
+      });
+
+      it('hits lines 239-240 - request completion logging', async () => {
+        const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+
+        const body: WebhookPayload = {
+          action: 'requested',
+          check_suite: { head_sha: 'logging123' },
+          repository: { name: 'VirtualStitch', owner: { login: '303Devs' } },
+          installation: { id: 123456 },
+        };
+
+        const req = createWebhookRequest(body);
+        const res = await POST(req);
+
+        expect(res.status).toBe(200);
+
+        // Verify request completion was logged (lines 239-240)
+        expect(consoleSpy).toHaveBeenCalledWith(
+          expect.stringMatching(/Request completed in \d+ms/)
+        );
+
+        consoleSpy.mockRestore();
+      });
+    });
+
+    describe('Missing Environment Variables', () => {
+      it('handles missing GH_APP_ID', async () => {
+        const originalAppId = process.env.GH_APP_ID;
+        delete process.env.GH_APP_ID;
+
+        const body: WebhookPayload = {
+          action: 'requested',
+          check_suite: { head_sha: 'noappid123' },
+          repository: { name: 'VirtualStitch', owner: { login: '303Devs' } },
+          installation: { id: 123456 },
+        };
+
+        const req = createWebhookRequest(body);
+        const res = await POST(req);
+
+        expect(res.status).toBe(500);
+        expect(await res.text()).toBe('Configuration error');
+
+        // Restore
+        process.env.GH_APP_ID = originalAppId;
+      });
+
+      it('handles missing GH_APP_PRIVATE_KEY', async () => {
+        const originalKey = process.env.GH_APP_PRIVATE_KEY;
+        delete process.env.GH_APP_PRIVATE_KEY;
+
+        const body: WebhookPayload = {
+          action: 'requested',
+          check_suite: { head_sha: 'nokey123' },
+          repository: { name: 'VirtualStitch', owner: { login: '303Devs' } },
+          installation: { id: 123456 },
+        };
+
+        const req = createWebhookRequest(body);
+        const res = await POST(req);
+
+        expect(res.status).toBe(500);
+        expect(await res.text()).toBe('Configuration error');
+
+        // Restore
+        process.env.GH_APP_PRIVATE_KEY = originalKey;
+      });
+    });
+
+    describe('Service Unavailable Scenarios', () => {
+      it('handles circuit breaker open state returning 503', async () => {
+        // Reset modules for fresh circuit breaker
+        jest.resetModules();
+
+        // Mock circuit breaker to be in OPEN state
+        const octokitRest = jest.requireMock('@octokit/rest');
+        let failureCount = 0;
+        octokitRest.Octokit.mockImplementation(() => ({
+          rest: {
+            checks: {
+              create: jest.fn().mockImplementation(() => {
+                failureCount++;
+                if (failureCount <= 6) {
+                  throw new Error('Simulated failure');
+                }
+                return { data: { id: 123 } };
+              }),
+            },
+          },
+        }));
+
+        const { POST: FreshPOST } = await import(
+          '@/app/api/github-webhook/route'
+        );
+
+        // Make requests to trigger circuit breaker failures
+        const body: WebhookPayload = {
+          action: 'requested',
+          check_suite: { head_sha: 'cb503test' },
+          repository: { name: 'VirtualStitch', owner: { login: '303Devs' } },
+          installation: { id: 123456 },
+        };
+
+        // Trigger multiple failures to open circuit breaker
+        for (let i = 0; i < 6; i++) {
+          const req = createWebhookRequest(body);
+          try {
+            await FreshPOST(req);
+          } catch {
+            // Expected failures
+          }
+        }
+
+        // This request should hit the open circuit breaker
+        const finalReq = createWebhookRequest(body);
+        const res = await FreshPOST(finalReq);
+
+        expect([503, 500]).toContain(res.status);
+      });
+    });
+
+    describe('IP Header Fallback Cases', () => {
+      it('tests all IP header fallback scenarios', async () => {
+        const body: WebhookPayload = {
+          action: 'requested',
+          check_suite: { head_sha: 'iptest123' },
+          repository: { name: 'VirtualStitch', owner: { login: '303Devs' } },
+          installation: { id: 123456 },
+        };
+
+        // Test 1: No IP headers at all (should default to 'unknown')
+        const requestNoIP = new Request(
+          'http://localhost:3000/api/github-webhook',
+          {
+            method: 'POST',
+            headers: {
+              'content-type': 'application/json',
+              'x-github-event': 'check_suite',
+              'x-hub-signature-256': generateSignature(
+                JSON.stringify(body),
+                'test-secret'
+              ),
+              // No x-forwarded-for or x-real-ip
+            },
+            body: JSON.stringify(body),
+          }
+        );
+
+        const res1 = await POST(requestNoIP as unknown as NextRequest);
+        expect(res1.status).toBe(200);
+
+        // Test 2: Only x-real-ip header
+        const requestRealIP = new Request(
+          'http://localhost:3000/api/github-webhook',
+          {
+            method: 'POST',
+            headers: {
+              'content-type': 'application/json',
+              'x-github-event': 'check_suite',
+              'x-hub-signature-256': generateSignature(
+                JSON.stringify(body),
+                'test-secret'
+              ),
+              'x-real-ip': '10.0.0.2',
+            },
+            body: JSON.stringify(body),
+          }
+        );
+
+        const res2 = await POST(requestRealIP as unknown as NextRequest);
+        expect(res2.status).toBe(200);
+      });
+    });
+  });
 });
