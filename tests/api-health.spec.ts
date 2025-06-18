@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.describe.skip('API Health Checks @api-health', () => {
+test.describe('API Health Checks @api-health', () => {
   test('homepage API responds correctly', async ({ page }) => {
     const response = await page.goto('/');
     expect(response?.status()).toBe(200);
