@@ -135,11 +135,11 @@ export default defineConfig({
   workers: isCI ? 1 : undefined,
 
   webServer:
-    process.env.CI ?
-      undefined
-    : {
+    isCI ? undefined : (
+      {
         command: 'npm run build && npm run start',
         url: 'http://localhost:3000',
-        reuseExistingServer: !process.env.CI,
-      },
+        reuseExistingServer: !isCI,
+      }
+    ),
 });

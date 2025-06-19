@@ -17,7 +17,12 @@
     "test:smoke": "npx playwright test --grep \"@smoke\"",
     "test:a11y": "npx playwright test --grep \"@accessibility\"",
     "test:performance": "npx playwright test --grep \"@performance\"",
-    "test:api-health": "npx playwright test --grep \"@api-health\""
+    "test:api-health": "npx playwright test --grep \"@api-health\"",
+    "test:api-integration": "npx playwright test --grep \"@api-integration\"",
+    "test:api-e2e": "npx playwright test --grep \"@e2e\"",
+    "test:edge": "npx playwright test --grep \"@edge\"",
+    "test:security": "npx playwright test --grep \"@security\"",
+    "test:ci-cd": "npx playwright test --grep \"@ci-cd\""
   },
   "dependencies": {
     "@octokit/app": "^16.0.1",
