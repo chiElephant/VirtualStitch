@@ -17,7 +17,7 @@ describe('Store', () => {
 
     // Test all initial property values (covers the proxy object creation)
     expect(state.intro).toBe(true);
-    expect(state.color).toBe('#00C851');
+    expect(state.color).toBe('#007938');
     expect(state.isLogoTexture).toBe(false);
     expect(state.isFullTexture).toBe(false);
     expect(state.logoDecal).toBe('./icons/logo.png');
