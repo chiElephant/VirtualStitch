@@ -17,9 +17,7 @@
     "test:smoke": "npx playwright test --grep \"@smoke\"",
     "test:a11y": "npx playwright test --grep \"@accessibility\"",
     "test:performance": "npx playwright test --grep \"@performance\"",
-    "test:performance-monitoring": "npx playwright test --grep \"@performance-monitoring\"",
-    "test:api-health": "npx playwright test --grep \"@api-health\"",
-    "playwright:install": "npx playwright install --with-deps"
+    "test:api-health": "npx playwright test --grep \"@api-health\""
   },
   "dependencies": {
     "@octokit/app": "^16.0.1",

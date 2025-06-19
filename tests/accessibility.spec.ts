@@ -58,7 +58,6 @@ test.describe('Accessibility Tests @accessibility', () => {
       };
     });
 
-    console.log('Button styles:', buttonStyles);
     expect(buttonStyles.backgroundColor).toBe('rgb(0, 121, 56)');
   });
 });
