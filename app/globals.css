@@ -79,53 +79,106 @@ html {
   border: 1px solid rgba(255, 255, 255, 0.18);
 }
 
-/* AGGRESSIVE OVERRIDE: Force solid backgrounds for accessibility buttons */
+/* NUCLEAR OPTION: Completely eliminate glassmorphism from buttons */
+/* Target every possible selector combination */
 button[aria-label='Customize It'],
 button[aria-label='Go Back'],
-.px-2.py-1\.5.flex-1.rounded-md button,
 *[aria-label='Customize It'],
-*[aria-label='Go Back'] {
-  background: var(--bg-color, #007938) !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  box-shadow: none !important;
-  border: none !important;
-  background-image: none !important;
-  background-blend-mode: normal !important;
-  opacity: 1 !important;
-}
-
-/* Extra specific selectors to override any CSS-in-JS or inline styles */
-button[style*='background-color:#007938'] {
-  background: #007938 !important;
-  background-color: #007938 !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  box-shadow: none !important;
-  border: none !important;
-  background-image: none !important;
-  background-blend-mode: normal !important;
-  opacity: 1 !important;
-}
-
-button[data-testid*='button-color'] {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  box-shadow: none !important;
-  border: none !important;
-  background-image: none !important;
-  background-blend-mode: normal !important;
-  opacity: 1 !important;
-}
-
-/* Force override any glassmorphism on buttons */
+*[aria-label='Go Back'],
+button.px-2,
+button.py-1\.5,
+button.flex-1,
+button.rounded-md,
+button[style*='background-color:#007938'],
+button[style*='background-color: rgb(0, 121, 56)'],
+button[data-testid*='button-color'],
+.px-2.py-1\.5.flex-1.rounded-md,
 button.glassmorphism[aria-label='Customize It'],
 button.glassmorphism[aria-label='Go Back'] {
   background: #007938 !important;
+  background-color: #007938 !important;
+  background-image: none !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
+  filter: none !important;
+  -webkit-filter: none !important;
   box-shadow: none !important;
   border: none !important;
+  opacity: 1 !important;
+  mix-blend-mode: normal !important;
+  isolation: isolate !important;
+  position: relative !important;
+  z-index: 999 !important;
+}
+
+/* Override any pseudo-elements that might be adding glassmorphism */
+button[aria-label='Customize It']::before,
+button[aria-label='Customize It']::after,
+button[aria-label='Go Back']::before,
+button[aria-label='Go Back']::after,
+*[aria-label='Customize It']::before,
+*[aria-label='Customize It']::after,
+*[aria-label='Go Back']::before,
+*[aria-label='Go Back']::after {
+  display: none !important;
+  content: none !important;
+  background: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Force removal of any parent glassmorphism effects */
+button[aria-label='Customize It']:not(.no-glassmorphism),
+button[aria-label='Go Back']:not(.no-glassmorphism) {
+  background: #007938 !important;
+  background-color: #007938 !important;
+  color: white !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  isolation: isolate !important;
+  position: relative !important;
+  z-index: 1000 !important;
+}
+
+/* Ultimate override - use attribute selectors */
+[aria-label='Customize It'] {
+  background: #007938 !important;
+  background-color: #007938 !important;
+  color: white !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  filter: none !important;
+  box-shadow: none !important;
+  border: none !important;
+  opacity: 1 !important;
+  isolation: isolate !important;
+  z-index: 1001 !important;
+}
+
+[aria-label='Go Back'] {
+  background: #007938 !important;
+  background-color: #007938 !important;
+  color: white !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  filter: none !important;
+  box-shadow: none !important;
+  border: none !important;
+  opacity: 1 !important;
+  isolation: isolate !important;
+  z-index: 1001 !important;
+}
+
+/* Remove glassmorphism from any parent containers that might affect buttons */
+.home button,
+.customizer button,
+div[data-testid='home-component'] button,
+div[data-testid='customizer'] button,
+div[data-testid='customizer-main'] button {
+  background: var(--button-bg, #007938) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  isolation: isolate !important;
 }
 
 input[type='file'] {
