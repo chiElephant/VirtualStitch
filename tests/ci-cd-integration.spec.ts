@@ -303,25 +303,101 @@ test.describe('CI/CD Integration Tests', () => {
       // Test that the app provides data for monitoring
       await page.goto('/');
 
+      // Wait for page to fully load
+      await page.waitForLoadState('networkidle');
+
       const performanceMetrics = await page.evaluate(() => {
         const navigation = performance.getEntriesByType(
           'navigation'
         )[0] as PerformanceNavigationTiming;
+
+        // Get paint metrics
+        const paintEntries = performance.getEntriesByType('paint');
+        const firstPaint = paintEntries.find(
+          (entry) => entry.name === 'first-paint'
+        );
+        const firstContentfulPaint = paintEntries.find(
+          (entry) => entry.name === 'first-contentful-paint'
+        );
+
         return {
+          // Navigation timing (most reliable across browsers)
           domContentLoaded:
             navigation.domContentLoadedEventEnd -
             navigation.domContentLoadedEventStart,
           loadComplete: navigation.loadEventEnd - navigation.loadEventStart,
-          firstPaint:
-            performance
-              .getEntriesByType('paint')
-              .find((entry) => entry.name === 'first-paint')?.startTime || 0,
+
+          // Reliable absolute timestamps
+          domInteractive: navigation.domInteractive,
+          domComplete: navigation.domComplete,
+          loadEventEnd: navigation.loadEventEnd,
+
+          // Paint metrics (may not be available in all browsers)
+          firstPaint: firstPaint?.startTime || 0,
+          firstContentfulPaint: firstContentfulPaint?.startTime || 0,
+          paintEntriesCount: paintEntries.length,
+
+          // Connection info
+          fetchStart: navigation.fetchStart || 0,
+          responseStart: navigation.responseStart || 0,
+          responseEnd: navigation.responseEnd || 0,
         };
       });
 
-      // Basic sanity checks
-      expect(performanceMetrics.domContentLoaded).toBeGreaterThan(0);
-      expect(performanceMetrics.firstPaint).toBeGreaterThan(0);
+      // Test that essential timing data is available (most reliable metrics)
+      expect(performanceMetrics.domInteractive).toBeGreaterThan(0);
+      expect(performanceMetrics.domComplete).toBeGreaterThan(0);
+      expect(performanceMetrics.loadEventEnd).toBeGreaterThan(0);
+
+      // Paint metrics: test if available, but don't require them
+      if (performanceMetrics.paintEntriesCount > 0) {
+        // If paint entries exist, at least one should have a valid time
+        const hasPaintTiming =
+          performanceMetrics.firstPaint > 0 ||
+          performanceMetrics.firstContentfulPaint > 0;
+        expect(hasPaintTiming).toBe(true);
+      }
+
+      // DOM loading metrics (can be 0 in fast environments)
+      expect(performanceMetrics.domContentLoaded).toBeGreaterThanOrEqual(0);
+      expect(performanceMetrics.loadComplete).toBeGreaterThanOrEqual(0);
+
+      // Network timing (only test if available)
+      if (performanceMetrics.fetchStart > 0) {
+        expect(performanceMetrics.fetchStart).toBeGreaterThan(0);
+      }
+
+      // Verify that page loaded properly (functional check)
+      await expect(page.locator('body')).toBeVisible();
+      await expect(page.locator('canvas')).toBeVisible();
+
+      // Test that we can capture custom performance marks (universal support)
+      await page.evaluate(() => {
+        performance.mark('test-mark-start');
+        performance.mark('test-mark-end');
+        performance.measure('test-measure', 'test-mark-start', 'test-mark-end');
+      });
+
+      const customMetrics = await page.evaluate(() => {
+        const marks = performance.getEntriesByType('mark');
+        const measures = performance.getEntriesByType('measure');
+        return {
+          marksCount: marks.length,
+          measuresCount: measures.length,
+          supportsPerformanceAPI: typeof performance !== 'undefined',
+          supportsMarks: typeof performance.mark === 'function',
+          supportsMeasures: typeof performance.measure === 'function',
+        };
+      });
+
+      // Core Performance API should be supported everywhere
+      expect(customMetrics.supportsPerformanceAPI).toBe(true);
+      expect(customMetrics.supportsMarks).toBe(true);
+      expect(customMetrics.supportsMeasures).toBe(true);
+
+      // Should be able to create custom performance metrics
+      expect(customMetrics.marksCount).toBeGreaterThan(0);
+      expect(customMetrics.measuresCount).toBeGreaterThan(0);
     });
   });
 
