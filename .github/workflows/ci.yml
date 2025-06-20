@@ -23,6 +23,88 @@ env:
   UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
 
 jobs:
+  # Fast feedback with smoke tests
+  smoke-tests:
+    name: 🔥 Smoke Tests
+    runs-on:
+      - self-hosted
+      - Linux
+      - ARM64
+    timeout-minutes: 5
+
+    steps:
+      - name: ⬇️ Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🎯 Determine context
+        id: context
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "check_name=Smoke Tests" >> $GITHUB_OUTPUT
+            echo "is_pr=true" >> $GITHUB_OUTPUT
+          else
+            echo "check_name=Smoke Tests" >> $GITHUB_OUTPUT
+            echo "is_pr=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 📝 Create GitHub Check
+        uses: ./.github/actions/github-check
+        id: check_run
+        with:
+          check_name: ${{ steps.context.outputs.check_name }}
+          action: create
+          status: in_progress
+          title: '🚧 Running critical path smoke tests...'
+          summary: 'Validating essential functionality and basic interactions...'
+
+      - name: 🔧 Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: 'npm'
+
+      - name: 📦 Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: 🔥 Run smoke tests
+        id: smoke
+        run: npm run test:smoke
+
+      - name: ✅ Update Check on Success
+        if: success()
+        uses: ./.github/actions/github-check
+        with:
+          check_name: ${{ steps.context.outputs.check_name }}
+          action: update
+          check_run_id: ${{ steps.check_run.outputs.check_run_id }}
+          status: completed
+          conclusion: success
+          title: '✅ Smoke tests passed'
+          summary: |
+            🎉 **Critical path validation successful!**
+
+            All essential functionality is working correctly:
+            - ✅ Homepage loads correctly
+            - ✅ Navigation to customizer works
+            - ✅ Basic UI components render
+            - ✅ Core interactions functional
+
+      - name: ❌ Update Check on Failure
+        if: failure()
+        uses: ./.github/actions/github-check
+        with:
+          check_name: ${{ steps.context.outputs.check_name }}
+          action: update
+          check_run_id: ${{ steps.check_run.outputs.check_run_id }}
+          status: completed
+          conclusion: failure
+          title: '❌ Smoke tests failed'
+          summary: |
+            🚨 **Critical functionality is broken!**
+
+            Essential features are not working. Check the [logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) immediately.
+
+  # Main CI checks
   ci-checks:
     name: ✅ CI Checks
     runs-on:
@@ -30,6 +112,7 @@ jobs:
       - Linux
       - ARM64
     timeout-minutes: 10
+    needs: smoke-tests
 
     steps:
       - name: ⬇️ Checkout code
@@ -53,25 +136,14 @@ jobs:
           fi
 
       - name: 📝 Create GitHub Check
-        uses: actions/github-script@v7
+        uses: ./.github/actions/github-check
         id: check_run
         with:
-          script: |
-            const checkName = '${{ steps.context.outputs.check_name }}';
-            const { data: checkRun } = await github.rest.checks.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              name: checkName,
-              head_sha: context.sha,
-              status: 'in_progress',
-              started_at: new Date().toISOString(),
-              output: {
-                title: '🚧 CI checks starting...',
-                summary: 'Running linting, type checks, Jest tests, and build verification...'
-              }
-            });
-            core.info(`✅ Created check: ${checkName} (ID: ${checkRun.id})`);
-            return checkRun.id;
+          check_name: ${{ steps.context.outputs.check_name }}
+          action: create
+          status: in_progress
+          title: '🚧 CI checks starting...'
+          summary: 'Running linting, type checks, Jest tests, and build verification...'
 
       - name: 🔧 Set up Node.js
         uses: actions/setup-node@v4
@@ -148,87 +220,310 @@ jobs:
 
       - name: ✅ Update Check on Success
         if: success()
-        uses: actions/github-script@v7
+        uses: ./.github/actions/github-check
         with:
-          script: |
-            const summary = [
-              '✅ **All CI checks passed successfully!**',
-              '',
-              '| Check | Status |',
-              '|-------|--------|',
-              '| Linting | ✅ Passed |',
-              '| Type Check | ✅ Passed |', 
-              '| Jest Tests | ✅ Passed |',
-              '| Build | ✅ Passed |',
-              '| Verification | ✅ Passed |',
-              '',
-              '**Next steps:**',
-              '${{ github.event_name == 'pull_request' && '- E2E tests will run once Vercel preview deployment is ready' || '- Production deployment monitoring will begin' }}'
-            ].join('\n');
+          check_name: ${{ steps.context.outputs.check_name }}
+          action: update
+          check_run_id: ${{ steps.check_run.outputs.check_run_id }}
+          status: completed
+          conclusion: success
+          title: '✅ All CI checks passed'
+          summary: |
+            ✅ **All CI checks passed successfully!**
 
-            await github.rest.checks.update({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              check_run_id: ${{ steps.check_run.outputs.result }},
-              status: 'completed',
-              conclusion: 'success',
-              completed_at: new Date().toISOString(),
-              output: {
-                title: '✅ All CI checks passed',
-                summary: summary
-              }
-            });
+            | Check | Status |
+            |-------|--------|
+            | Linting | ✅ Passed |
+            | Type Check | ✅ Passed |
+            | Jest Tests | ✅ Passed |
+            | Build | ✅ Passed |
+            | Verification | ✅ Passed |
+
+            **Next steps:**
+            ${{ github.event_name == 'pull_request' && '- E2E tests will run once Vercel preview deployment is ready' || '- Production deployment monitoring will begin' }}
 
       - name: ❌ Update Check on Failure
         if: failure()
-        uses: actions/github-script@v7
+        uses: ./.github/actions/github-check
         with:
-          script: |
-            const failedSteps = [];
-            if ('${{ steps.lint.outcome }}' === 'failure') failedSteps.push('Linting');
-            if ('${{ steps.typecheck.outcome }}' === 'failure') failedSteps.push('Type Check');
-            if ('${{ steps.test.outcome }}' === 'failure') failedSteps.push('Jest Tests');
-            if ('${{ steps.build.outcome }}' === 'failure') failedSteps.push('Build');
-            if ('${{ steps.verify.outcome }}' === 'failure') failedSteps.push('Verification');
+          check_name: ${{ steps.context.outputs.check_name }}
+          action: update
+          check_run_id: ${{ steps.check_run.outputs.check_run_id }}
+          status: completed
+          conclusion: failure
+          title: '❌ CI checks failed'
+          summary: |
+            ❌ **CI checks failed**
 
-            const summary = [
-              '❌ **CI checks failed**',
-              '',
-              `**Failed steps:** ${failedSteps.join(', ')}`,
-              '',
-              '**Next steps:**',
-              '1. Check the [workflow logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for detailed error messages',
-              '2. Fix the issues locally',
-              '3. Push your changes to re-run the checks'
-            ].join('\n');
+            **Failed steps:** ${{ steps.lint.outcome == 'failure' && 'Linting' || '' }} ${{ steps.typecheck.outcome == 'failure' && 'Type Check' || '' }} ${{ steps.test.outcome == 'failure' && 'Jest Tests' || '' }} ${{ steps.build.outcome == 'failure' && 'Build' || '' }} ${{ steps.verify.outcome == 'failure' && 'Verification' || '' }}
 
-            await github.rest.checks.update({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              check_run_id: ${{ steps.check_run.outputs.result }},
-              status: 'completed',
-              conclusion: 'failure',
-              completed_at: new Date().toISOString(),
-              output: {
-                title: '❌ CI checks failed',
-                summary: summary
-              }
-            });
+            **Next steps:**
+            1. Check the [workflow logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for detailed error messages
+            2. Fix the issues locally
+            3. Push your changes to re-run the checks
 
       - name: ⚠️ Update Check on Cancellation
         if: cancelled()
-        uses: actions/github-script@v7
+        uses: ./.github/actions/github-check
         with:
-          script: |
-            await github.rest.checks.update({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              check_run_id: ${{ steps.check_run.outputs.result }},
-              status: 'completed',
-              conclusion: 'cancelled',
-              completed_at: new Date().toISOString(),
-              output: {
-                title: '⚠️ CI checks cancelled',
-                summary: 'The CI workflow was cancelled before completion.'
-              }
-            });
+          check_name: ${{ steps.context.outputs.check_name }}
+          action: update
+          check_run_id: ${{ steps.check_run.outputs.check_run_id }}
+          status: completed
+          conclusion: cancelled
+          title: '⚠️ CI checks cancelled'
+          summary: 'The CI workflow was cancelled before completion.'
+
+  # Core functionality tests (runs after CI)
+  core-tests:
+    name: 🧪 Core Tests
+    runs-on:
+      - self-hosted
+      - Linux
+      - ARM64
+    timeout-minutes: 15
+    needs: ci-checks
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+
+    env:
+      BASE_URL: http://localhost:3000
+
+    steps:
+      - name: ⬇️ Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📝 Create GitHub Check
+        uses: ./.github/actions/github-check
+        id: check_run
+        with:
+          check_name: 'Core Tests'
+          action: create
+          status: in_progress
+          title: '🧪 Running core functionality tests...'
+          summary: 'Testing individual components and features...'
+
+      - name: 🔧 Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: 'npm'
+
+      - name: 📦 Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: 🧪 Run core tests
+        id: core
+        run: npm run test:core
+
+      - name: 📤 Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: core-test-results-${{ github.run_id }}
+          path: test-results/playwright/
+          retention-days: 7
+
+      - name: ✅ Update Check on Success
+        if: success()
+        uses: ./.github/actions/github-check
+        with:
+          check_name: 'Core Tests'
+          action: update
+          check_run_id: ${{ steps.check_run.outputs.check_run_id }}
+          status: completed
+          conclusion: success
+          title: '✅ Core tests passed'
+          summary: |
+            🎉 **All core functionality tests passed!**
+
+            Component testing completed successfully:
+            - ✅ Home page functionality
+            - ✅ Customizer interface
+            - ✅ Color picker operations
+            - ✅ File upload handling
+            - ✅ AI picker interactions
+            - ✅ Image download features
+            - ✅ Canvas rendering
+
+      - name: ❌ Update Check on Failure
+        if: failure()
+        uses: ./.github/actions/github-check
+        with:
+          check_name: 'Core Tests'
+          action: update
+          check_run_id: ${{ steps.check_run.outputs.check_run_id }}
+          status: completed
+          conclusion: failure
+          title: '❌ Core tests failed'
+          summary: |
+            ❌ **Core functionality tests failed**
+
+            Check the [test results](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details.
+
+  # Quality assurance tests (parallel with core tests)
+  quality-tests:
+    name: 🛡️ Quality Tests
+    runs-on:
+      - self-hosted
+      - Linux
+      - ARM64
+    timeout-minutes: 20
+    needs: ci-checks
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+
+    env:
+      BASE_URL: http://localhost:3000
+
+    steps:
+      - name: ⬇️ Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📝 Create GitHub Check
+        uses: ./.github/actions/github-check
+        id: check_run
+        with:
+          check_name: 'Quality Tests'
+          action: create
+          status: in_progress
+          title: '🛡️ Running quality assurance tests...'
+          summary: 'Testing accessibility, performance, security, and responsive design...'
+
+      - name: 🔧 Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: 'npm'
+
+      - name: 📦 Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: 🧪 Run quality tests
+        id: quality
+        run: npm run test:quality
+
+      - name: 📤 Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-test-results-${{ github.run_id }}
+          path: test-results/playwright/
+          retention-days: 7
+
+      - name: ✅ Update Check on Success
+        if: success()
+        uses: ./.github/actions/github-check
+        with:
+          check_name: 'Quality Tests'
+          action: update
+          check_run_id: ${{ steps.check_run.outputs.check_run_id }}
+          status: completed
+          conclusion: success
+          title: '✅ Quality tests passed'
+          summary: |
+            🎉 **All quality assurance tests passed!**
+
+            Quality validation completed successfully:
+            - ✅ Accessibility (WCAG compliance)
+            - ✅ Performance benchmarks
+            - ✅ Security validation
+            - ✅ Responsive design
+
+      - name: ❌ Update Check on Failure
+        if: failure()
+        uses: ./.github/actions/github-check
+        with:
+          check_name: 'Quality Tests'
+          action: update
+          check_run_id: ${{ steps.check_run.outputs.check_run_id }}
+          status: completed
+          conclusion: failure
+          title: '❌ Quality tests failed'
+          summary: |
+            ❌ **Quality assurance tests failed**
+
+            Quality issues detected. Check the [test results](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details.
+
+  # API health checks (parallel with other tests)
+  api-tests:
+    name: 🌐 API Tests
+    runs-on:
+      - self-hosted
+      - Linux
+      - ARM64
+    timeout-minutes: 10
+    needs: ci-checks
+
+    env:
+      BASE_URL: http://localhost:3000
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+      UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+
+    steps:
+      - name: ⬇️ Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📝 Create GitHub Check
+        uses: ./.github/actions/github-check
+        id: check_run
+        with:
+          check_name: 'API Tests'
+          action: create
+          status: in_progress
+          title: '🌐 Running API health checks...'
+          summary: 'Testing API endpoints and integration scenarios...'
+
+      - name: 🔧 Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: 'npm'
+
+      - name: 📦 Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: 🧪 Run API tests
+        id: api
+        run: npm run test:api
+
+      - name: 📤 Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-test-results-${{ github.run_id }}
+          path: test-results/playwright/
+          retention-days: 7
+
+      - name: ✅ Update Check on Success
+        if: success()
+        uses: ./.github/actions/github-check
+        with:
+          check_name: 'API Tests'
+          action: update
+          check_run_id: ${{ steps.check_run.outputs.check_run_id }}
+          status: completed
+          conclusion: success
+          title: '✅ API tests passed'
+          summary: |
+            🎉 **All API tests passed!**
+
+            API validation completed successfully:
+            - ✅ Health check endpoints
+            - ✅ Integration scenarios
+            - ✅ Error handling
+            - ✅ Rate limiting
+
+      - name: ❌ Update Check on Failure
+        if: failure()
+        uses: ./.github/actions/github-check
+        with:
+          check_name: 'API Tests'
+          action: update
+          check_run_id: ${{ steps.check_run.outputs.check_run_id }}
+          status: completed
+          conclusion: failure
+          title: '❌ API tests failed'
+          summary: |
+            ❌ **API tests failed**
+
+            API issues detected. Check the [test results](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details.

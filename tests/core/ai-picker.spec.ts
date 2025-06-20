@@ -7,7 +7,7 @@ test.describe('AI Picker', () => {
   test.beforeEach(async ({ page }) => {
     utils = new TestUtils(page);
     await utils.nav.goToCustomizer();
-    await utils.nav.openEditorTab('ai-picker');
+    await utils.nav.openEditorTab('aiPicker');
   });
 
   test.describe('UI Components', () => {
@@ -26,30 +26,27 @@ test.describe('AI Picker', () => {
   });
 
   test.describe('Successful AI Generation', () => {
-    test('should generate and apply logo successfully', async ({ page }) => {
+    test('should generate and apply logo successfully', async () => {
       await utils.ai.mockSuccessfulResponse();
-      
       await utils.ai.generateImage('Modern tech logo', 'logo');
-      
       await utils.ai.verifySuccessToast();
       await utils.texture.verifyTextureVisible('logo');
     });
 
-    test('should generate and apply full texture successfully', async ({ page }) => {
+    test('should generate and apply full texture successfully', async () => {
       await utils.ai.mockSuccessfulResponse();
-      
       await utils.ai.generateImage('Abstract pattern', 'full');
-      
       await utils.ai.verifySuccessToast();
       await utils.texture.verifyTextureVisible('full');
     });
 
-    test('should close AI picker after successful generation', async ({ page }) => {
+    test('should close AI picker after successful generation', async ({
+      page,
+    }) => {
       await utils.ai.mockSuccessfulResponse();
-      
       await utils.ai.generateImage('Test prompt', 'logo');
       await utils.ai.verifySuccessToast();
-      
+
       await expect(page.getByTestId('ai-picker')).not.toBeVisible();
     });
   });
@@ -60,27 +57,27 @@ test.describe('AI Picker', () => {
       await expect(page.getByText(/please enter a prompt/i)).toBeVisible();
     });
 
-    test('should handle rate limiting (429)', async ({ page }) => {
+    test('should handle rate limiting (429)', async () => {
       await utils.ai.mockErrorResponse(429);
-      
+
       await utils.ai.generateImage('Test rate limit');
-      
+
       await utils.ai.verifyErrorToast('rate-limit');
     });
 
-    test('should handle server errors (500)', async ({ page }) => {
+    test('should handle server errors (500)', async () => {
       await utils.ai.mockErrorResponse(500);
-      
+
       await utils.ai.generateImage('Test server error');
-      
+
       await utils.ai.verifyErrorToast('server');
     });
 
-    test('should handle unexpected errors', async ({ page }) => {
+    test('should handle unexpected errors', async () => {
       await utils.ai.mockErrorResponse(418); // Teapot error
-      
+
       await utils.ai.generateImage('Test unexpected error');
-      
+
       await utils.ai.verifyErrorToast('unexpected');
     });
   });
@@ -102,8 +99,10 @@ test.describe('AI Picker', () => {
       });
 
       await utils.ai.generateImage('Test loading');
-      
-      await expect(page.getByRole('button', { name: 'Asking AI...' })).toBeVisible();
+
+      await expect(
+        page.getByRole('button', { name: 'Asking AI...' })
+      ).toBeVisible();
       await expect(page.getByTestId('ai-logo-button')).not.toBeVisible();
       await expect(page.getByTestId('ai-full-button')).not.toBeVisible();
 
@@ -114,7 +113,7 @@ test.describe('AI Picker', () => {
   test.describe('Input Validation and Security', () => {
     test('should handle malicious prompts safely', async ({ page }) => {
       await utils.ai.mockSuccessfulResponse();
-      
+
       for (const maliciousPrompt of MALICIOUS_INPUTS.xss) {
         let scriptExecuted = false;
         page.on('dialog', () => {
@@ -123,14 +122,14 @@ test.describe('AI Picker', () => {
 
         await page.getByTestId('ai-prompt-input').fill(maliciousPrompt);
         await page.getByTestId('ai-logo-button').click();
-        
+
         // Ensure no script execution
         expect(scriptExecuted).toBe(false);
-        
+
         // Wait for response and clear input
         await utils.ai.verifySuccessToast();
         await utils.wait.waitForToastToDisappear(/image applied successfully/i);
-        await utils.nav.openEditorTab('ai-picker');
+        await utils.nav.openEditorTab('aiPicker');
         await page.getByTestId('ai-prompt-input').fill('');
       }
     });
@@ -146,7 +145,7 @@ test.describe('AI Picker', () => {
       });
 
       await utils.ai.generateImage(MALICIOUS_INPUTS.longInput);
-      
+
       // Should handle gracefully
       await expect(page.locator('body')).toBeVisible();
     });
@@ -156,10 +155,10 @@ test.describe('AI Picker', () => {
     test('should preserve prompt when switching tabs', async ({ page }) => {
       const testPrompt = 'Preserve this prompt';
       await page.getByTestId('ai-prompt-input').fill(testPrompt);
-      
+
       await page.getByTestId('editor-tab-colorPicker').click();
-      await utils.nav.openEditorTab('ai-picker');
-      
+      await utils.nav.openEditorTab('aiPicker');
+
       await expect(page.getByTestId('ai-prompt-input')).toHaveValue(testPrompt);
     });
   });

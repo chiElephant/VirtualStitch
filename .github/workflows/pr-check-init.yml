@@ -20,7 +20,11 @@ jobs:
         with:
           script: |
             const checkNames = [
+              'Smoke Tests',
               'CI Checks',
+              'Core Tests',
+              'Quality Tests',
+              'API Tests',
               'E2E Tests (chromium)',
               'E2E Tests (firefox)', 
               'E2E Tests (webkit)',
@@ -69,17 +73,44 @@ jobs:
               failed.forEach(f => core.warning(`  - ${f.name}: ${f.error}`));
             }
 
-            // Create summary
+            // Create enhanced summary
             await core.summary
-              .addHeading('PR Check Initialization')
+              .addHeading('🚀 PR Check Initialization')
               .addTable([
-                ['Check Name', 'Status'],
-                ...results.map(r => [
-                  r.name, 
-                  r.status === 'created' ? '✅ Created' : '❌ Failed'
-                ])
+                ['Check Name', 'Category', 'Status'],
+                ['Smoke Tests', '🔥 Critical Path', successful.find(r => r.name === 'Smoke Tests') ? '✅ Created' : '❌ Failed'],
+                ['CI Checks', '🔧 Build & Test', successful.find(r => r.name === 'CI Checks') ? '✅ Created' : '❌ Failed'],
+                ['Core Tests', '🧪 Unit Testing', successful.find(r => r.name === 'Core Tests') ? '✅ Created' : '❌ Failed'],
+                ['Quality Tests', '🛡️ QA & Security', successful.find(r => r.name === 'Quality Tests') ? '✅ Created' : '❌ Failed'],
+                ['API Tests', '🌐 API Health', successful.find(r => r.name === 'API Tests') ? '✅ Created' : '❌ Failed'],
+                ['E2E Tests (chromium)', '🌍 Integration', successful.find(r => r.name === 'E2E Tests (chromium)') ? '✅ Created' : '❌ Failed'],
+                ['E2E Tests (firefox)', '🦊 Cross-browser', successful.find(r => r.name === 'E2E Tests (firefox)') ? '✅ Created' : '❌ Failed'],
+                ['E2E Tests (webkit)', '🍎 Safari/WebKit', successful.find(r => r.name === 'E2E Tests (webkit)') ? '✅ Created' : '❌ Failed'],
+                ['E2E Tests (mobile-chrome)', '📱 Mobile Chrome', successful.find(r => r.name === 'E2E Tests (mobile-chrome)') ? '✅ Created' : '❌ Failed'],
+                ['E2E Tests (mobile-safari)', '📱 Mobile Safari', successful.find(r => r.name === 'E2E Tests (mobile-safari)') ? '✅ Created' : '❌ Failed']
               ])
-              .addQuote(`PR #${context.payload.pull_request.number} is ready for CI/CD pipeline`)
+              .addSeparator()
+              .addRaw(`
+              <details>
+              <summary>📋 Pipeline Execution Order</summary>
+              
+              **Phase 1: Fast Feedback (1-2 minutes)**
+              1. 🔥 **Smoke Tests** - Critical path validation
+              
+              **Phase 2: Core Validation (5-10 minutes)**
+              2. 🔧 **CI Checks** - Linting, type-check, Jest tests, build
+              
+              **Phase 3: Comprehensive Testing (Parallel - 10-20 minutes)**
+              3. 🧪 **Core Tests** - Component functionality testing
+              4. 🛡️ **Quality Tests** - Accessibility, performance, security
+              5. 🌐 **API Tests** - API health and integration
+              
+              **Phase 4: Integration Testing (After Vercel deployment)**
+              6. 🌍 **E2E Tests** - Cross-browser integration testing
+              
+              </details>
+              `)
+              .addQuote(`✨ PR #${context.payload.pull_request.number} is ready for the enhanced CI/CD pipeline with reorganized test structure!`)
               .write();
 
       - name: 📋 Log PR information
@@ -91,7 +122,40 @@ jobs:
           echo "- **Base Branch:** ${{ github.event.pull_request.base.ref }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Head Branch:** ${{ github.event.pull_request.head.ref }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🚀 Enhanced CI/CD Pipeline Features" >> $GITHUB_STEP_SUMMARY
+          echo "- **Organized Test Structure:** Tests are now categorized (core, integration, quality, api, deployment)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Faster Feedback:** Smoke tests provide immediate validation" >> $GITHUB_STEP_SUMMARY
+          echo "- **Parallel Execution:** Quality and API tests run in parallel for speed" >> $GITHUB_STEP_SUMMARY
+          echo "- **Comprehensive Coverage:** Accessibility, performance, security, and responsive testing" >> $GITHUB_STEP_SUMMARY
+          echo "- **Smart Dependencies:** Tests run in optimal order with proper dependencies" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Next steps:**" >> $GITHUB_STEP_SUMMARY
-          echo "1. CI checks will run automatically" >> $GITHUB_STEP_SUMMARY
-          echo "2. E2E tests will run after Vercel preview deployment" >> $GITHUB_STEP_SUMMARY
-          echo "3. Auto-merge will trigger when all checks pass" >> $GITHUB_STEP_SUMMARY
+          echo "1. ⚡ Smoke tests will run immediately for fast feedback" >> $GITHUB_STEP_SUMMARY
+          echo "2. 🔧 CI checks will validate code quality and build" >> $GITHUB_STEP_SUMMARY
+          echo "3. 🧪 Core and quality tests will run in parallel" >> $GITHUB_STEP_SUMMARY
+          echo "4. 🌍 E2E tests will run after Vercel preview deployment" >> $GITHUB_STEP_SUMMARY
+          echo "5. ✅ Auto-merge will trigger when all checks pass" >> $GITHUB_STEP_SUMMARY
+
+      - name: 🔍 Validate test structure
+        run: |
+          echo "## 🧪 Test Structure Validation" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Check if new test structure exists
+          if [ -d "tests/core" ] && [ -d "tests/integration" ] && [ -d "tests/quality" ]; then
+            echo "✅ **New test structure detected**" >> $GITHUB_STEP_SUMMARY
+            echo "- 📁 \`tests/core/\` - Component tests" >> $GITHUB_STEP_SUMMARY
+            echo "- 📁 \`tests/integration/\` - User workflow tests" >> $GITHUB_STEP_SUMMARY
+            echo "- 📁 \`tests/quality/\` - Accessibility, performance, security" >> $GITHUB_STEP_SUMMARY
+            echo "- 📁 \`tests/api/\` - API health and integration" >> $GITHUB_STEP_SUMMARY
+            echo "- 📁 \`tests/deployment/\` - Production validation" >> $GITHUB_STEP_SUMMARY
+            echo "- 📁 \`tests/utils/\` - Shared test utilities" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ **Legacy test structure detected**" >> $GITHUB_STEP_SUMMARY
+            echo "Consider migrating to the new organized structure for better maintainability." >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Check if old tests are preserved
+          if [ -d "old-tests" ]; then
+            echo "📦 **Legacy tests preserved in \`old-tests/\` directory**" >> $GITHUB_STEP_SUMMARY
+          fi

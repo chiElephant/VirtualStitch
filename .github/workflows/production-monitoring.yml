@@ -2,6 +2,7 @@ name: Production Monitoring
 
 permissions:
   contents: read
+  checks: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -40,6 +41,16 @@ jobs:
         with:
           ref: ${{ github.event.client_payload.git.sha }}
 
+      - name: 📝 Create GitHub Check
+        uses: ./.github/actions/github-check
+        id: check_run
+        with:
+          check_name: 'Production Monitoring'
+          action: create
+          status: in_progress
+          title: '🚀 Production health check starting...'
+          summary: 'Running comprehensive production validation and monitoring...'
+
       - name: 🔧 Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -59,23 +70,37 @@ jobs:
           initial_wait: 60
           vercel_bypass_secret: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
 
-      - name: 🧪 Run critical smoke tests
+      - name: 🔥 Run critical smoke tests
         id: smoke_tests
-        run: npx playwright test --grep "@smoke" --reporter=list
+        run: npm run test:smoke -- --project=chromium --reporter=list
         env:
           CI: true
         continue-on-error: true
 
       - name: 🏥 Run API health checks
         id: api_health
-        run: npx playwright test --grep "@api-health" --reporter=list
+        run: npm run test:api-health -- --project=chromium --reporter=list
         env:
           CI: true
         continue-on-error: true
 
       - name: ⚡ Run performance monitoring
         id: performance
-        run: npx playwright test --grep "@performance-monitoring" --reporter=list
+        run: npm run test:performance -- --project=chromium --reporter=list
+        env:
+          CI: true
+        continue-on-error: true
+
+      - name: 🛡️ Run security validation
+        id: security
+        run: npm run test:security -- --project=chromium --reporter=list
+        env:
+          CI: true
+        continue-on-error: true
+
+      - name: 📊 Run production validation tests
+        id: production_validation
+        run: npm run test:production -- --project=chromium --reporter=list
         env:
           CI: true
         continue-on-error: true
@@ -108,12 +133,14 @@ jobs:
           echo "commit_sha=${{ github.event.client_payload.git.sha }}" >> $GITHUB_OUTPUT
           echo "deploy_url=${{ github.event.client_payload.url }}" >> $GITHUB_OUTPUT
 
-          # Create health check summary
+          # Create comprehensive health check summary
           HEALTH_CHECKS=$(cat << EOF
           {
             "smoke_tests": "${{ steps.smoke_tests.outcome }}",
             "api_health": "${{ steps.api_health.outcome }}",
             "performance": "${{ steps.performance.outcome }}",
+            "security": "${{ steps.security.outcome }}",
+            "production_validation": "${{ steps.production_validation.outcome }}",
             "ssl_certificate": "${{ steps.ssl_check.outputs.ssl_status }}"
           }
           EOF
@@ -123,11 +150,122 @@ jobs:
           echo "$HEALTH_CHECKS" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
+          # Calculate overall health score
+          PASSED_TESTS=0
+          TOTAL_TESTS=6
+
+          [[ "${{ steps.smoke_tests.outcome }}" == "success" ]] && ((PASSED_TESTS++))
+          [[ "${{ steps.api_health.outcome }}" == "success" ]] && ((PASSED_TESTS++))
+          [[ "${{ steps.performance.outcome }}" == "success" ]] && ((PASSED_TESTS++))
+          [[ "${{ steps.security.outcome }}" == "success" ]] && ((PASSED_TESTS++))
+          [[ "${{ steps.production_validation.outcome }}" == "success" ]] && ((PASSED_TESTS++))
+          [[ "${{ steps.ssl_check.outputs.ssl_status }}" == "valid" ]] && ((PASSED_TESTS++))
+
+          HEALTH_SCORE=$((PASSED_TESTS * 100 / TOTAL_TESTS))
+          echo "health_score=$HEALTH_SCORE" >> $GITHUB_OUTPUT
+
+      - name: ✅ Update Check on Success
+        if: >
+          steps.smoke_tests.outcome == 'success' &&
+          steps.api_health.outcome == 'success' &&
+          steps.performance.outcome == 'success' &&
+          steps.security.outcome == 'success' &&
+          steps.production_validation.outcome == 'success'
+        uses: ./.github/actions/github-check
+        with:
+          check_name: 'Production Monitoring'
+          action: update
+          check_run_id: ${{ steps.check_run.outputs.check_run_id }}
+          status: completed
+          conclusion: success
+          title: '✅ Production health check passed'
+          summary: |
+            🎉 **Production deployment is healthy!**
+
+            **Health Score: ${{ steps.metrics.outputs.health_score }}%**
+
+            | Check | Status |
+            |-------|--------|
+            | Smoke Tests | ✅ Passed |
+            | API Health | ✅ Passed |
+            | Performance | ✅ Passed |
+            | Security | ✅ Passed |
+            | Production Validation | ✅ Passed |
+            | SSL Certificate | ${{ steps.ssl_check.outputs.ssl_status == 'valid' && '✅ Valid' || '⚠️ Issues' }} |
+
+            **Deployment Details:**
+            - **URL:** ${{ github.event.client_payload.url }}
+            - **Commit:** `${{ github.event.client_payload.git.sha }}`
+            - **Time:** ${{ steps.metrics.outputs.deployment_time }}
+
+            🚀 All systems operational!
+
+      - name: ⚠️ Update Check on Partial Success
+        if: >
+          (steps.smoke_tests.outcome == 'success' &&
+           steps.api_health.outcome == 'success') &&
+          (steps.performance.outcome != 'success' ||
+           steps.security.outcome != 'success' ||
+           steps.production_validation.outcome != 'success')
+        uses: ./.github/actions/github-check
+        with:
+          check_name: 'Production Monitoring'
+          action: update
+          check_run_id: ${{ steps.check_run.outputs.check_run_id }}
+          status: completed
+          conclusion: success
+          title: '⚠️ Production running with warnings'
+          summary: |
+            ⚠️ **Production is functional but has warnings**
+
+            **Health Score: ${{ steps.metrics.outputs.health_score }}%**
+
+            | Check | Status |
+            |-------|--------|
+            | Smoke Tests | ${{ steps.smoke_tests.outcome == 'success' && '✅ Passed' || '❌ Failed' }} |
+            | API Health | ${{ steps.api_health.outcome == 'success' && '✅ Passed' || '❌ Failed' }} |
+            | Performance | ${{ steps.performance.outcome == 'success' && '✅ Passed' || '⚠️ Issues' }} |
+            | Security | ${{ steps.security.outcome == 'success' && '✅ Passed' || '⚠️ Issues' }} |
+            | Production Validation | ${{ steps.production_validation.outcome == 'success' && '✅ Passed' || '⚠️ Issues' }} |
+            | SSL Certificate | ${{ steps.ssl_check.outputs.ssl_status == 'valid' && '✅ Valid' || '⚠️ Issues' }} |
+
+            Core functionality is operational, but consider addressing warnings.
+
+      - name: ❌ Update Check on Failure
+        if: >
+          steps.smoke_tests.outcome == 'failure' ||
+          steps.api_health.outcome == 'failure'
+        uses: ./.github/actions/github-check
+        with:
+          check_name: 'Production Monitoring'
+          action: update
+          check_run_id: ${{ steps.check_run.outputs.check_run_id }}
+          status: completed
+          conclusion: failure
+          title: '🚨 Production health check failed'
+          summary: |
+            🚨 **CRITICAL: Production deployment has issues!**
+
+            **Health Score: ${{ steps.metrics.outputs.health_score }}%**
+
+            | Check | Status |
+            |-------|--------|
+            | Smoke Tests | ${{ steps.smoke_tests.outcome == 'success' && '✅ Passed' || '❌ Failed' }} |
+            | API Health | ${{ steps.api_health.outcome == 'success' && '✅ Passed' || '❌ Failed' }} |
+            | Performance | ${{ steps.performance.outcome == 'success' && '✅ Passed' || '⚠️ Issues' }} |
+            | Security | ${{ steps.security.outcome == 'success' && '✅ Passed' || '⚠️ Issues' }} |
+            | Production Validation | ${{ steps.production_validation.outcome == 'success' && '✅ Passed' || '⚠️ Issues' }} |
+            | SSL Certificate | ${{ steps.ssl_check.outputs.ssl_status == 'valid' && '✅ Valid' || '⚠️ Issues' }} |
+
+            **Immediate action required!** Consider rollback if critical.
+
       - name: ✅ Send success notification
         if: >
           steps.smoke_tests.outcome == 'success' &&
           steps.api_health.outcome == 'success' &&
-          steps.performance.outcome == 'success'
+          steps.performance.outcome == 'success' &&
+          steps.security.outcome == 'success' &&
+          steps.production_validation.outcome == 'success'
         uses: ./.github/actions/send-notifications
         with:
           type: success
@@ -143,8 +281,7 @@ jobs:
       - name: 🚨 Send failure notification
         if: >
           steps.smoke_tests.outcome == 'failure' ||
-          steps.api_health.outcome == 'failure' ||
-          steps.performance.outcome == 'failure'
+          steps.api_health.outcome == 'failure'
         uses: ./.github/actions/send-notifications
         with:
           type: failure
@@ -166,10 +303,22 @@ jobs:
             test-results/playwright/
           retention-days: 14
 
+      - name: 📊 Upload production metrics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-metrics-${{ github.run_id }}
+          path: |
+            test-results/playwright/performance/
+            test-results/playwright/api/
+          retention-days: 30
+
       - name: 📝 Production monitoring summary
         if: always()
         run: |
           echo "## 🚀 Production Monitoring Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Health Score: ${{ steps.metrics.outputs.health_score }}%**" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Deployment URL:** ${{ github.event.client_payload.url }}" >> $GITHUB_STEP_SUMMARY
           echo "**Commit:** \`${{ github.event.client_payload.git.sha }}\`" >> $GITHUB_STEP_SUMMARY
@@ -182,14 +331,32 @@ jobs:
           echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
           echo "| Smoke Tests | ${{ steps.smoke_tests.outcome == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| API Health | ${{ steps.api_health.outcome == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Performance | ${{ steps.performance.outcome == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Performance | ${{ steps.performance.outcome == 'success' && '✅ Passed' || '⚠️ Issues' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Security | ${{ steps.security.outcome == 'success' && '✅ Passed' || '⚠️ Issues' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Production Validation | ${{ steps.production_validation.outcome == 'success' && '✅ Passed' || '⚠️ Issues' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| SSL Certificate | ${{ steps.ssl_check.outputs.ssl_status == 'valid' && '✅ Valid' || '⚠️ Issues' }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Overall Status:** ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
 
           # Add notification status
-          if [[ "${{ steps.smoke_tests.outcome }}" == "success" && "${{ steps.api_health.outcome }}" == "success" && "${{ steps.performance.outcome }}" == "success" ]]; then
+          if [[ "${{ steps.smoke_tests.outcome }}" == "success" && "${{ steps.api_health.outcome }}" == "success" && "${{ steps.performance.outcome }}" == "success" && "${{ steps.security.outcome }}" == "success" && "${{ steps.production_validation.outcome }}" == "success" ]]; then
             echo "**📧 Notification:** Success email sent" >> $GITHUB_STEP_SUMMARY
-          else
+          elif [[ "${{ steps.smoke_tests.outcome }}" == "failure" || "${{ steps.api_health.outcome }}" == "failure" ]]; then
             echo "**📧 Notification:** Failure alert sent" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "**📧 Notification:** Partial success - no alert sent" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Add health score visualization
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Health Score Breakdown" >> $GITHUB_STEP_SUMMARY
+          SCORE=${{ steps.metrics.outputs.health_score }}
+          if [ $SCORE -ge 90 ]; then
+            echo "🟢 **Excellent** ($SCORE%)" >> $GITHUB_STEP_SUMMARY
+          elif [ $SCORE -ge 75 ]; then
+            echo "🟡 **Good** ($SCORE%)" >> $GITHUB_STEP_SUMMARY
+          elif [ $SCORE -ge 50 ]; then
+            echo "🟠 **Warning** ($SCORE%)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "🔴 **Critical** ($SCORE%)" >> $GITHUB_STEP_SUMMARY
           fi

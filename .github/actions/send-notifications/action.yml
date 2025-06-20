@@ -1,5 +1,5 @@
 name: 'Send Deployment Notification'
-description: 'Send email notifications for deployment status with templates'
+description: 'Send email notifications for deployment status with enhanced templates'
 
 inputs:
   type:
@@ -34,7 +34,7 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - name: Generate email content
+    - name: Generate enhanced email content
       shell: bash
       run: |
         # Parse health checks
@@ -43,78 +43,235 @@ runs:
         # Generate timestamp
         TIMESTAMP=$(date -Iseconds)
 
+        # Calculate health score
+        TOTAL_CHECKS=0
+        PASSED_CHECKS=0
+
+        if [ "$HEALTH_CHECKS" != "{}" ]; then
+          # Count total and passed checks
+          TOTAL_CHECKS=$(echo "$HEALTH_CHECKS" | jq 'length')
+          PASSED_CHECKS=$(echo "$HEALTH_CHECKS" | jq '[.[] | select(. == "success" or . == "valid")] | length')
+        fi
+
+        # Calculate health percentage
+        if [ $TOTAL_CHECKS -gt 0 ]; then
+          HEALTH_SCORE=$((PASSED_CHECKS * 100 / TOTAL_CHECKS))
+        else
+          HEALTH_SCORE=100
+        fi
+
         # Set email subject and body based on type
         if [ "${{ inputs.type }}" = "success" ]; then
-          SUBJECT="✅ Production Deployment Successful - ${{ inputs.branch }}"
+          SUBJECT="✅ Production Deployment Successful (${HEALTH_SCORE}%) - ${{ inputs.branch }}"
           
-          # Generate health check results for success
+          # Generate enhanced health check results for success
           HEALTH_RESULTS=""
           if [ "$HEALTH_CHECKS" != "{}" ]; then
-            HEALTH_RESULTS="<h3>✅ Health Check Results</h3><ul>"
-            echo "$HEALTH_CHECKS" | jq -r 'to_entries[] | "<li><strong>\(.key):</strong> ✅ Passed</li>"' | while read line; do
-              HEALTH_RESULTS="${HEALTH_RESULTS}${line}"
-            done
+            HEALTH_RESULTS="<h3>🎯 Health Check Results (Score: ${HEALTH_SCORE}%)</h3><ul>"
+            
+            # Smoke tests
+            SMOKE_STATUS=$(echo "$HEALTH_CHECKS" | jq -r '.smoke_tests // "unknown"')
+            if [ "$SMOKE_STATUS" = "success" ]; then
+              HEALTH_RESULTS="${HEALTH_RESULTS}<li><strong>🔥 Smoke Tests:</strong> ✅ Passed</li>"
+            else
+              HEALTH_RESULTS="${HEALTH_RESULTS}<li><strong>🔥 Smoke Tests:</strong> ❌ Failed</li>"
+            fi
+            
+            # API health
+            API_STATUS=$(echo "$HEALTH_CHECKS" | jq -r '.api_health // "unknown"')
+            if [ "$API_STATUS" = "success" ]; then
+              HEALTH_RESULTS="${HEALTH_RESULTS}<li><strong>🌐 API Health:</strong> ✅ Passed</li>"
+            else
+              HEALTH_RESULTS="${HEALTH_RESULTS}<li><strong>🌐 API Health:</strong> ❌ Failed</li>"
+            fi
+            
+            # Performance
+            PERF_STATUS=$(echo "$HEALTH_CHECKS" | jq -r '.performance // "unknown"')
+            if [ "$PERF_STATUS" = "success" ]; then
+              HEALTH_RESULTS="${HEALTH_RESULTS}<li><strong>⚡ Performance:</strong> ✅ Passed</li>"
+            else
+              HEALTH_RESULTS="${HEALTH_RESULTS}<li><strong>⚡ Performance:</strong> ⚠️ Issues Detected</li>"
+            fi
+            
+            # Security
+            SEC_STATUS=$(echo "$HEALTH_CHECKS" | jq -r '.security // "unknown"')
+            if [ "$SEC_STATUS" = "success" ]; then
+              HEALTH_RESULTS="${HEALTH_RESULTS}<li><strong>🛡️ Security:</strong> ✅ Passed</li>"
+            else
+              HEALTH_RESULTS="${HEALTH_RESULTS}<li><strong>🛡️ Security:</strong> ⚠️ Issues Detected</li>"
+            fi
+            
+            # Production validation
+            PROD_STATUS=$(echo "$HEALTH_CHECKS" | jq -r '.production_validation // "unknown"')
+            if [ "$PROD_STATUS" = "success" ]; then
+              HEALTH_RESULTS="${HEALTH_RESULTS}<li><strong>🚀 Production Validation:</strong> ✅ Passed</li>"
+            else
+              HEALTH_RESULTS="${HEALTH_RESULTS}<li><strong>🚀 Production Validation:</strong> ⚠️ Issues Detected</li>"
+            fi
+            
+            # SSL certificate
+            SSL_STATUS=$(echo "$HEALTH_CHECKS" | jq -r '.ssl_certificate // "unknown"')
+            if [ "$SSL_STATUS" = "valid" ]; then
+              HEALTH_RESULTS="${HEALTH_RESULTS}<li><strong>🔒 SSL Certificate:</strong> ✅ Valid</li>"
+            else
+              HEALTH_RESULTS="${HEALTH_RESULTS}<li><strong>🔒 SSL Certificate:</strong> ⚠️ Issues Detected</li>"
+            fi
+            
             HEALTH_RESULTS="${HEALTH_RESULTS}</ul>"
+          fi
+          
+          # Health score badge
+          if [ $HEALTH_SCORE -ge 90 ]; then
+            HEALTH_BADGE="🟢 Excellent"
+          elif [ $HEALTH_SCORE -ge 75 ]; then
+            HEALTH_BADGE="🟡 Good"
+          elif [ $HEALTH_SCORE -ge 50 ]; then
+            HEALTH_BADGE="🟠 Warning"
+          else
+            HEALTH_BADGE="🔴 Critical"
           fi
           
           BODY="<h2>🚀 Production Deployment Successful!</h2>
           
-          <p>Your latest code changes have been successfully deployed and all health checks passed.</p>
+          <div style=\"background-color: #d4edda; border: 1px solid #c3e6cb; padding: 15px; border-radius: 5px; margin-bottom: 20px;\">
+            <h3 style=\"margin-top: 0; color: #155724;\">📊 Health Score: ${HEALTH_SCORE}% (${HEALTH_BADGE})</h3>
+            <p style=\"margin-bottom: 0; color: #155724;\">Your deployment has passed comprehensive validation and is performing excellently!</p>
+          </div>
           
-          <h3>📊 Deployment Details</h3>
+          <h3>📋 Deployment Details</h3>
           <ul>
-            <li><strong>URL:</strong> <a href=\"${{ inputs.deployment_url }}\">${{ inputs.deployment_url }}</a></li>
-            <li><strong>Commit:</strong> <code>${{ inputs.commit_sha }}</code></li>
-            <li><strong>Branch:</strong> ${{ inputs.branch }}</li>
-            <li><strong>Author:</strong> ${{ inputs.author }}</li>
-            <li><strong>Time:</strong> ${TIMESTAMP}</li>
+            <li><strong>🌐 URL:</strong> <a href=\"${{ inputs.deployment_url }}\">${{ inputs.deployment_url }}</a></li>
+            <li><strong>📝 Commit:</strong> <code>${{ inputs.commit_sha }}</code></li>
+            <li><strong>🌿 Branch:</strong> ${{ inputs.branch }}</li>
+            <li><strong>👤 Author:</strong> ${{ inputs.author }}</li>
+            <li><strong>⏰ Time:</strong> ${TIMESTAMP}</li>
           </ul>
           
           ${HEALTH_RESULTS}
           
-          <p>🎉 Everything is running smoothly! Your users can enjoy the latest features.</p>
+          <h3>🎉 What's Working</h3>
+          <ul>
+            <li>✅ All critical functionality is operational</li>
+            <li>✅ API endpoints are responding correctly</li>
+            <li>✅ Performance metrics are within acceptable ranges</li>
+            <li>✅ Security validations passed</li>
+            <li>✅ Production environment is stable</li>
+          </ul>
+          
+          <p style=\"background-color: #d1ecf1; border: 1px solid #bee5eb; padding: 10px; border-radius: 5px;\">
+            <strong>🎉 Success!</strong> Your users can now enjoy the latest features with confidence.
+          </p>
           
           <hr>
-          <p><small>This notification was sent by VirtualStitch CI/CD Pipeline</small></p>"
+          <p><small>This notification was sent by VirtualStitch Enhanced CI/CD Pipeline</small></p>"
           
         else
-          SUBJECT="🚨 URGENT - Production Issues Detected - ${{ inputs.branch }}"
+          SUBJECT="🚨 URGENT - Production Issues Detected (${HEALTH_SCORE}%) - ${{ inputs.branch }}"
           
-          # Generate health check results for failure
+          # Generate enhanced health check results for failure
           HEALTH_RESULTS=""
           if [ "$HEALTH_CHECKS" != "{}" ]; then
-            HEALTH_RESULTS="<h3>❌ Failed Health Checks</h3><ul>"
-            echo "$HEALTH_CHECKS" | jq -r 'to_entries[] | if .value == "success" then "<li><strong>\(.key):</strong> ✅ Passed</li>" else "<li><strong>\(.key):</strong> ❌ Failed</li>" end' | while read line; do
-              HEALTH_RESULTS="${HEALTH_RESULTS}${line}"
-            done
+            HEALTH_RESULTS="<h3>❌ Failed Health Checks (Score: ${HEALTH_SCORE}%)</h3><ul>"
+            
+            # Detailed status for each check
+            SMOKE_STATUS=$(echo "$HEALTH_CHECKS" | jq -r '.smoke_tests // "unknown"')
+            if [ "$SMOKE_STATUS" = "success" ]; then
+              HEALTH_RESULTS="${HEALTH_RESULTS}<li><strong>🔥 Smoke Tests:</strong> ✅ Passed</li>"
+            else
+              HEALTH_RESULTS="${HEALTH_RESULTS}<li><strong>🔥 Smoke Tests:</strong> ❌ CRITICAL FAILURE</li>"
+            fi
+            
+            API_STATUS=$(echo "$HEALTH_CHECKS" | jq -r '.api_health // "unknown"')
+            if [ "$API_STATUS" = "success" ]; then
+              HEALTH_RESULTS="${HEALTH_RESULTS}<li><strong>🌐 API Health:</strong> ✅ Passed</li>"
+            else
+              HEALTH_RESULTS="${HEALTH_RESULTS}<li><strong>🌐 API Health:</strong> ❌ CRITICAL FAILURE</li>"
+            fi
+            
+            PERF_STATUS=$(echo "$HEALTH_CHECKS" | jq -r '.performance // "unknown"')
+            if [ "$PERF_STATUS" = "success" ]; then
+              HEALTH_RESULTS="${HEALTH_RESULTS}<li><strong>⚡ Performance:</strong> ✅ Passed</li>"
+            else
+              HEALTH_RESULTS="${HEALTH_RESULTS}<li><strong>⚡ Performance:</strong> ⚠️ Performance Issues</li>"
+            fi
+            
+            SEC_STATUS=$(echo "$HEALTH_CHECKS" | jq -r '.security // "unknown"')
+            if [ "$SEC_STATUS" = "success" ]; then
+              HEALTH_RESULTS="${HEALTH_RESULTS}<li><strong>🛡️ Security:</strong> ✅ Passed</li>"
+            else
+              HEALTH_RESULTS="${HEALTH_RESULTS}<li><strong>🛡️ Security:</strong> ⚠️ Security Issues</li>"
+            fi
+            
+            PROD_STATUS=$(echo "$HEALTH_CHECKS" | jq -r '.production_validation // "unknown"')
+            if [ "$PROD_STATUS" = "success" ]; then
+              HEALTH_RESULTS="${HEALTH_RESULTS}<li><strong>🚀 Production Validation:</strong> ✅ Passed</li>"
+            else
+              HEALTH_RESULTS="${HEALTH_RESULTS}<li><strong>🚀 Production Validation:</strong> ⚠️ Validation Issues</li>"
+            fi
+            
+            SSL_STATUS=$(echo "$HEALTH_CHECKS" | jq -r '.ssl_certificate // "unknown"')
+            if [ "$SSL_STATUS" = "valid" ]; then
+              HEALTH_RESULTS="${HEALTH_RESULTS}<li><strong>🔒 SSL Certificate:</strong> ✅ Valid</li>"
+            else
+              HEALTH_RESULTS="${HEALTH_RESULTS}<li><strong>🔒 SSL Certificate:</strong> ⚠️ Certificate Issues</li>"
+            fi
+            
             HEALTH_RESULTS="${HEALTH_RESULTS}</ul>"
+          fi
+          
+          # Urgency level based on health score
+          if [ $HEALTH_SCORE -lt 25 ]; then
+            URGENCY="🚨 CRITICAL"
+            URGENCY_COLOR="#dc3545"
+          elif [ $HEALTH_SCORE -lt 50 ]; then
+            URGENCY="⚠️ HIGH"
+            URGENCY_COLOR="#fd7e14"
+          else
+            URGENCY="📊 MODERATE"
+            URGENCY_COLOR="#ffc107"
           fi
           
           BODY="<h2>⚠️ Production Deployment Has Issues!</h2>
           
-          <p><strong style=\"color: red;\">URGENT:</strong> Production deployment has issues that need immediate attention!</p>
+          <div style=\"background-color: #f8d7da; border: 1px solid #f5c6cb; padding: 15px; border-radius: 5px; margin-bottom: 20px;\">
+            <h3 style=\"margin-top: 0; color: #721c24;\">🚨 Health Score: ${HEALTH_SCORE}% - ${URGENCY}</h3>
+            <p style=\"margin-bottom: 0; color: #721c24; font-weight: bold;\">Immediate attention required! Production deployment has critical issues.</p>
+          </div>
           
-          <h3>📊 Deployment Details</h3>
+          <h3>📋 Deployment Details</h3>
           <ul>
-            <li><strong>URL:</strong> <a href=\"${{ inputs.deployment_url }}\">${{ inputs.deployment_url }}</a></li>
-            <li><strong>Commit:</strong> <code>${{ inputs.commit_sha }}</code></li>
-            <li><strong>Branch:</strong> ${{ inputs.branch }}</li>
-            <li><strong>Author:</strong> ${{ inputs.author }}</li>
-            <li><strong>Time:</strong> ${TIMESTAMP}</li>
+            <li><strong>🌐 URL:</strong> <a href=\"${{ inputs.deployment_url }}\">${{ inputs.deployment_url }}</a></li>
+            <li><strong>📝 Commit:</strong> <code>${{ inputs.commit_sha }}</code></li>
+            <li><strong>🌿 Branch:</strong> ${{ inputs.branch }}</li>
+            <li><strong>👤 Author:</strong> ${{ inputs.author }}</li>
+            <li><strong>⏰ Time:</strong> ${TIMESTAMP}</li>
           </ul>
           
           ${HEALTH_RESULTS}
           
-          <h3>🔗 Investigation Links</h3>
+          <h3>🚨 Critical Actions Required</h3>
+          <ol>
+            <li><strong>Immediate Assessment:</strong> Review failed health checks above</li>
+            <li><strong>Check Logs:</strong> <a href=\"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\">View detailed logs and test results</a></li>
+            <li><strong>User Impact:</strong> Assess if users are experiencing issues</li>
+            <li><strong>Rollback Decision:</strong> Consider reverting to previous stable version if critical</li>
+            <li><strong>Team Notification:</strong> Alert on-call team and stakeholders</li>
+          </ol>
+          
+          <h3>🔗 Investigation Resources</h3>
           <ul>
-            <li><a href=\"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\">View detailed logs</a></li>
-            <li><a href=\"${{ github.server_url }}/${{ github.repository }}/commit/${{ inputs.commit_sha }}\">View commit changes</a></li>
+            <li><a href=\"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\">📊 Detailed workflow logs and test results</a></li>
+            <li><a href=\"${{ github.server_url }}/${{ github.repository }}/commit/${{ inputs.commit_sha }}\">📝 View commit changes and diff</a></li>
+            <li><a href=\"${{ inputs.deployment_url }}\">🌐 Live deployment (check manually)</a></li>
+            <li><a href=\"${{ github.server_url }}/${{ github.repository }}/deployments\">🚀 Deployment history</a></li>
           </ul>
           
-          <p><strong>Action Required:</strong> Please investigate immediately and consider rolling back if necessary.</p>
+          <div style=\"background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; border-radius: 5px;\">
+            <strong>⏰ Time-sensitive:</strong> Please investigate immediately. Consider rolling back if issues impact user experience.
+          </div>
           
           <hr>
-          <p><small>This alert was sent by VirtualStitch CI/CD Pipeline</small></p>"
+          <p><small>This alert was sent by VirtualStitch Enhanced CI/CD Pipeline</small></p>"
         fi
 
         # Save to environment for next step
@@ -123,7 +280,7 @@ runs:
         echo "$BODY" >> $GITHUB_ENV
         echo "EOF" >> $GITHUB_ENV
 
-    - name: Send email notification
+    - name: Send enhanced email notification
       uses: dawidd6/action-send-mail@v3
       with:
         server_address: smtp.gmail.com
@@ -132,5 +289,6 @@ runs:
         password: ${{ inputs.smtp_password }}
         subject: ${{ env.EMAIL_SUBJECT }}
         to: ${{ inputs.recipient_email }}
-        from: 'VirtualStitch CI <${{ inputs.smtp_username }}>'
+        from: 'VirtualStitch Enhanced CI <${{ inputs.smtp_username }}>'
         html_body: ${{ env.EMAIL_BODY }}
+        priority: ${{ inputs.type == 'failure' && 'high' || 'normal' }}

@@ -1,5 +1,9 @@
 import { test, expect } from '@playwright/test';
-import { TestUtils, TEST_FILES, VALID_TEST_IMAGE_BASE64 } from '../utils/test-helpers';
+import {
+  TestUtils,
+  TEST_FILES,
+  VALID_TEST_IMAGE_BASE64,
+} from '../utils/test-helpers';
 
 test.describe('File Picker', () => {
   let utils: TestUtils;
@@ -7,7 +11,7 @@ test.describe('File Picker', () => {
   test.beforeEach(async ({ page }) => {
     utils = new TestUtils(page);
     await utils.nav.goToCustomizer();
-    await utils.nav.openEditorTab('file-picker');
+    await utils.nav.openEditorTab('filePicker');
   });
 
   test.describe('Initial State', () => {
@@ -23,72 +27,97 @@ test.describe('File Picker', () => {
 
   test.describe('File Upload', () => {
     test('should display filename after upload', async ({ page }) => {
-      await page.getByTestId('file-picker-input').setInputFiles(TEST_FILES.emblem);
+      await page
+        .getByTestId('file-picker-input')
+        .setInputFiles(TEST_FILES.emblem);
       await expect(page.getByText('emblem.png')).toBeVisible();
     });
 
-    test('should replace previous filename with new upload', async ({ page }) => {
-      await page.getByTestId('file-picker-input').setInputFiles(TEST_FILES.emblem);
+    test('should replace previous filename with new upload', async ({
+      page,
+    }) => {
+      await page
+        .getByTestId('file-picker-input')
+        .setInputFiles(TEST_FILES.emblem);
       await expect(page.getByText('emblem.png')).toBeVisible();
 
-      await page.getByTestId('file-picker-input').setInputFiles(TEST_FILES.emblem2);
+      await page
+        .getByTestId('file-picker-input')
+        .setInputFiles(TEST_FILES.emblem2);
       await expect(page.getByText('emblem2.png')).toBeVisible();
       await expect(page.getByText('emblem.png')).toHaveCount(0);
     });
 
-    test('should accept non-image files but still show filename', async ({ page }) => {
-      await page.getByTestId('file-picker-input').setInputFiles(TEST_FILES.invalidFile);
+    test('should accept non-image files but still show filename', async ({
+      page,
+    }) => {
+      await page
+        .getByTestId('file-picker-input')
+        .setInputFiles(TEST_FILES.invalidFile);
       await expect(page.getByText('sample.txt')).toBeVisible();
     });
   });
 
   test.describe('Texture Application', () => {
-    test('should apply uploaded file as logo texture', async ({ page }) => {
+    test('should apply uploaded file as logo texture', async () => {
       await utils.texture.verifyTextureHidden('logo');
-      
       await utils.file.uploadFile(TEST_FILES.emblem, 'logo');
-      
       await utils.texture.verifyTextureVisible('logo');
     });
 
-    test('should apply uploaded file as full texture', async ({ page }) => {
+    test('should apply uploaded file as full texture', async ({}) => {
       await utils.texture.verifyTextureHidden('full');
-      
+
       await utils.file.uploadFile(TEST_FILES.emblem, 'full');
-      
+
       await utils.texture.verifyTextureVisible('full');
     });
   });
 
   test.describe('State Persistence', () => {
-    test('should preserve filename after applying as logo', async ({ page }) => {
-      await page.getByTestId('file-picker-input').setInputFiles(TEST_FILES.emblem);
+    test('should preserve filename after applying as logo', async ({
+      page,
+    }) => {
+      await page
+        .getByTestId('file-picker-input')
+        .setInputFiles(TEST_FILES.emblem);
       await page.getByRole('button', { name: 'Logo' }).click();
-      
+
       // Reopen file picker
-      await utils.nav.openEditorTab('file-picker');
+      await utils.nav.openEditorTab('filePicker');
       await expect(page.getByText('emblem.png')).toBeVisible();
     });
 
-    test('should preserve filename after applying as full texture', async ({ page }) => {
-      await page.getByTestId('file-picker-input').setInputFiles(TEST_FILES.emblem);
+    test('should preserve filename after applying as full texture', async ({
+      page,
+    }) => {
+      await page
+        .getByTestId('file-picker-input')
+        .setInputFiles(TEST_FILES.emblem);
       await page.getByRole('button', { name: 'Full' }).click();
-      
+
       // Reopen file picker
-      await utils.nav.openEditorTab('file-picker');
+      await utils.nav.openEditorTab('filePicker');
       await expect(page.getByText('emblem.png')).toBeVisible();
     });
   });
 
   test.describe('Edge Cases', () => {
-    test('should handle files with suspicious names safely', async ({ page }) => {
+    test('should handle files with suspicious names safely', async ({
+      page,
+    }) => {
       const buffer = Buffer.from(VALID_TEST_IMAGE_BASE64, 'base64');
-      
-      await utils.file.uploadWithBuffer('script.js.png', 'image/png', buffer, 'logo');
-      
+
+      await utils.file.uploadWithBuffer(
+        'script.js.png',
+        'image/png',
+        buffer,
+        'logo'
+      );
+
       // App should handle safely without executing scripts
       await expect(page.locator('body')).toBeVisible();
-      
+
       // Verify texture applied
       await utils.wait.waitForTextureApplication();
       const logoTextureCount = await page.getByTestId('logo-texture').count();
@@ -101,11 +130,19 @@ test.describe('File Picker', () => {
     test('should handle oversized files gracefully', async ({ page }) => {
       const largeContent = 'x'.repeat(1024 * 1024); // 1MB
       const buffer = Buffer.from(largeContent);
-      
-      await utils.file.uploadWithBuffer('large.png', 'image/png', buffer, 'logo');
-      
+      await expect(page.locator('canvas')).toBeVisible();
+
+      await utils.file.uploadWithBuffer(
+        'large.png',
+        'image/png',
+        buffer,
+        'logo'
+      );
+
+      await page.waitForTimeout(5000); // Allow time for processing
+
       // Should not crash
-      await expect(page.locator('body')).toBeVisible();
+      await expect(page.locator('canvas')).toBeVisible();
     });
   });
 });

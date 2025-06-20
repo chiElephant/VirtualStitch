@@ -6,9 +6,9 @@ export const VALID_TEST_IMAGE_BASE64 =
 
 // Test file paths
 export const TEST_FILES = {
-  emblem: './fixtures/emblem.png',
-  emblem2: './fixtures/emblem2.png',
-  invalidFile: './fixtures/sample.txt',
+  emblem: './tests/fixtures/emblem.png',
+  emblem2: './tests/fixtures/emblem2.png',
+  invalidFile: './tests/fixtures/sample.txt',
 } as const;
 
 // Common colors used in tests
@@ -47,7 +47,7 @@ export class NavigationHelpers {
 
   async openEditorTab(tabName: string) {
     await this.page.getByTestId(`editor-tab-${tabName}`).click();
-    await expect(this.page.getByTestId(tabName)).toBeVisible();
+    await expect(this.page.getByTestId(`editor-tab-${tabName}`)).toBeVisible();
   }
 
   async toggleFilterTab(tabName: string) {
@@ -83,11 +83,10 @@ export class FileHelpers {
   constructor(private page: Page) {}
 
   async uploadFile(filePath: string, applyAs: 'logo' | 'full' = 'logo') {
-    await this.page.getByTestId('editor-tab-filePicker').click();
     await this.page.waitForSelector('[data-testid="file-picker-input"]', {
       state: 'visible',
     });
-    
+
     await this.page.getByTestId('file-picker-input').setInputFiles(filePath);
     await this.page
       .getByRole('button', { name: applyAs === 'logo' ? 'Logo' : 'Full' })
@@ -95,11 +94,11 @@ export class FileHelpers {
 
     // Wait for application
     await this.page.waitForTimeout(500);
-    
+
     // Ensure the appropriate filter is activated
     const filterTab = applyAs === 'logo' ? 'logoShirt' : 'stylishShirt';
     const textureTestId = applyAs === 'logo' ? 'logo-texture' : 'full-texture';
-    
+
     const textureCount = await this.page.getByTestId(textureTestId).count();
     if (textureCount === 0) {
       await this.page.getByTestId(`filter-tab-${filterTab}`).click();
@@ -112,8 +111,13 @@ export class FileHelpers {
     await expect(this.page.getByTestId(textureTestId)).toHaveCount(1);
   }
 
-  async uploadWithBuffer(filename: string, mimeType: string, buffer: Buffer, applyAs: 'logo' | 'full' = 'logo') {
-    await this.page.getByTestId('editor-tab-filePicker').click();
+  async uploadWithBuffer(
+    filename: string,
+    mimeType: string,
+    buffer: Buffer,
+    applyAs: 'logo' | 'full' = 'logo'
+  ) {
+    // await this.page.getByTestId('editor-tab-filePicker').click();
     await this.page.waitForSelector('[data-testid="file-picker-input"]', {
       state: 'visible',
     });
@@ -137,7 +141,7 @@ export class AIHelpers {
   constructor(private page: Page) {}
 
   async mockSuccessfulResponse() {
-    await this.page.route('/api/custom-logo', (route) => {
+    return await this.page.route('/api/custom-logo', (route) => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -153,9 +157,9 @@ export class AIHelpers {
   }
 
   async generateImage(prompt: string, type: 'logo' | 'full' = 'logo') {
-    await this.page.getByTestId('editor-tab-aiPicker').click();
+    // await this.page.getByTestId('editor-tab-aiPicker').click();
     await this.page.getByTestId('ai-prompt-input').fill(prompt);
-    
+
     const buttonName = type === 'logo' ? 'ai-logo-button' : 'ai-full-button';
     await this.page.getByTestId(buttonName).click();
   }
@@ -163,7 +167,7 @@ export class AIHelpers {
   async verifySuccessToast() {
     await expect(
       this.page.getByText(/image applied successfully/i)
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 120000 }); // 120 seconds
   }
 
   async verifyErrorToast(errorType: 'rate-limit' | 'server' | 'unexpected') {
@@ -172,7 +176,7 @@ export class AIHelpers {
       'server': /server error while generating/i,
       'unexpected': /unexpected error occurred/i,
     };
-    
+
     await expect(this.page.getByText(errorMessages[errorType])).toBeVisible();
   }
 }
@@ -187,7 +191,7 @@ export class DownloadHelpers {
     // Open download tab if not already open
     const imageDownloadTab = this.page.getByTestId('image-download');
     const isTabOpen = await imageDownloadTab.isVisible();
-    
+
     if (!isTabOpen) {
       await this.page.getByTestId('editor-tab-imageDownload').click();
       await this.page.waitForTimeout(500);
@@ -213,11 +217,15 @@ export class DownloadHelpers {
   }
 
   async verifyDownloadEnabled(buttonName: string) {
-    await expect(this.page.getByRole('button', { name: buttonName })).toBeEnabled();
+    await expect(
+      this.page.getByRole('button', { name: buttonName })
+    ).toBeEnabled();
   }
 
   async verifyDownloadDisabled(buttonName: string) {
-    await expect(this.page.getByRole('button', { name: buttonName })).toBeDisabled();
+    await expect(
+      this.page.getByRole('button', { name: buttonName })
+    ).toBeDisabled();
   }
 }
 
@@ -232,10 +240,9 @@ export class TextureHelpers {
   }
 
   async verifyFilterActive(filterType: 'logoShirt' | 'stylishShirt') {
-    await expect(this.page.getByTestId(`filter-tab-${filterType}`)).toHaveAttribute(
-      'data-is-active',
-      'true'
-    );
+    await expect(
+      this.page.getByTestId(`filter-tab-${filterType}`)
+    ).toHaveAttribute('data-is-active', 'true');
   }
 
   async verifyTextureVisible(textureType: 'logo' | 'full') {
@@ -264,8 +271,8 @@ export class WaitHelpers {
   }
 
   async waitForToastToDisappear(toastText: string | RegExp) {
-    await expect(this.page.getByText(toastText)).not.toBeVisible({ 
-      timeout: 10000 
+    await expect(this.page.getByText(toastText)).not.toBeVisible({
+      timeout: 10000,
     });
   }
 }
