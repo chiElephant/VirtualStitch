@@ -44,7 +44,9 @@ const CustomButton = ({
       onClick={handleClick}
       disabled={disabled}
       aria-label={title}
-      data-testid={dataTestId}>
+      aria-disabled={disabled}
+      data-testid={dataTestId}
+      type="button">
       {title}
     </button>
   );

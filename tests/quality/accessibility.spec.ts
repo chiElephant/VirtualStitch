@@ -10,7 +10,9 @@ test.describe('Accessibility Tests @accessibility', () => {
   });
 
   test.describe('WCAG Compliance', () => {
-    test('should not have accessibility violations on homepage', async ({ page }) => {
+    test('should not have accessibility violations on homepage', async ({
+      page,
+    }) => {
       await page.goto('/');
       await page.waitForLoadState('networkidle');
 
@@ -21,7 +23,9 @@ test.describe('Accessibility Tests @accessibility', () => {
       expect(accessibilityScanResults.violations).toEqual([]);
     });
 
-    test('should not have accessibility violations in customizer', async ({ page }) => {
+    test('should not have accessibility violations in customizer', async ({
+      page,
+    }) => {
       await page.goto('/');
       await page.click('button[aria-label="Customize It"]');
       await utils.wait.waitForAnimations();
@@ -36,7 +40,9 @@ test.describe('Accessibility Tests @accessibility', () => {
       expect(accessibilityScanResults.violations).toEqual([]);
     });
 
-    test('should not have accessibility violations in individual components', async ({ page }) => {
+    test('should not have accessibility violations in individual components', async ({
+      page,
+    }) => {
       await utils.nav.goToCustomizer();
 
       const components = [
@@ -64,7 +70,7 @@ test.describe('Accessibility Tests @accessibility', () => {
   test.describe('Keyboard Navigation', () => {
     test('should support keyboard navigation on homepage', async ({ page }) => {
       await page.goto('/');
-      
+
       // Tab to first focusable element
       await page.keyboard.press('Tab');
       const firstFocusedElement = await page.locator(':focus').textContent();
@@ -73,15 +79,17 @@ test.describe('Accessibility Tests @accessibility', () => {
       // Verify element is visible and interactive
       const focusedElement = page.locator(':focus');
       await expect(focusedElement).toBeVisible();
-      
+
       // Test Enter key activation
       await page.keyboard.press('Enter');
-      
+
       // Should navigate to customizer
       await expect(page.getByTestId('editor-tabs-container')).toBeVisible();
     });
 
-    test('should support keyboard navigation in customizer', async ({ page }) => {
+    test('should support keyboard navigation in customizer', async ({
+      page,
+    }) => {
       await utils.nav.goToCustomizer();
 
       // Test Tab navigation through editor tabs
@@ -97,42 +105,53 @@ test.describe('Accessibility Tests @accessibility', () => {
       }
     });
 
-    test('should support keyboard navigation in color picker', async ({ page }) => {
+    test('should support keyboard navigation in color picker', async ({
+      page,
+    }) => {
       await utils.nav.goToCustomizer();
       await utils.color.openColorPicker();
 
       // Tab into color picker
       await page.keyboard.press('Tab');
       await page.keyboard.press('Tab');
-      
+
       // Should be able to navigate within color picker
       const focusedInColorPicker = await page.evaluate(() => {
         const focused = document.activeElement;
-        const colorPicker = document.querySelector('[data-testid="color-picker"]');
+        const colorPicker = document.querySelector(
+          '[data-testid="color-picker"]'
+        );
         return colorPicker?.contains(focused) || false;
       });
 
       // Focus should be within color picker area or its controls
-      expect(focusedInColorPicker || await page.locator(':focus').isVisible()).toBeTruthy();
+      expect(
+        focusedInColorPicker || (await page.locator(':focus').isVisible())
+      ).toBeTruthy();
     });
 
-    test('should support keyboard navigation for file upload', async ({ page }) => {
+    test('should support keyboard navigation for file upload', async ({
+      page,
+    }) => {
       await utils.nav.goToCustomizer();
-      await utils.nav.openEditorTab('file-picker');
+      await utils.nav.openEditorTab('filePicker');
 
       // Tab to file input
       await page.keyboard.press('Tab');
       await page.keyboard.press('Tab');
-      
+
       // File input should be focusable
-      const fileInput = page.getByTestId('file-picker-input');
       const isFileInputFocused = await page.evaluate(() => {
-        const fileInput = document.querySelector('[data-testid="file-picker-input"]');
+        const fileInput = document.querySelector(
+          '[data-testid="file-picker-input"]'
+        );
         return document.activeElement === fileInput;
       });
 
       // Either file input is focused or focus is on related control
-      expect(isFileInputFocused || await page.locator(':focus').isVisible()).toBeTruthy();
+      expect(
+        isFileInputFocused || (await page.locator(':focus').isVisible())
+      ).toBeTruthy();
     });
 
     test('should support keyboard activation of buttons', async ({ page }) => {
@@ -145,9 +164,11 @@ test.describe('Accessibility Tests @accessibility', () => {
 
       // Activate with Enter
       await page.keyboard.press('Enter');
-      
+
       // Should navigate to home
-      await expect(page.getByRole('heading', { name: "LET'S DO IT." })).toBeVisible();
+      await expect(
+        page.getByRole('heading', { name: "LET'S DO IT." })
+      ).toBeVisible();
     });
   });
 
@@ -155,8 +176,13 @@ test.describe('Accessibility Tests @accessibility', () => {
     test('should have proper aria labels on main buttons', async ({ page }) => {
       await page.goto('/');
 
-      const customizeButton = page.getByRole('button', { name: 'Customize It' });
-      await expect(customizeButton).toHaveAttribute('aria-label', 'Customize It');
+      const customizeButton = page.getByRole('button', {
+        name: 'Customize It',
+      });
+      await expect(customizeButton).toHaveAttribute(
+        'aria-label',
+        'Customize It'
+      );
 
       await customizeButton.click();
       await utils.wait.waitForAnimations();
@@ -178,7 +204,7 @@ test.describe('Accessibility Tests @accessibility', () => {
       for (const tab of editorTabs) {
         const tabElement = page.getByTestId(tab.testId);
         await expect(tabElement).toBeVisible();
-        
+
         const img = tabElement.getByRole('img', { name: tab.imgName });
         await expect(img).toBeVisible();
       }
@@ -188,39 +214,42 @@ test.describe('Accessibility Tests @accessibility', () => {
       await utils.nav.goToCustomizer();
 
       // Test AI picker form
-      await utils.nav.openEditorTab('ai-picker');
+      await utils.nav.openEditorTab('aiPicker');
       const promptInput = page.getByTestId('ai-prompt-input');
       await expect(promptInput).toHaveAttribute('placeholder', 'Ask AI...');
 
       // Test filename input
-      await utils.nav.openEditorTab('image-download');
+      await utils.nav.openEditorTab('imageDownload');
       const filenameInput = page.getByPlaceholder('e.g., my-shirt');
       await expect(filenameInput).toBeVisible();
-      
-      // Input should have associated label
-      const label = page.getByText('Filename');
+
+      // Input should have associated label (be specific about the label element)
+      const label = page.locator('label[for="image-download-input"]');
       await expect(label).toBeVisible();
+      await expect(label).toHaveText('Filename');
     });
 
     test('should provide meaningful button text', async ({ page }) => {
       await utils.nav.goToCustomizer();
-      await utils.nav.openEditorTab('file-picker');
+      await utils.nav.openEditorTab('filePicker');
 
       // File picker buttons should have clear text
       await expect(page.getByRole('button', { name: 'Logo' })).toBeVisible();
-      await expect(page.getByRole('button', { name: 'Full' })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Full Pattern' })).toBeVisible();
 
       // AI picker buttons
-      await utils.nav.openEditorTab('ai-picker');
+      await utils.nav.openEditorTab('aiPicker');
       await expect(page.getByTestId('ai-logo-button')).toBeVisible();
       await expect(page.getByTestId('ai-full-button')).toBeVisible();
     });
   });
 
   test.describe('Color Contrast and Visual Accessibility', () => {
-    test('should maintain accessible color contrast ratios', async ({ page }) => {
+    test('should maintain accessible color contrast ratios', async ({
+      page,
+    }) => {
       await page.goto('/');
-      
+
       // Test default button contrast
       const customizeButton = page.locator('button[aria-label="Customize It"]');
       await expect(customizeButton).toBeVisible();
@@ -242,11 +271,15 @@ test.describe('Accessibility Tests @accessibility', () => {
       await utils.color.openColorPicker();
 
       // Test different color combinations
-      const colorsToTest = [TEST_COLORS.dark, TEST_COLORS.lightBlue, TEST_COLORS.yellow];
+      const colorsToTest = [
+        TEST_COLORS.dark,
+        TEST_COLORS.lightBlue,
+        TEST_COLORS.yellow,
+      ];
 
       for (const color of colorsToTest) {
         await utils.color.selectColor(color);
-        
+
         const backButton = page.getByRole('button', { name: 'Go Back' });
         const buttonStyles = await backButton.evaluate((el) => {
           const styles = window.getComputedStyle(el);
@@ -275,7 +308,7 @@ test.describe('Accessibility Tests @accessibility', () => {
 
       for (const element of focusableElements) {
         await element.focus();
-        
+
         // Element should be clearly focused (visible focus ring or style change)
         const focusStyles = await element.evaluate((el) => {
           const styles = window.getComputedStyle(el);
@@ -287,11 +320,11 @@ test.describe('Accessibility Tests @accessibility', () => {
         });
 
         // Should have some form of focus indication
-        const hasFocusIndicator = 
+        const hasFocusIndicator =
           focusStyles.outline !== 'none' ||
           focusStyles.outlineWidth !== '0px' ||
           focusStyles.boxShadow !== 'none';
-        
+
         expect(hasFocusIndicator).toBeTruthy();
       }
     });
@@ -301,25 +334,29 @@ test.describe('Accessibility Tests @accessibility', () => {
     test('should respect reduced motion preferences', async ({ page }) => {
       // Set reduced motion preference
       await page.emulateMedia({ reducedMotion: 'reduce' });
-      
+
       await page.goto('/');
       await page.getByRole('button', { name: 'Customize It' }).click();
 
       // Page should still function with reduced motion
       await expect(page.getByTestId('editor-tabs-container')).toBeVisible();
-      
+
       // Navigation should work without motion
       await page.getByRole('button', { name: 'Go Back' }).click();
-      await expect(page.getByRole('heading', { name: "LET'S DO IT." })).toBeVisible();
+      await expect(
+        page.getByRole('heading', { name: "LET'S DO IT." })
+      ).toBeVisible();
     });
 
-    test('should provide alternatives for motion-based interactions', async ({ page }) => {
+    test('should provide alternatives for motion-based interactions', async ({
+      page,
+    }) => {
       await utils.nav.goToCustomizer();
-      
+
       // Canvas should be interactive even if motion is reduced
       const canvas = page.locator('canvas');
       await expect(canvas).toBeVisible();
-      
+
       // Color changes should work without animation
       await utils.color.openColorPicker();
       await utils.color.selectColor(TEST_COLORS.green);
@@ -330,35 +367,41 @@ test.describe('Accessibility Tests @accessibility', () => {
   test.describe('Error Accessibility', () => {
     test('should provide accessible error messages', async ({ page }) => {
       await utils.nav.goToCustomizer();
-      await utils.nav.openEditorTab('ai-picker');
+      await utils.nav.openEditorTab('aiPicker');
 
       // Trigger error (empty prompt)
       await page.getByTestId('ai-logo-button').click();
-      
+
       // Error message should be accessible
       const errorMessage = page.getByText(/please enter a prompt/i);
       await expect(errorMessage).toBeVisible();
-      
+
       // Message should be announced to screen readers
       const messageRole = await errorMessage.getAttribute('role');
       const ariaLive = await errorMessage.getAttribute('aria-live');
-      
+
       // Should have appropriate ARIA attributes or be in an alerting context
-      expect(messageRole === 'alert' || ariaLive === 'polite' || ariaLive === 'assertive').toBeTruthy();
+      expect(
+        messageRole === 'alert' ||
+          ariaLive === 'polite' ||
+          ariaLive === 'assertive'
+      ).toBeTruthy();
     });
 
     test('should handle form validation accessibly', async ({ page }) => {
       await utils.nav.goToCustomizer();
-      await utils.nav.openEditorTab('image-download');
+      await utils.nav.openEditorTab('imageDownload');
 
       // Buttons should be properly disabled when form is invalid
-      const downloadButton = page.getByRole('button', { name: 'Download Logo' });
+      const downloadButton = page.getByRole('button', {
+        name: 'Download Logo',
+      });
       await expect(downloadButton).toBeDisabled();
-      
+
       // Screen readers should understand why button is disabled
       const ariaDisabled = await downloadButton.getAttribute('aria-disabled');
       const disabled = await downloadButton.getAttribute('disabled');
-      
+
       expect(ariaDisabled === 'true' || disabled !== null).toBeTruthy();
     });
   });
@@ -377,9 +420,11 @@ test.describe('Accessibility Tests @accessibility', () => {
       expect(scanResults.violations).toEqual([]);
 
       // Touch targets should be appropriately sized
-      const customizeButton = page.getByRole('button', { name: 'Customize It' });
+      const customizeButton = page.getByRole('button', {
+        name: 'Customize It',
+      });
       const buttonSize = await customizeButton.boundingBox();
-      
+
       if (buttonSize) {
         // Minimum touch target size (44px recommended)
         expect(buttonSize.height).toBeGreaterThanOrEqual(44);

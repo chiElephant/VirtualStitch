@@ -1,5 +1,9 @@
+// config/helpers.ts
 import { toast } from 'react-toastify';
 import { downloadCanvasToImage, downloadImageToFile } from './downloaders';
+
+// Maximum data URL size (roughly 10MB when base64 encoded)
+const MAX_DATA_URL_SIZE = 10 * 1024 * 1024;
 
 // Handles downloading either a canvas or decal image based on the given type.
 // Automatically resets the input file name on success.
@@ -48,19 +52,90 @@ export const handleImageDownload = (
   }
 };
 
-// Reads a Blob file (e.g., an uploaded image) and converts it into a base64 data URL.
-// Returns a Promise that resolves with the file's content.
-export const reader = (file: Blob) =>
+// Enhanced file reader with better error handling and size limits
+export const reader = (file: Blob): Promise<string> =>
   new Promise((resolve, reject) => {
+    // Check file size before reading
+    if (file.size > MAX_DATA_URL_SIZE) {
+      reject(
+        new Error(
+          `File too large. Maximum size is ${MAX_DATA_URL_SIZE / (1024 * 1024)}MB.`
+        )
+      );
+      return;
+    }
+
     const fileReader = new FileReader();
-    fileReader.onload = () => resolve(fileReader.result);
-    fileReader.onerror = () => reject(new Error('File reading failed.'));
+
+    fileReader.onload = () => {
+      const result = fileReader.result as string;
+
+      // Validate the result
+      if (!result || typeof result !== 'string') {
+        reject(new Error('Failed to read file content.'));
+        return;
+      }
+
+      // Check if the data URL is valid
+      if (!result.startsWith('data:')) {
+        reject(new Error('Invalid file format.'));
+        return;
+      }
+
+      // Check final size
+      if (result.length > MAX_DATA_URL_SIZE) {
+        reject(new Error('Processed file is too large.'));
+        return;
+      }
+
+      resolve(result);
+    };
+
+    fileReader.onerror = () => {
+      reject(new Error('File reading failed.'));
+    };
+
+    fileReader.onabort = () => {
+      reject(new Error('File reading was aborted.'));
+    };
+
     try {
       fileReader.readAsDataURL(file);
     } catch (error) {
-      reject(error);
+      reject(
+        error instanceof Error ? error : (
+          new Error('Unknown error during file reading.')
+        )
+      );
     }
   });
+
+// Safely reads a file with comprehensive error handling
+export const safeFileReader = async (file: Blob): Promise<string | null> => {
+  try {
+    const result = await reader(file);
+    return result;
+  } catch (error) {
+    console.error('File reading error:', error);
+
+    // Show user-friendly error message
+    const errorMessage =
+      error instanceof Error ?
+        error.message
+      : 'Unknown error occurred while reading file.';
+    toast.error(`Failed to read file: ${errorMessage}`, {
+      position: 'top-center',
+      autoClose: 5000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      theme: 'colored',
+    });
+
+    return null;
+  }
+};
 
 // Calculates whether black or white text will be more legible on a given background color.
 // Uses luminance based on the YIQ formula to determine brightness.

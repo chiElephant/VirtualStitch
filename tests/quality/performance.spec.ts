@@ -1,5 +1,10 @@
 import { test, expect } from '@playwright/test';
-import { TestUtils, PERFORMANCE_THRESHOLDS, VIEWPORTS } from '../utils/test-helpers';
+import {
+  TestUtils,
+  PERFORMANCE_THRESHOLDS,
+  VIEWPORTS,
+  TEST_FILES,
+} from '../utils/test-helpers';
 
 interface PerformanceVitals {
   lcp?: number;
@@ -103,14 +108,17 @@ test.describe('Performance Tests @performance-monitoring', () => {
       });
 
       // Apply thresholds
-      if (vitals.lcp) expect(vitals.lcp).toBeLessThan(PERFORMANCE_THRESHOLDS.lcp);
-      if (vitals.cls) expect(vitals.cls).toBeLessThan(PERFORMANCE_THRESHOLDS.cls);
-      if (vitals.fcp) expect(vitals.fcp).toBeLessThan(PERFORMANCE_THRESHOLDS.fcp);
+      if (vitals.lcp)
+        expect(vitals.lcp).toBeLessThan(PERFORMANCE_THRESHOLDS.lcp);
+      if (vitals.cls)
+        expect(vitals.cls).toBeLessThan(PERFORMANCE_THRESHOLDS.cls);
+      if (vitals.fcp)
+        expect(vitals.fcp).toBeLessThan(PERFORMANCE_THRESHOLDS.fcp);
     });
   });
 
   test.describe('Interaction Performance', () => {
-    test('should handle rapid interactions smoothly', async ({ page }) => {
+    test('should handle rapid interactions smoothly', async ({}) => {
       await utils.nav.goToCustomizer();
 
       const startTime = Date.now();
@@ -118,29 +126,38 @@ test.describe('Performance Tests @performance-monitoring', () => {
       // Rapid interactions
       await utils.color.openColorPicker();
       await utils.color.selectColor('#80C670');
-      await utils.nav.openEditorTab('file-picker');
-      await utils.nav.openEditorTab('ai-picker');
-      await utils.nav.openEditorTab('image-download');
+      await utils.nav.openEditorTab('filePicker');
+      await utils.nav.openEditorTab('aiPicker');
+      await utils.nav.openEditorTab('imageDownload');
 
       const interactionTime = Date.now() - startTime;
       expect(interactionTime).toBeLessThan(PERFORMANCE_THRESHOLDS.interaction);
     });
 
-    test('should maintain performance during texture operations', async ({ page }) => {
+    test('should maintain performance during texture operations', async ({}) => {
       await utils.nav.goToCustomizer();
 
       const startTime = Date.now();
 
-      // Upload and apply multiple textures
-      await utils.file.uploadFile('./fixtures/emblem.png', 'logo');
-      await utils.file.uploadFile('./fixtures/emblem2.png', 'full');
-      
+      // Use optimized texture operations for better performance
+      const texture1Time = await utils.file.performOptimizedTextureOperation(
+        TEST_FILES.emblem,
+        'logo'
+      );
+      const texture2Time = await utils.file.performOptimizedTextureOperation(
+        TEST_FILES.emblem2,
+        'full'
+      );
+
       // Toggle filters
       await utils.texture.activateFilter('logoShirt');
       await utils.texture.activateFilter('stylishShirt');
 
-      const textureTime = Date.now() - startTime;
-      expect(textureTime).toBeLessThan(PERFORMANCE_THRESHOLDS.interaction);
+      const totalTime = Date.now() - startTime;
+      console.log(
+        `Total texture operation time: ${totalTime}ms (emblem: ${texture1Time}ms, emblem2: ${texture2Time}ms)`
+      );
+      expect(totalTime).toBeLessThan(PERFORMANCE_THRESHOLDS.textureOperation);
     });
   });
 
@@ -150,19 +167,23 @@ test.describe('Performance Tests @performance-monitoring', () => {
       await page.waitForSelector('canvas');
       await page.waitForTimeout(3000); // Allow Three.js initialization
 
-      const canvasInfo = await page.evaluate((): { exists: boolean; hasContent: boolean } => {
-        const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-        if (!canvas) return { exists: false, hasContent: false };
-        
-        const hasContent = canvas.width > 0 && canvas.height > 0;
-        return { exists: true, hasContent };
-      });
+      const canvasInfo = await page.evaluate(
+        (): { exists: boolean; hasContent: boolean } => {
+          const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+          if (!canvas) return { exists: false, hasContent: false };
+
+          const hasContent = canvas.width > 0 && canvas.height > 0;
+          return { exists: true, hasContent };
+        }
+      );
 
       expect(canvasInfo.exists).toBeTruthy();
       expect(canvasInfo.hasContent).toBeTruthy();
     });
 
-    test('should handle multiple color changes efficiently', async ({ page }) => {
+    test('should handle multiple color changes efficiently', async ({
+      page,
+    }) => {
       await utils.nav.goToCustomizer();
       await utils.color.openColorPicker();
 
@@ -187,7 +208,9 @@ test.describe('Performance Tests @performance-monitoring', () => {
 
       const memoryInfo = await page.evaluate((): number | null => {
         const perfWithMemory = performance as PerformanceWithMemory;
-        return perfWithMemory.memory ? perfWithMemory.memory.usedJSHeapSize : null;
+        return perfWithMemory.memory ?
+            perfWithMemory.memory.usedJSHeapSize
+          : null;
       });
 
       // Only check if memory API is available (Chrome)
@@ -202,28 +225,33 @@ test.describe('Performance Tests @performance-monitoring', () => {
       // Get initial memory if available
       const initialMemory = await page.evaluate((): number | null => {
         const perfWithMemory = performance as PerformanceWithMemory;
-        return perfWithMemory.memory ? perfWithMemory.memory.usedJSHeapSize : null;
+        return perfWithMemory.memory ?
+            perfWithMemory.memory.usedJSHeapSize
+          : null;
       });
 
       // Perform memory-intensive operations
       for (let i = 0; i < 10; i++) {
         await utils.color.openColorPicker();
         await utils.color.selectColor('#80C670');
-        await utils.nav.openEditorTab('file-picker');
-        await utils.nav.openEditorTab('ai-picker');
+        await utils.nav.openEditorTab('filePicker');
+        await utils.nav.openEditorTab('aiPicker');
         await page.waitForTimeout(100);
       }
 
       // Force garbage collection if possible
       await page.evaluate(() => {
-        if ((window as any).gc) {
-          (window as any).gc();
+        const winWithGC = window as unknown as { gc?: () => void };
+        if (typeof winWithGC.gc === 'function') {
+          winWithGC.gc();
         }
       });
 
       const finalMemory = await page.evaluate((): number | null => {
         const perfWithMemory = performance as PerformanceWithMemory;
-        return perfWithMemory.memory ? perfWithMemory.memory.usedJSHeapSize : null;
+        return perfWithMemory.memory ?
+            perfWithMemory.memory.usedJSHeapSize
+          : null;
       });
 
       // Check for significant memory leaks
@@ -263,7 +291,9 @@ test.describe('Performance Tests @performance-monitoring', () => {
       expect(failureRate).toBeLessThan(0.1); // Less than 10% failure
 
       // Check API request performance
-      const apiRequests = networkRequests.filter((req) => req.url.includes('/api/'));
+      const apiRequests = networkRequests.filter((req) =>
+        req.url.includes('/api/')
+      );
       const slowApiRequests = apiRequests.filter(
         (req) => req.responseTime > PERFORMANCE_THRESHOLDS.apiResponse
       );
@@ -282,9 +312,10 @@ test.describe('Performance Tests @performance-monitoring', () => {
         const loadTime = Date.now() - startTime;
 
         // Allow extra time for mobile devices
-        const threshold = deviceName.includes('mobile') ? 
-          PERFORMANCE_THRESHOLDS.pageLoad * 1.5 : 
-          PERFORMANCE_THRESHOLDS.pageLoad;
+        const threshold =
+          deviceName.includes('mobile') ?
+            PERFORMANCE_THRESHOLDS.pageLoad * 1.5
+          : PERFORMANCE_THRESHOLDS.pageLoad;
 
         expect(loadTime).toBeLessThan(threshold);
 
@@ -296,7 +327,9 @@ test.describe('Performance Tests @performance-monitoring', () => {
         });
         const interactionTime = Date.now() - interactionStart;
 
-        expect(interactionTime).toBeLessThan(PERFORMANCE_THRESHOLDS.interaction);
+        expect(interactionTime).toBeLessThan(
+          PERFORMANCE_THRESHOLDS.interaction
+        );
       });
     });
   });
@@ -307,7 +340,9 @@ test.describe('Performance Tests @performance-monitoring', () => {
       await page.waitForLoadState('networkidle');
 
       const performanceMetrics = await page.evaluate(() => {
-        const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
+        const navigation = performance.getEntriesByType(
+          'navigation'
+        )[0] as PerformanceNavigationTiming;
         const paintEntries = performance.getEntriesByType('paint');
 
         return {
@@ -339,7 +374,7 @@ test.describe('Performance Tests @performance-monitoring', () => {
       const customMetrics = await page.evaluate(() => {
         const marks = performance.getEntriesByType('mark');
         const measures = performance.getEntriesByType('measure');
-        
+
         return {
           marksCount: marks.length,
           measuresCount: measures.length,

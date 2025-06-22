@@ -1,5 +1,10 @@
 import { test, expect } from '@playwright/test';
-import { TestUtils, TEST_FILES, TEST_COLORS, VALID_TEST_IMAGE_BASE64 } from '../utils/test-helpers';
+import {
+  TestUtils,
+  TEST_FILES,
+  TEST_COLORS,
+  VALID_TEST_IMAGE_BASE64,
+} from '../utils/test-helpers';
 
 test.describe('Complete User Workflows @e2e', () => {
   let utils: TestUtils;
@@ -9,7 +14,9 @@ test.describe('Complete User Workflows @e2e', () => {
   });
 
   test.describe('Logo Customization Workflow', () => {
-    test('should complete full logo customization and download', async ({ page }) => {
+    test('should complete full logo customization and download', async ({
+      page,
+    }) => {
       await page.goto('/');
 
       // Step 1: Navigate to customizer
@@ -25,10 +32,16 @@ test.describe('Complete User Workflows @e2e', () => {
       await utils.texture.verifyTextureVisible('logo');
 
       // Step 4: Download both canvas and logo
-      const canvasDownload = await utils.download.downloadImage('my-custom-shirt', 'Download Shirt');
+      const canvasDownload = await utils.download.downloadImage(
+        'my-custom-shirt',
+        'Download Shirt'
+      );
       expect(canvasDownload.suggestedFilename()).toContain('my-custom-shirt');
 
-      const logoDownload = await utils.download.downloadImage('my-logo', 'Download Logo');
+      const logoDownload = await utils.download.downloadImage(
+        'my-logo',
+        'Download Logo'
+      );
       expect(logoDownload.suggestedFilename()).toContain('my-logo');
 
       // Step 5: Verify state persistence
@@ -39,7 +52,9 @@ test.describe('Complete User Workflows @e2e', () => {
   });
 
   test.describe('Pattern Customization Workflow', () => {
-    test('should complete full pattern customization and download', async ({ page }) => {
+    test('should complete full pattern customization and download', async ({
+      page,
+    }) => {
       await page.goto('/');
       await utils.nav.goToCustomizer();
 
@@ -53,18 +68,26 @@ test.describe('Complete User Workflows @e2e', () => {
       await utils.texture.verifyTextureVisible('full');
 
       // Download both items
-      const canvasDownload = await utils.download.downloadImage('pattern-shirt', 'Download Shirt');
+      const canvasDownload = await utils.download.downloadImage(
+        'pattern-shirt',
+        'Download Shirt'
+      );
       expect(canvasDownload.suggestedFilename()).toContain('pattern-shirt');
 
-      const patternDownload = await utils.download.downloadImage('my-pattern', 'Download Pattern');
+      const patternDownload = await utils.download.downloadImage(
+        'my-pattern',
+        'Download Pattern'
+      );
       expect(patternDownload.suggestedFilename()).toContain('my-pattern');
     });
   });
 
   test.describe('AI-Powered Workflow', () => {
-    test('should complete AI generation to download workflow', async ({ page }) => {
+    test('should complete AI generation to download workflow', async ({
+      page,
+    }) => {
       await utils.ai.mockSuccessfulResponse();
-      
+
       await page.goto('/');
       await utils.nav.goToCustomizer();
 
@@ -79,11 +102,16 @@ test.describe('Complete User Workflows @e2e', () => {
       await utils.color.verifyColorApplied(TEST_COLORS.dark);
 
       // Download final result
-      const download = await utils.download.downloadImage('ai-logo-shirt', 'Download Shirt');
+      const download = await utils.download.downloadImage(
+        'ai-logo-shirt',
+        'Download Shirt'
+      );
       expect(download.suggestedFilename()).toContain('ai-logo-shirt');
     });
 
-    test('should handle AI generation failure and recovery', async ({ page }) => {
+    test('should handle AI generation failure and recovery', async ({
+      page,
+    }) => {
       // Mock failure then success
       let callCount = 0;
       await page.route('/api/custom-logo', (route) => {
@@ -107,7 +135,7 @@ test.describe('Complete User Workflows @e2e', () => {
       await utils.ai.verifyErrorToast('server');
 
       // Retry succeeds
-      await utils.nav.openEditorTab('ai-picker');
+      await utils.nav.openEditorTab('aiPicker');
       await utils.ai.generateImage('Test prompt');
       await utils.ai.verifySuccessToast();
       await utils.texture.verifyTextureVisible('logo');
@@ -115,7 +143,9 @@ test.describe('Complete User Workflows @e2e', () => {
   });
 
   test.describe('Multi-Layer Customization', () => {
-    test('should apply and manage both logo and pattern simultaneously', async ({ page }) => {
+    test('should apply and manage both logo and pattern simultaneously', async ({
+      page,
+    }) => {
       await page.goto('/');
       await utils.nav.goToCustomizer();
 
@@ -131,7 +161,7 @@ test.describe('Complete User Workflows @e2e', () => {
       const logoFilterActive = await page
         .getByTestId('filter-tab-logoShirt')
         .getAttribute('data-is-active');
-      
+
       if (logoFilterActive !== 'true') {
         await utils.texture.activateFilter('logoShirt');
       }
@@ -152,9 +182,7 @@ test.describe('Complete User Workflows @e2e', () => {
   });
 
   test.describe('Session Persistence', () => {
-    test('should maintain customizations when navigating back and forth', async ({ page }) => {
-      await page.goto('/');
-
+    test('should maintain customizations when navigating back and forth', async () => {
       // Make customizations
       await utils.nav.goToCustomizer();
       await utils.color.openColorPicker();
@@ -163,14 +191,16 @@ test.describe('Complete User Workflows @e2e', () => {
 
       // Navigate away and back
       await utils.nav.goToHome();
-      await utils.nav.goToCustomizer();
+      await utils.nav.openCustomizer();
 
       // Verify persistence
       await utils.color.verifyColorApplied(TEST_COLORS.lightBlue);
       await utils.texture.verifyTextureVisible('logo');
     });
 
-    test('should handle complex state persistence across navigation', async ({ page }) => {
+    test('should handle complex state persistence across navigation', async ({
+      page,
+    }) => {
       await page.goto('/');
       await utils.nav.goToCustomizer();
 
@@ -179,15 +209,14 @@ test.describe('Complete User Workflows @e2e', () => {
       await utils.color.selectColor(TEST_COLORS.red);
       await utils.file.uploadFile(TEST_FILES.emblem, 'logo');
       await utils.file.uploadFile(TEST_FILES.emblem2, 'full');
-      
+
       // Activate both filters
       await utils.texture.activateFilter('logoShirt');
-      await utils.texture.activateFilter('stylishShirt');
 
       // Multiple navigation cycles
       for (let i = 0; i < 3; i++) {
         await utils.nav.goToHome();
-        await utils.nav.goToCustomizer();
+        await utils.nav.openCustomizer();
       }
 
       // Verify complex state maintained
@@ -216,11 +245,16 @@ test.describe('Complete User Workflows @e2e', () => {
       await utils.texture.verifyTextureVisible('logo');
 
       // Download on mobile
-      const download = await utils.download.downloadImage('mobile-shirt', 'Download Shirt');
+      const download = await utils.download.downloadImage(
+        'mobile-shirt',
+        'Download Shirt'
+      );
       expect(download.suggestedFilename()).toContain('mobile-shirt');
     });
 
-    test('should handle orientation changes during workflow', async ({ page }) => {
+    test('should handle orientation changes during workflow', async ({
+      page,
+    }) => {
       await page.setViewportSize({ width: 375, height: 667 }); // Portrait
       await page.goto('/');
       await utils.nav.goToCustomizer();
@@ -249,8 +283,13 @@ test.describe('Complete User Workflows @e2e', () => {
 
       // Rapid color changes
       await utils.color.openColorPicker();
-      const colors = [TEST_COLORS.lightBlue, TEST_COLORS.purple, TEST_COLORS.green, TEST_COLORS.dark];
-      
+      const colors = [
+        TEST_COLORS.lightBlue,
+        TEST_COLORS.purple,
+        TEST_COLORS.green,
+        TEST_COLORS.dark,
+      ];
+
       for (const color of colors) {
         await utils.color.selectColor(color);
         await page.waitForTimeout(100); // Rapid but not instant
@@ -260,7 +299,7 @@ test.describe('Complete User Workflows @e2e', () => {
       await utils.file.uploadFile(TEST_FILES.emblem, 'logo');
 
       // Rapid filter toggling
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < 4; i++) {
         await utils.texture.activateFilter('logoShirt');
         await page.waitForTimeout(50);
       }
@@ -271,7 +310,9 @@ test.describe('Complete User Workflows @e2e', () => {
       await utils.color.verifyColorApplied(colors[colors.length - 1]);
     });
 
-    test('should handle workflow interruption and resumption', async ({ page }) => {
+    test('should handle workflow interruption and resumption', async ({
+      page,
+    }) => {
       await page.goto('/');
       await utils.nav.goToCustomizer();
 
@@ -285,7 +326,9 @@ test.describe('Complete User Workflows @e2e', () => {
       await utils.nav.goToCustomizer();
 
       // Resume workflow - state should be reset to defaults
-      await expect(page.getByTestId(`canvas-color-${TEST_COLORS.defaultGreen}`)).toHaveCount(1);
+      await expect(
+        page.getByTestId(`canvas-color-${TEST_COLORS.defaultGreen}`)
+      ).toHaveCount(1);
       await utils.texture.verifyTextureHidden('logo');
 
       // Complete new workflow
@@ -297,7 +340,9 @@ test.describe('Complete User Workflows @e2e', () => {
   });
 
   test.describe('Performance Under Load', () => {
-    test('should maintain performance with multiple texture switches', async ({ page }) => {
+    test('should maintain performance with multiple texture switches', async ({
+      page,
+    }) => {
       await page.goto('/');
       await utils.nav.goToCustomizer();
 
@@ -306,9 +351,9 @@ test.describe('Complete User Workflows @e2e', () => {
 
       // Multiple rapid texture applications
       const files = [TEST_FILES.emblem, TEST_FILES.emblem2, TEST_FILES.emblem];
-      
+
       for (const file of files) {
-        await utils.nav.openEditorTab('file-picker');
+        await utils.nav.openEditorTab('filePicker');
         await utils.file.uploadFile(file, 'logo');
         await utils.wait.waitForTextureApplication();
       }

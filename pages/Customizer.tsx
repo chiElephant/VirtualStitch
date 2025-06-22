@@ -6,7 +6,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useSnapshot } from 'valtio';
 
 import state, { State } from '@/store';
-import { reader } from '@/config/helpers';
+import { reader, safeFileReader } from '@/config/helpers';
 import { EditorTabs, FilterTabs, DecalTypes } from '@/config/constants';
 import { fadeAnimation, slideAnimation } from '@/config/motion';
 import {
@@ -70,11 +70,27 @@ const Customizer = (props: CustomizerProps) => {
       });
 
       // Handle various API error states with specific toasts for better UX.
+      // - 400: Validation error (malicious content, etc.)
       // - 429: Rate limiting (too many requests)
       // - 500: AI service/server-side error
       // - fallback: catch-all unexpected error
       if (!response.ok) {
-        if (response.status === 429) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.message || 'Unknown error';
+        
+        if (response.status === 400) {
+          toast.error(errorMessage, {
+            position: 'bottom-right',
+            autoClose: 5000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: false,
+            draggable: true,
+            progress: undefined,
+            theme: 'colored',
+            transition: Flip,
+          });
+        } else if (response.status === 429) {
           toast.error(
             'You are making requests too quickly 🚫. Please wait a minute.',
             {
@@ -149,11 +165,57 @@ const Customizer = (props: CustomizerProps) => {
     }
   };
 
+  // Update this section in pages/Customizer.tsx
+
   const readFile = async (type: 'logo' | 'full') => {
-    if (!file) return;
-    const result = (await reader(file)) as string;
-    handleDecals(type, result);
-    setActiveEditorTab('');
+    if (!file) {
+      toast.warn('Please select a file first.', {
+        position: 'top-center',
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        theme: 'colored',
+        transition: Flip,
+      });
+      return;
+    }
+
+    try {
+      // Use the safe file reader with error handling
+      const result = await safeFileReader(file);
+
+      if (result) {
+        handleDecals(type, result);
+        setActiveEditorTab('');
+
+        toast.success('Image applied successfully ✅', {
+          position: 'bottom-right',
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          theme: 'colored',
+          transition: Flip,
+        });
+      }
+      // If result is null, error was already handled by safeFileReader
+    } catch (error) {
+      console.error('Error processing file:', error);
+
+      toast.error('Failed to process file. Please try a different image.', {
+        position: 'bottom-right',
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        theme: 'colored',
+        transition: Flip,
+      });
+    }
   };
 
   const activeFilterKey =

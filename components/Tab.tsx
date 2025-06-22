@@ -9,10 +9,12 @@ type Tab = {
 };
 
 interface TabProps {
-  tab: Tab;
-  handleClick: () => void;
-  isFilterTab?: boolean;
-  isActiveTab?: string | boolean;
+  'tab': Tab;
+  'handleClick': () => void;
+  'isFilterTab'?: boolean;
+  'isActiveTab'?: string | boolean;
+  'data-testid'?: string;
+  'data-is-active'?: boolean;
 }
 
 const Tab = ({
@@ -20,6 +22,8 @@ const Tab = ({
   handleClick,
   isFilterTab,
   isActiveTab,
+  'data-testid': testId,
+  'data-is-active': isActive,
   ...props
 }: TabProps) => {
   const snap = useSnapshot(state);
@@ -34,7 +38,25 @@ const Tab = ({
       key={tab.name}
       className={`tab-btn ${isFilterTab ? 'rounded-full glassmorphism' : 'rounded-4'}`}
       onClick={handleClick}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleClick();
+        }
+      }}
       style={activeStyles}
+      data-testid={testId}
+      data-is-active={isActive}
+      tabIndex={0}
+      role='button'
+      aria-label={`${
+        isFilterTab ?
+          tab.name === 'logoShirt' ? 'Small texture filter tab'
+          : tab.name === 'stylishShirt' ? 'Full texture filter tab'
+          : tab.name + ' filter tab'
+        : tab.name + ' editor tab'
+      }${isActiveTab ? ' (active)' : ''}`}
+      aria-pressed={isFilterTab ? !!isActiveTab : undefined}
       {...props}>
       <Image
         src={tab.icon}

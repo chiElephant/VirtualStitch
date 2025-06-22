@@ -1,5 +1,10 @@
 import { test, expect } from '@playwright/test';
-import { TestUtils, VIEWPORTS, TEST_COLORS } from '../utils/test-helpers';
+import {
+  TestUtils,
+  VIEWPORTS,
+  TEST_COLORS,
+  TEST_FILES,
+} from '../utils/test-helpers';
 
 test.describe('Responsive Design Tests', () => {
   let utils: TestUtils;
@@ -15,7 +20,9 @@ test.describe('Responsive Design Tests', () => {
           await page.setViewportSize(viewport);
         });
 
-        test('should display essential elements correctly', async ({ page }) => {
+        test('should display essential elements correctly', async ({
+          page,
+        }) => {
           await page.goto('/');
 
           // Core elements should be visible
@@ -31,19 +38,21 @@ test.describe('Responsive Design Tests', () => {
         test('should navigate to customizer properly', async ({ page }) => {
           await page.goto('/');
           await page.getByRole('button', { name: 'Customize It' }).click();
-          
+
           // Allow extra time for mobile animations
           const waitTime = deviceName.includes('mobile') ? 2500 : 1500;
           await page.waitForTimeout(waitTime);
 
           await expect(page.getByTestId('editor-tabs-container')).toBeVisible();
           await expect(page.getByTestId('filter-tabs-container')).toBeVisible();
-          await expect(page.getByRole('button', { name: 'Go Back' })).toBeVisible();
+          await expect(
+            page.getByRole('button', { name: 'Go Back' })
+          ).toBeVisible();
         });
 
-        test('should handle color picker interactions', async ({ page }) => {
+        test('should handle color picker interactions', async ({}) => {
           await utils.nav.goToCustomizer();
-          
+
           await utils.color.openColorPicker();
           await utils.color.selectColor(TEST_COLORS.green);
           await utils.color.verifyColorApplied(TEST_COLORS.green);
@@ -51,9 +60,11 @@ test.describe('Responsive Design Tests', () => {
 
         test('should support file upload', async ({ page }) => {
           await utils.nav.goToCustomizer();
-          
-          await utils.nav.openEditorTab('file-picker');
-          await page.getByTestId('file-picker-input').setInputFiles('./fixtures/emblem.png');
+
+          await utils.nav.openEditorTab('filePicker');
+          await page
+            .getByTestId('file-picker-input')
+            .setInputFiles(TEST_FILES.emblem);
           await expect(page.getByText('emblem.png')).toBeVisible();
         });
       });
@@ -64,10 +75,12 @@ test.describe('Responsive Design Tests', () => {
     const mobileDevices = ['mobile', 'tablet', 'largeMobile'];
 
     mobileDevices.forEach((deviceKey) => {
-      test(`should handle touch interactions on ${deviceKey}`, async ({ page }) => {
+      test(`should handle touch interactions on ${deviceKey}`, async ({
+        page,
+      }) => {
         const viewport = VIEWPORTS[deviceKey as keyof typeof VIEWPORTS];
         await page.setViewportSize(viewport);
-        
+
         await page.goto('/');
         await utils.nav.goToCustomizer();
 
@@ -105,8 +118,16 @@ test.describe('Responsive Design Tests', () => {
 
   test.describe('Orientation Changes', () => {
     const mobileViewports = [
-      { name: 'iPhone', portrait: VIEWPORTS.mobile, landscape: { width: 667, height: 375 } },
-      { name: 'iPad', portrait: VIEWPORTS.tablet, landscape: { width: 1024, height: 768 } },
+      {
+        name: 'iPhone',
+        portrait: VIEWPORTS.mobile,
+        landscape: { width: 667, height: 375 },
+      },
+      {
+        name: 'iPad',
+        portrait: VIEWPORTS.tablet,
+        landscape: { width: 1024, height: 768 },
+      },
     ];
 
     mobileViewports.forEach(({ name, portrait, landscape }) => {
@@ -142,8 +163,10 @@ test.describe('Responsive Design Tests', () => {
       await page.goto('/');
 
       // Basic functionality should still work
-      await expect(page.getByRole('button', { name: 'Customize It' })).toBeVisible();
-      
+      await expect(
+        page.getByRole('button', { name: 'Customize It' })
+      ).toBeVisible();
+
       await utils.nav.goToCustomizer();
       await expect(page.getByTestId('editor-tabs-container')).toBeVisible();
 
@@ -159,7 +182,9 @@ test.describe('Responsive Design Tests', () => {
 
       // Layout should scale appropriately
       await expect(page.locator('canvas')).toBeVisible();
-      await expect(page.getByRole('button', { name: 'Customize It' })).toBeVisible();
+      await expect(
+        page.getByRole('button', { name: 'Customize It' })
+      ).toBeVisible();
 
       await utils.nav.goToCustomizer();
       await expect(page.getByTestId('editor-tabs-container')).toBeVisible();
@@ -203,7 +228,7 @@ test.describe('Responsive Design Tests', () => {
       // Test desktop layout
       await page.setViewportSize(VIEWPORTS.desktop);
       await utils.nav.goToCustomizer();
-      
+
       const desktopTabsContainer = page.getByTestId('editor-tabs-container');
       const desktopBox = await desktopTabsContainer.boundingBox();
 
@@ -216,7 +241,7 @@ test.describe('Responsive Design Tests', () => {
 
       // Layout should adapt (different positioning/sizing)
       if (desktopBox && mobileBox) {
-        const positionChanged = 
+        const positionChanged =
           Math.abs(desktopBox.x - mobileBox.x) > 50 ||
           Math.abs(desktopBox.y - mobileBox.y) > 50;
         expect(positionChanged).toBeTruthy();
@@ -228,10 +253,20 @@ test.describe('Responsive Design Tests', () => {
       await utils.color.verifyColorApplied(TEST_COLORS.red);
     });
 
-    test('should adapt filter tabs on different screen sizes', async ({ page }) => {
+    test('should adapt filter tabs on different screen sizes', async ({
+      page,
+    }) => {
       await utils.nav.goToCustomizer();
 
-      const screenSizes = [VIEWPORTS.desktop, VIEWPORTS.tablet, VIEWPORTS.mobile];
+      // First upload some content so filter tabs can actually be activated
+      await utils.file.uploadFile(TEST_FILES.emblem, 'logo');
+      await page.waitForTimeout(1000); // Allow texture to load
+
+      const screenSizes = [
+        VIEWPORTS.desktop,
+        VIEWPORTS.tablet,
+        VIEWPORTS.mobile,
+      ];
 
       for (const viewport of screenSizes) {
         await page.setViewportSize(viewport);
@@ -241,7 +276,7 @@ test.describe('Responsive Design Tests', () => {
         await expect(page.getByTestId('filter-tab-logoShirt')).toBeVisible();
         await expect(page.getByTestId('filter-tab-stylishShirt')).toBeVisible();
 
-        // Should be interactive
+        // Should be interactive - now with content to actually filter
         await utils.texture.activateFilter('logoShirt');
         await utils.texture.verifyFilterActive('logoShirt');
       }
@@ -249,8 +284,14 @@ test.describe('Responsive Design Tests', () => {
   });
 
   test.describe('Responsive Text and Typography', () => {
-    test('should maintain readable text across screen sizes', async ({ page }) => {
-      const viewportsToTest = [VIEWPORTS.mobile, VIEWPORTS.tablet, VIEWPORTS.desktop];
+    test('should maintain readable text across screen sizes', async ({
+      page,
+    }) => {
+      const viewportsToTest = [
+        VIEWPORTS.mobile,
+        VIEWPORTS.tablet,
+        VIEWPORTS.desktop,
+      ];
 
       for (const viewport of viewportsToTest) {
         await page.setViewportSize(viewport);
@@ -309,11 +350,14 @@ test.describe('Responsive Design Tests', () => {
       await utils.color.verifyColorApplied(TEST_COLORS.cyan);
 
       // File upload
-      await utils.file.uploadFile('./fixtures/emblem.png', 'logo');
+      await utils.file.uploadFile(TEST_FILES.emblem, 'logo');
       await utils.texture.verifyTextureVisible('logo');
 
       // Download functionality
-      const download = await utils.download.downloadImage('mobile-test', 'Download Shirt');
+      const download = await utils.download.downloadImage(
+        'mobile-test',
+        'Download Shirt'
+      );
       expect(download.suggestedFilename()).toContain('mobile-test');
     });
 
@@ -331,20 +375,24 @@ test.describe('Responsive Design Tests', () => {
 
       // Test navigation
       await page.getByRole('button', { name: 'Go Back' }).click();
-      await expect(page.getByRole('heading', { name: "LET'S DO IT." })).toBeVisible();
+      await expect(
+        page.getByRole('heading', { name: "LET'S DO IT." })
+      ).toBeVisible();
     });
   });
 
   test.describe('Cross-Device Consistency', () => {
-    test('should maintain state consistency across viewport changes', async ({ page }) => {
+    test('should maintain state consistency across viewport changes', async ({
+      page,
+    }) => {
       // Start on desktop
       await page.setViewportSize(VIEWPORTS.desktop);
       await utils.nav.goToCustomizer();
-      
+
       // Make changes
       await utils.color.openColorPicker();
       await utils.color.selectColor(TEST_COLORS.purple);
-      await utils.file.uploadFile('./fixtures/emblem.png', 'logo');
+      await utils.file.uploadFile(TEST_FILES.emblem, 'logo');
 
       // Switch to mobile
       await page.setViewportSize(VIEWPORTS.mobile);
@@ -363,7 +411,9 @@ test.describe('Responsive Design Tests', () => {
       await utils.texture.verifyTextureVisible('logo');
     });
 
-    test('should provide consistent user experience across devices', async ({ page }) => {
+    test('should provide consistent user experience across devices', async ({
+      page,
+    }) => {
       const devices = [
         { name: 'Mobile', viewport: VIEWPORTS.mobile },
         { name: 'Tablet', viewport: VIEWPORTS.tablet },
@@ -376,11 +426,11 @@ test.describe('Responsive Design Tests', () => {
 
         // Core user journey should work consistently
         await utils.nav.goToCustomizer();
-        
+
         // Essential features should be accessible
         await expect(page.getByTestId('editor-tabs-container')).toBeVisible();
         await expect(page.getByTestId('filter-tabs-container')).toBeVisible();
-        
+
         // Basic interactions should work
         await utils.color.openColorPicker();
         await utils.color.selectColor(TEST_COLORS.lightBlue);

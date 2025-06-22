@@ -19,18 +19,26 @@ const ImageDownload = ({ activeFilterTab }: ImageDownloadProps) => {
       data-testid='image-download'>
       <div className='flex-1 flex flex-col'>
         <label
-          htmlFor='image-download'
+          htmlFor='image-download-input'
           className='imagedownload-label'>
           Filename
         </label>
         <input
-          id='image-download'
+          id='image-download-input'
           type='text'
           placeholder='e.g., my-shirt'
           value={fileName}
           onChange={(e) => setFileName(e.target.value.trim())}
           className='border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-color'
+          aria-label='Enter filename for download (without extension)'
+          aria-describedby='filename-help'
         />
+        <div
+          id='filename-help'
+          className='sr-only'>
+          Enter a filename for your downloaded image. Do not include file
+          extension. The file will be saved as PNG format.
+        </div>
       </div>
 
       <div className='mt-4 flex flex-wrap gap-3'>
@@ -51,6 +59,7 @@ const ImageDownload = ({ activeFilterTab }: ImageDownloadProps) => {
               state.fullDecal === DEFAULT_FULL)
           }
           customStyles='w-fit px-4 py-2.5 font-bold text-sm'
+          aria-label='Download complete shirt design as image'
         />
         <CustomButton
           type='filled'
@@ -73,6 +82,7 @@ const ImageDownload = ({ activeFilterTab }: ImageDownloadProps) => {
               state.fullDecal === DEFAULT_FULL)
           }
           customStyles='w-fit px-4 py-2.5 font-bold text-sm'
+          aria-label={`Download ${activeFilterTab === 'stylishShirt' ? 'pattern' : 'logo'} design only`}
         />
       </div>
     </div>

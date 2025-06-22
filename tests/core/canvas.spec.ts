@@ -78,6 +78,7 @@ test.describe('Canvas and 3D Rendering', () => {
     });
 
     test('should display custom logo after upload', async ({}) => {
+      await utils.nav.openEditorTab('filePicker');
       await utils.file.uploadFile(TEST_FILES.emblem, 'logo');
       await utils.texture.verifyTextureVisible('logo');
     });
@@ -102,6 +103,7 @@ test.describe('Canvas and 3D Rendering', () => {
     });
 
     test('should display custom pattern after upload', async ({}) => {
+      await utils.nav.openEditorTab('filePicker');
       await utils.file.uploadFile(TEST_FILES.emblem, 'full');
       await utils.texture.verifyTextureVisible('full');
     });
@@ -109,7 +111,10 @@ test.describe('Canvas and 3D Rendering', () => {
 
   test.describe('Combined Textures', () => {
     test('should display both textures when both filters are active', async ({}) => {
+      await utils.nav.openEditorTab('filePicker');
       await utils.file.uploadFile(TEST_FILES.emblem, 'logo');
+
+      await utils.nav.openEditorTab('filePicker');
       await utils.file.uploadFile(TEST_FILES.emblem2, 'full');
 
       // Ensure both filters are active
@@ -121,7 +126,10 @@ test.describe('Canvas and 3D Rendering', () => {
 
     test('should hide both textures when both filters are deactivated', async ({}) => {
       // Setup both textures
+      await utils.nav.openEditorTab('filePicker');
       await utils.file.uploadFile(TEST_FILES.emblem, 'logo');
+
+      await utils.nav.openEditorTab('filePicker');
       await utils.file.uploadFile(TEST_FILES.emblem2, 'full');
       await utils.texture.activateFilter('logoShirt');
 

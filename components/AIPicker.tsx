@@ -25,7 +25,12 @@ const AIPicker = ({
         value={prompt}
         onChange={(e) => setPrompt(e.target.value)}
         className='aipicker-textarea'
+        aria-label='AI image generation prompt'
+        aria-describedby='prompt-help'
       />
+      <div id='prompt-help' className='sr-only'>
+        Describe the image you want to generate using AI. Be specific about colors, style, and content.
+      </div>
       <div className='flex flex-wrap gap-3'>
         {generatingImg ?
           <CustomButton

@@ -48,13 +48,19 @@ test.describe('Customizer', () => {
   });
 
   test.describe('Editor Tab Behavior', () => {
-    test('should toggle editor tabs open and close', async ({ page }) => {
+    test('should toggle editor tabs open and close', async ({ page, browserName }) => {
       // Open tab
       await page.getByTestId('editor-tab-colorPicker').click();
       await expect(page.getByTestId('color-picker')).toBeVisible();
 
-      // Close tab
+      // Close tab - wait a bit longer on webkit for animation
       await page.getByTestId('editor-tab-colorPicker').click();
+      
+      if (browserName === 'webkit') {
+        // Safari may need more time for animations
+        await page.waitForTimeout(500);
+      }
+      
       await expect(page.getByTestId('color-picker')).toHaveCount(0);
     });
 
