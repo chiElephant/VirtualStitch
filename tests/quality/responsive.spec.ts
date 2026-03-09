@@ -1,114 +1,91 @@
-import { test, expect } from '@playwright/test';
-import {
-  TestUtils,
-  VIEWPORTS,
-  TEST_COLORS,
-  TEST_FILES,
-} from '../utils/test-helpers';
+import { test, expect } from '../__config__/base-test';
 
-test.describe('Responsive Design Tests', () => {
-  let utils: TestUtils;
-
-  test.beforeEach(async ({ page }) => {
-    utils = new TestUtils(page);
+test.describe('📱 Responsive Design Excellence', () => {
+  test.beforeEach(async ({ suite }) => {
+    await suite.setup();
+  });
+  
+  test.afterEach(async ({ suite }) => {
+    await suite.cleanup.reset();
   });
 
-  test.describe('Device-Specific Layout Tests', () => {
-    Object.entries(VIEWPORTS).forEach(([deviceName, viewport]) => {
-      test.describe(`${deviceName} (${viewport.width}x${viewport.height})`, () => {
-        test.beforeEach(async ({ page }) => {
-          await page.setViewportSize(viewport);
-        });
+  // ==========================================
+  // 🖥️ DEVICE-SPECIFIC LAYOUT PERFECTION
+  // ==========================================
+  test.describe('Cross-Device Layout Validation', () => {
+    Object.entries(suite.data.viewports).forEach(([deviceName, viewport]) => {
+      test(`should deliver flawless experience on ${deviceName} (${viewport.width}x${viewport.height})`, async ({ suite }) => {
+        await suite.page.setViewportSize(viewport);
+        
+        await suite.actions.navigateToHomepage();
 
-        test('should display essential elements correctly', async ({
-          page,
-        }) => {
-          await page.goto('/');
+        // Essential elements visibility
+        await expect(suite.page.getByRole('heading', { name: "LET'S DO IT." })).toBeVisible();
+        await expect(suite.page.locator('canvas')).toBeVisible();
+        await expect(suite.page.getByRole('button', { name: 'Customize It' })).toBeVisible();
 
-          // Core elements should be visible
-          await expect(
-            page.getByRole('heading', { name: "LET'S DO IT." })
-          ).toBeVisible();
-          await expect(page.locator('canvas')).toBeVisible();
-          await expect(
-            page.getByRole('button', { name: 'Customize It' })
-          ).toBeVisible();
-        });
+        // Verify responsive navigation
+        await suite.page.getByRole('button', { name: 'Customize It' }).click();
+        
+        const waitTime = deviceName.includes('mobile') ? 2500 : 1500;
+        await suite.wait.custom(waitTime);
 
-        test('should navigate to customizer properly', async ({ page }) => {
-          await page.goto('/');
-          await page.getByRole('button', { name: 'Customize It' }).click();
+        await expect(suite.page.getByTestId('editor-tabs-container')).toBeVisible();
+        await expect(suite.page.getByTestId('filter-tabs-container')).toBeVisible();
+        await expect(suite.page.getByRole('button', { name: 'Go Back' })).toBeVisible();
 
-          // Allow extra time for mobile animations
-          const waitTime = deviceName.includes('mobile') ? 2500 : 1500;
-          await page.waitForTimeout(waitTime);
+        // Test device-optimized interactions
+        await suite.actions.activateEditorTab('colorPicker');
+        await suite.actions.selectColor(suite.data.colors.green);
+        await suite.actions.verifyColorApplied(suite.data.colors.green);
 
-          await expect(page.getByTestId('editor-tabs-container')).toBeVisible();
-          await expect(page.getByTestId('filter-tabs-container')).toBeVisible();
-          await expect(
-            page.getByRole('button', { name: 'Go Back' })
-          ).toBeVisible();
-        });
-
-        test('should handle color picker interactions', async ({}) => {
-          await utils.nav.goToCustomizer();
-
-          await utils.color.openColorPicker();
-          await utils.color.selectColor(TEST_COLORS.green);
-          await utils.color.verifyColorApplied(TEST_COLORS.green);
-        });
-
-        test('should support file upload', async ({ page }) => {
-          await utils.nav.goToCustomizer();
-
-          await utils.nav.openEditorTab('filePicker');
-          await page
-            .getByTestId('file-picker-input')
-            .setInputFiles(TEST_FILES.emblem);
-          await expect(page.getByText('emblem.png')).toBeVisible();
-        });
+        // File upload responsiveness
+        await suite.actions.activateEditorTab('filePicker');
+        await suite.actions.uploadTestFile(suite.data.testFiles.emblem, 'logo');
+        await expect(suite.page.getByText('emblem.png')).toBeVisible();
       });
     });
   });
 
-  test.describe('Touch and Mobile Interactions', () => {
+  // ==========================================
+  // 👆 TOUCH & MOBILE INTERACTION MASTERY
+  // ==========================================
+  test.describe('Touch-Optimized Interactions', () => {
     const mobileDevices = ['mobile', 'tablet', 'largeMobile'];
 
     mobileDevices.forEach((deviceKey) => {
-      test(`should handle touch interactions on ${deviceKey}`, async ({
-        page,
-      }) => {
-        const viewport = VIEWPORTS[deviceKey as keyof typeof VIEWPORTS];
-        await page.setViewportSize(viewport);
+      test(`should provide exceptional touch experience on ${deviceKey}`, async ({ suite }) => {
+        const viewport = suite.data.viewports[deviceKey as keyof typeof suite.data.viewports];
+        await suite.page.setViewportSize(viewport);
 
-        await page.goto('/');
-        await utils.nav.goToCustomizer();
+        await suite.actions.navigateToHomepage();
+        await suite.flows.navigateToCustomizer();
 
-        // Test touch-friendly interactions
-        await page.getByTestId('editor-tab-colorPicker').click();
-        await page.getByTitle(TEST_COLORS.lightBlue).click();
-        await utils.color.verifyColorApplied(TEST_COLORS.lightBlue);
+        // Touch-optimized color picker
+        await suite.page.getByTestId('editor-tab-colorPicker').click();
+        await suite.page.getByTitle(suite.data.colors.lightBlue).click();
+        await suite.actions.verifyColorApplied(suite.data.colors.lightBlue);
 
-        // Test filter tab touches
-        await page.getByTestId('filter-tab-logoShirt').click();
-        await utils.texture.verifyFilterActive('logoShirt');
+        // Touch-friendly filter interactions
+        await suite.page.getByTestId('filter-tab-logoShirt').click();
+        await suite.actions.verifyFilterActive('logoShirt');
       });
     });
+    
+    test('should meet touch target accessibility standards', async ({ suite }) => {
+      await suite.page.setViewportSize(suite.data.viewports.mobile);
+      await suite.flows.navigateToCustomizer();
 
-    test('should have appropriate touch target sizes', async ({ page }) => {
-      await page.setViewportSize(VIEWPORTS.mobile);
-      await utils.nav.goToCustomizer();
-
-      // Check touch target sizes (minimum 44px recommended)
       const interactiveElements = [
-        page.getByRole('button', { name: 'Go Back' }),
-        page.getByTestId('editor-tab-colorPicker'),
-        page.getByTestId('filter-tab-logoShirt'),
+        suite.page.getByRole('button', { name: 'Go Back' }),
+        suite.page.getByTestId('editor-tab-colorPicker'),
+        suite.page.getByTestId('filter-tab-logoShirt')
       ];
 
       for (const element of interactiveElements) {
         const boundingBox = await element.boundingBox();
         if (boundingBox) {
+          // WCAG AAA recommendation: 44px minimum
           expect(boundingBox.height).toBeGreaterThanOrEqual(44);
           expect(boundingBox.width).toBeGreaterThanOrEqual(44);
         }
@@ -116,325 +93,315 @@ test.describe('Responsive Design Tests', () => {
     });
   });
 
-  test.describe('Orientation Changes', () => {
+  // ==========================================
+  // 🔄 ORIENTATION CHANGE HANDLING
+  // ==========================================
+  test.describe('Seamless Orientation Transitions', () => {
     const mobileViewports = [
       {
         name: 'iPhone',
-        portrait: VIEWPORTS.mobile,
-        landscape: { width: 667, height: 375 },
+        portrait: suite.data.viewports.mobile,
+        landscape: { width: 667, height: 375 }
       },
       {
         name: 'iPad',
-        portrait: VIEWPORTS.tablet,
-        landscape: { width: 1024, height: 768 },
-      },
+        portrait: suite.data.viewports.tablet,
+        landscape: { width: 1024, height: 768 }
+      }
     ];
 
     mobileViewports.forEach(({ name, portrait, landscape }) => {
-      test(`should handle orientation changes on ${name}`, async ({ page }) => {
-        // Start in portrait
-        await page.setViewportSize(portrait);
-        await page.goto('/');
-        await expect(page.locator('canvas')).toBeVisible();
+      test(`should gracefully handle orientation changes on ${name}`, async ({ suite }) => {
+        // Start in portrait mode
+        await suite.page.setViewportSize(portrait);
+        await suite.actions.navigateToHomepage();
+        await expect(suite.page.locator('canvas')).toBeVisible();
 
-        // Navigate to customizer
-        await utils.nav.goToCustomizer();
-        await utils.color.openColorPicker();
-        await utils.color.selectColor(TEST_COLORS.purple);
+        // Setup customization in portrait
+        await suite.flows.navigateToCustomizer();
+        await suite.actions.activateEditorTab('colorPicker');
+        await suite.actions.selectColor(suite.data.colors.purple);
 
-        // Switch to landscape
-        await page.setViewportSize(landscape);
-        await page.waitForTimeout(1000);
+        // Switch to landscape orientation
+        await suite.page.setViewportSize(landscape);
+        await suite.wait.forOrientationChange();
 
-        // Verify functionality persists
-        await expect(page.locator('canvas')).toBeVisible();
-        await utils.color.verifyColorApplied(TEST_COLORS.purple);
+        // Verify state persistence and continued functionality
+        await expect(suite.page.locator('canvas')).toBeVisible();
+        await suite.actions.verifyColorApplied(suite.data.colors.purple);
 
         // Test continued functionality in landscape
-        await utils.color.selectColor(TEST_COLORS.dark);
-        await utils.color.verifyColorApplied(TEST_COLORS.dark);
+        await suite.actions.selectColor(suite.data.colors.dark);
+        await suite.actions.verifyColorApplied(suite.data.colors.dark);
       });
     });
   });
 
-  test.describe('Viewport Edge Cases', () => {
-    test('should handle extremely small viewport', async ({ page }) => {
-      await page.setViewportSize(VIEWPORTS.tiny);
-      await page.goto('/');
+  // ==========================================
+  // 🎯 VIEWPORT EDGE CASES
+  // ==========================================
+  test.describe('Extreme Viewport Resilience', () => {
+    test('should excel on extremely small viewports', async ({ suite }) => {
+      await suite.page.setViewportSize(suite.data.viewports.tiny);
+      await suite.actions.navigateToHomepage();
 
-      // Basic functionality should still work
-      await expect(
-        page.getByRole('button', { name: 'Customize It' })
-      ).toBeVisible();
+      // Core functionality must work despite constraints
+      await expect(suite.page.getByRole('button', { name: 'Customize It' })).toBeVisible();
 
-      await utils.nav.goToCustomizer();
-      await expect(page.getByTestId('editor-tabs-container')).toBeVisible();
+      await suite.flows.navigateToCustomizer();
+      await expect(suite.page.getByTestId('editor-tabs-container')).toBeVisible();
 
-      // Should be able to interact despite small size
-      await utils.color.openColorPicker();
-      await utils.color.selectColor(TEST_COLORS.green);
-      await utils.color.verifyColorApplied(TEST_COLORS.green);
+      // Interaction capability verification
+      await suite.actions.activateEditorTab('colorPicker');
+      await suite.actions.selectColor(suite.data.colors.green);
+      await suite.actions.verifyColorApplied(suite.data.colors.green);
     });
+    
+    test('should scale beautifully on ultra-wide displays', async ({ suite }) => {
+      await suite.page.setViewportSize(suite.data.viewports.ultraWide);
+      await suite.actions.navigateToHomepage();
 
-    test('should handle extremely large viewport', async ({ page }) => {
-      await page.setViewportSize(VIEWPORTS.ultraWide);
-      await page.goto('/');
+      // Layout should scale appropriately for large screens
+      await expect(suite.page.locator('canvas')).toBeVisible();
+      await expect(suite.page.getByRole('button', { name: 'Customize It' })).toBeVisible();
 
-      // Layout should scale appropriately
-      await expect(page.locator('canvas')).toBeVisible();
-      await expect(
-        page.getByRole('button', { name: 'Customize It' })
-      ).toBeVisible();
+      await suite.flows.navigateToCustomizer();
+      await expect(suite.page.getByTestId('editor-tabs-container')).toBeVisible();
 
-      await utils.nav.goToCustomizer();
-      await expect(page.getByTestId('editor-tabs-container')).toBeVisible();
-
-      // Functionality should work at large sizes
-      await utils.color.openColorPicker();
-      await utils.color.selectColor(TEST_COLORS.lightBlue);
-      await utils.color.verifyColorApplied(TEST_COLORS.lightBlue);
+      // Ultra-wide functionality verification
+      await suite.actions.activateEditorTab('colorPicker');
+      await suite.actions.selectColor(suite.data.colors.lightBlue);
+      await suite.actions.verifyColorApplied(suite.data.colors.lightBlue);
     });
-
-    test('should handle dynamic viewport changes', async ({ page }) => {
-      await page.goto('/');
-      await utils.nav.goToCustomizer();
+    
+    test('should handle dynamic viewport transitions flawlessly', async ({ suite }) => {
+      await suite.actions.navigateToHomepage();
+      await suite.flows.navigateToCustomizer();
 
       const viewportSequence = [
-        VIEWPORTS.desktop,
-        VIEWPORTS.tablet,
-        VIEWPORTS.mobile,
-        VIEWPORTS.ultraWide,
-        VIEWPORTS.tiny,
+        suite.data.viewports.desktop,
+        suite.data.viewports.tablet,
+        suite.data.viewports.mobile,
+        suite.data.viewports.ultraWide,
+        suite.data.viewports.tiny
       ];
 
       for (const viewport of viewportSequence) {
-        await page.setViewportSize(viewport);
-        await page.waitForTimeout(500);
+        await suite.page.setViewportSize(viewport);
+        await suite.wait.forLayoutStabilization();
 
-        // Core elements should remain functional
-        await expect(page.getByTestId('editor-tabs-container')).toBeVisible();
-        await expect(page.locator('canvas')).toBeVisible();
+        // Core elements must remain functional
+        await expect(suite.page.getByTestId('editor-tabs-container')).toBeVisible();
+        await expect(suite.page.locator('canvas')).toBeVisible();
       }
 
-      // Test functionality after all changes
-      await utils.color.openColorPicker();
-      await utils.color.selectColor(TEST_COLORS.yellow);
-      await utils.color.verifyColorApplied(TEST_COLORS.yellow);
+      // Final functionality test after all transitions
+      await suite.actions.activateEditorTab('colorPicker');
+      await suite.actions.selectColor(suite.data.colors.yellow);
+      await suite.actions.verifyColorApplied(suite.data.colors.yellow);
     });
   });
 
-  test.describe('Responsive Content Adaptation', () => {
-    test('should adapt editor tabs layout on mobile', async ({ page }) => {
-      // Test desktop layout
-      await page.setViewportSize(VIEWPORTS.desktop);
-      await utils.nav.goToCustomizer();
+  // ==========================================
+  // 🎨 RESPONSIVE CONTENT ADAPTATION
+  // ==========================================
+  test.describe('Intelligent Content Adaptation', () => {
+    test('should optimize editor tabs layout across screen sizes', async ({ suite }) => {
+      // Desktop layout baseline
+      await suite.page.setViewportSize(suite.data.viewports.desktop);
+      await suite.flows.navigateToCustomizer();
 
-      const desktopTabsContainer = page.getByTestId('editor-tabs-container');
+      const desktopTabsContainer = suite.page.getByTestId('editor-tabs-container');
       const desktopBox = await desktopTabsContainer.boundingBox();
 
-      // Test mobile layout
-      await page.setViewportSize(VIEWPORTS.mobile);
-      await page.waitForTimeout(500);
+      // Mobile adaptation verification
+      await suite.page.setViewportSize(suite.data.viewports.mobile);
+      await suite.wait.forLayoutStabilization();
 
-      const mobileTabsContainer = page.getByTestId('editor-tabs-container');
+      const mobileTabsContainer = suite.page.getByTestId('editor-tabs-container');
       const mobileBox = await mobileTabsContainer.boundingBox();
 
-      // Layout should adapt (different positioning/sizing)
+      // Layout should intelligently adapt
       if (desktopBox && mobileBox) {
-        const positionChanged =
-          Math.abs(desktopBox.x - mobileBox.x) > 50 ||
+        const hasAdaptiveLayout = 
+          Math.abs(desktopBox.x - mobileBox.x) > 50 || 
           Math.abs(desktopBox.y - mobileBox.y) > 50;
-        expect(positionChanged).toBeTruthy();
+        expect(hasAdaptiveLayout).toBeTruthy();
       }
 
-      // Functionality should remain intact
-      await utils.color.openColorPicker();
-      await utils.color.selectColor(TEST_COLORS.red);
-      await utils.color.verifyColorApplied(TEST_COLORS.red);
+      // Functionality integrity check
+      await suite.actions.activateEditorTab('colorPicker');
+      await suite.actions.selectColor(suite.data.colors.red);
+      await suite.actions.verifyColorApplied(suite.data.colors.red);
     });
+    
+    test('should optimize filter tabs for different screen sizes', async ({ suite }) => {
+      await suite.flows.navigateToCustomizer();
 
-    test('should adapt filter tabs on different screen sizes', async ({
-      page,
-    }) => {
-      await utils.nav.goToCustomizer();
-
-      // First upload some content so filter tabs can actually be activated
-      await utils.file.uploadFile(TEST_FILES.emblem, 'logo');
-      await page.waitForTimeout(1000); // Allow texture to load
+      // Setup content for filter testing
+      await suite.actions.uploadTestFile(suite.data.testFiles.emblem, 'logo');
+      await suite.wait.forTextureLoad();
 
       const screenSizes = [
-        VIEWPORTS.desktop,
-        VIEWPORTS.tablet,
-        VIEWPORTS.mobile,
+        suite.data.viewports.desktop,
+        suite.data.viewports.tablet,
+        suite.data.viewports.mobile
       ];
 
       for (const viewport of screenSizes) {
-        await page.setViewportSize(viewport);
-        await page.waitForTimeout(500);
+        await suite.page.setViewportSize(viewport);
+        await suite.wait.forLayoutStabilization();
 
-        // Filter tabs should remain accessible
-        await expect(page.getByTestId('filter-tab-logoShirt')).toBeVisible();
-        await expect(page.getByTestId('filter-tab-stylishShirt')).toBeVisible();
+        // Filter tabs accessibility verification
+        await expect(suite.page.getByTestId('filter-tab-logoShirt')).toBeVisible();
+        await expect(suite.page.getByTestId('filter-tab-stylishShirt')).toBeVisible();
 
-        // Should be interactive - now with content to actually filter
-        await utils.texture.activateFilter('logoShirt');
-        await utils.texture.verifyFilterActive('logoShirt');
+        // Interactive functionality verification
+        await suite.actions.activateFilter('logoShirt');
+        await suite.actions.verifyFilterActive('logoShirt');
       }
     });
   });
 
-  test.describe('Responsive Text and Typography', () => {
-    test('should maintain readable text across screen sizes', async ({
-      page,
-    }) => {
+  // ==========================================
+  // 📝 RESPONSIVE TYPOGRAPHY
+  // ==========================================
+  test.describe('Adaptive Typography Excellence', () => {
+    test('should maintain optimal readability across screen sizes', async ({ suite }) => {
       const viewportsToTest = [
-        VIEWPORTS.mobile,
-        VIEWPORTS.tablet,
-        VIEWPORTS.desktop,
+        suite.data.viewports.mobile,
+        suite.data.viewports.tablet,
+        suite.data.viewports.desktop
       ];
 
       for (const viewport of viewportsToTest) {
-        await page.setViewportSize(viewport);
-        await page.goto('/');
+        await suite.page.setViewportSize(viewport);
+        await suite.actions.navigateToHomepage();
 
-        // Main heading should be readable
-        const heading = page.getByRole('heading', { name: "LET'S DO IT." });
+        // Heading readability verification
+        const heading = suite.page.getByRole('heading', { name: "LET'S DO IT." });
         await expect(heading).toBeVisible();
 
-        const headingStyles = await heading.evaluate((el) => {
-          const styles = window.getComputedStyle(el);
-          return {
-            fontSize: parseFloat(styles.fontSize),
-            lineHeight: styles.lineHeight,
-          };
-        });
-
-        // Font size should be reasonable (at least 16px on mobile)
+        const headingStyles = await suite.actions.getElementStyles(heading);
+        
+        // Device-appropriate font sizing
         const minFontSize = viewport.width <= 768 ? 16 : 14;
         expect(headingStyles.fontSize).toBeGreaterThanOrEqual(minFontSize);
       }
     });
+    
+    test('should scale interactive elements appropriately', async ({ suite }) => {
+      await suite.page.setViewportSize(suite.data.viewports.mobile);
+      await suite.actions.navigateToHomepage();
 
-    test('should scale button text appropriately', async ({ page }) => {
-      await page.setViewportSize(VIEWPORTS.mobile);
-      await page.goto('/');
-
-      const button = page.getByRole('button', { name: 'Customize It' });
+      const button = suite.page.getByRole('button', { name: 'Customize It' });
       await expect(button).toBeVisible();
 
-      const buttonStyles = await button.evaluate((el) => {
-        const styles = window.getComputedStyle(el);
-        return {
-          fontSize: parseFloat(styles.fontSize),
-          padding: styles.padding,
-        };
-      });
-
-      // Button text should be readable on mobile
+      const buttonStyles = await suite.actions.getElementStyles(button);
+      
+      // Mobile-optimized button sizing
       expect(buttonStyles.fontSize).toBeGreaterThanOrEqual(14);
+      expect(buttonStyles.padding).toBeDefined();
     });
   });
 
-  test.describe('Mobile-First Workflow Validation', () => {
-    test('should complete full workflow on mobile', async ({ page }) => {
-      await page.setViewportSize(VIEWPORTS.mobile);
-      await page.goto('/');
+  // ==========================================
+  // 📱 MOBILE-FIRST WORKFLOW VALIDATION
+  // ==========================================
+  test.describe('Complete Mobile Experience', () => {
+    test('should deliver full workflow excellence on mobile', async ({ suite }) => {
+      await suite.page.setViewportSize(suite.data.viewports.mobile);
+      await suite.actions.navigateToHomepage();
 
-      // Complete mobile workflow
-      await utils.nav.goToCustomizer();
-      await page.waitForTimeout(2000); // Extra time for mobile
+      // Complete mobile user journey
+      await suite.flows.navigateToCustomizer();
+      await suite.wait.forMobileAnimations();
 
-      // Color customization
-      await utils.color.openColorPicker();
-      await utils.color.selectColor(TEST_COLORS.cyan);
-      await utils.color.verifyColorApplied(TEST_COLORS.cyan);
+      // Color customization on mobile
+      await suite.actions.activateEditorTab('colorPicker');
+      await suite.actions.selectColor(suite.data.colors.cyan);
+      await suite.actions.verifyColorApplied(suite.data.colors.cyan);
 
-      // File upload
-      await utils.file.uploadFile(TEST_FILES.emblem, 'logo');
-      await utils.texture.verifyTextureVisible('logo');
+      // File upload capability
+      await suite.actions.uploadTestFile(suite.data.testFiles.emblem, 'logo');
+      await suite.actions.verifyTextureVisible('logo');
 
-      // Download functionality
-      const download = await utils.download.downloadImage(
-        'mobile-test',
-        'Download Shirt'
-      );
+      // Download functionality verification
+      const download = await suite.actions.downloadImage('mobile-test', 'Download Shirt');
       expect(download.suggestedFilename()).toContain('mobile-test');
     });
+    
+    test('should excel at mobile gesture interactions', async ({ suite }) => {
+      await suite.page.setViewportSize(suite.data.viewports.mobile);
+      await suite.flows.navigateToCustomizer();
 
-    test('should handle mobile gestures and interactions', async ({ page }) => {
-      await page.setViewportSize(VIEWPORTS.mobile);
-      await utils.nav.goToCustomizer();
+      // Mobile interaction testing
+      await suite.page.getByTestId('editor-tab-colorPicker').click();
+      await suite.page.getByTitle(suite.data.colors.green).click();
 
-      // Test various mobile interactions
-      await page.getByTestId('editor-tab-colorPicker').click();
-      await page.getByTitle(TEST_COLORS.green).click();
+      // Filter interaction optimization
+      await suite.page.getByTestId('filter-tab-logoShirt').click();
+      await suite.page.getByTestId('filter-tab-stylishShirt').click();
 
-      // Test filter interactions
-      await page.getByTestId('filter-tab-logoShirt').click();
-      await page.getByTestId('filter-tab-stylishShirt').click();
-
-      // Test navigation
-      await page.getByRole('button', { name: 'Go Back' }).click();
-      await expect(
-        page.getByRole('heading', { name: "LET'S DO IT." })
-      ).toBeVisible();
+      // Navigation flow verification
+      await suite.page.getByRole('button', { name: 'Go Back' }).click();
+      await expect(suite.page.getByRole('heading', { name: "LET'S DO IT." })).toBeVisible();
     });
   });
 
-  test.describe('Cross-Device Consistency', () => {
-    test('should maintain state consistency across viewport changes', async ({
-      page,
-    }) => {
-      // Start on desktop
-      await page.setViewportSize(VIEWPORTS.desktop);
-      await utils.nav.goToCustomizer();
+  // ==========================================
+  // 🔄 CROSS-DEVICE CONSISTENCY
+  // ==========================================
+  test.describe('Seamless Cross-Device Experience', () => {
+    test('should maintain perfect state consistency across viewport changes', async ({ suite }) => {
+      // Start with desktop setup
+      await suite.page.setViewportSize(suite.data.viewports.desktop);
+      await suite.flows.navigateToCustomizer();
 
-      // Make changes
-      await utils.color.openColorPicker();
-      await utils.color.selectColor(TEST_COLORS.purple);
-      await utils.file.uploadFile(TEST_FILES.emblem, 'logo');
+      // Establish state
+      await suite.actions.activateEditorTab('colorPicker');
+      await suite.actions.selectColor(suite.data.colors.purple);
+      await suite.actions.uploadTestFile(suite.data.testFiles.emblem, 'logo');
 
-      // Switch to mobile
-      await page.setViewportSize(VIEWPORTS.mobile);
-      await page.waitForTimeout(1000);
+      // Mobile transition verification
+      await suite.page.setViewportSize(suite.data.viewports.mobile);
+      await suite.wait.forLayoutStabilization();
 
-      // Verify state persisted
-      await utils.color.verifyColorApplied(TEST_COLORS.purple);
-      await utils.texture.verifyTextureVisible('logo');
+      // State persistence verification
+      await suite.actions.verifyColorApplied(suite.data.colors.purple);
+      await suite.actions.verifyTextureVisible('logo');
 
-      // Switch to tablet
-      await page.setViewportSize(VIEWPORTS.tablet);
-      await page.waitForTimeout(1000);
+      // Tablet transition verification
+      await suite.page.setViewportSize(suite.data.viewports.tablet);
+      await suite.wait.forLayoutStabilization();
 
-      // State should still be intact
-      await utils.color.verifyColorApplied(TEST_COLORS.purple);
-      await utils.texture.verifyTextureVisible('logo');
+      // Continued state integrity
+      await suite.actions.verifyColorApplied(suite.data.colors.purple);
+      await suite.actions.verifyTextureVisible('logo');
     });
-
-    test('should provide consistent user experience across devices', async ({
-      page,
-    }) => {
+    
+    test('should provide consistent UX across all device categories', async ({ suite }) => {
       const devices = [
-        { name: 'Mobile', viewport: VIEWPORTS.mobile },
-        { name: 'Tablet', viewport: VIEWPORTS.tablet },
-        { name: 'Desktop', viewport: VIEWPORTS.desktop },
+        { name: 'Mobile', viewport: suite.data.viewports.mobile },
+        { name: 'Tablet', viewport: suite.data.viewports.tablet },
+        { name: 'Desktop', viewport: suite.data.viewports.desktop }
       ];
 
       for (const device of devices) {
-        await page.setViewportSize(device.viewport);
-        await page.goto('/');
+        await suite.page.setViewportSize(device.viewport);
+        await suite.actions.navigateToHomepage();
 
-        // Core user journey should work consistently
-        await utils.nav.goToCustomizer();
+        // Core user journey consistency
+        await suite.flows.navigateToCustomizer();
 
-        // Essential features should be accessible
-        await expect(page.getByTestId('editor-tabs-container')).toBeVisible();
-        await expect(page.getByTestId('filter-tabs-container')).toBeVisible();
+        // Essential features accessibility
+        await expect(suite.page.getByTestId('editor-tabs-container')).toBeVisible();
+        await expect(suite.page.getByTestId('filter-tabs-container')).toBeVisible();
 
-        // Basic interactions should work
-        await utils.color.openColorPicker();
-        await utils.color.selectColor(TEST_COLORS.lightBlue);
-        await utils.color.verifyColorApplied(TEST_COLORS.lightBlue);
+        // Consistent interaction patterns
+        await suite.actions.activateEditorTab('colorPicker');
+        await suite.actions.selectColor(suite.data.colors.lightBlue);
+        await suite.actions.verifyColorApplied(suite.data.colors.lightBlue);
       }
     });
   });

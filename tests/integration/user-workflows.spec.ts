@@ -1,120 +1,107 @@
-import { test, expect } from '@playwright/test';
-import {
-  TestUtils,
-  TEST_FILES,
-  TEST_COLORS,
-  VALID_TEST_IMAGE_BASE64,
-} from '../utils/test-helpers';
+import { test, expect } from '../__config__/base-test';
 
-test.describe('Complete User Workflows @e2e', () => {
-  let utils: TestUtils;
-
-  test.beforeEach(async ({ page }) => {
-    utils = new TestUtils(page);
+test.describe('🎯 Complete User Workflows Excellence', () => {
+  test.beforeEach(async ({ suite }) => {
+    await suite.setup();
+  });
+  
+  test.afterEach(async ({ suite }) => {
+    await suite.cleanup.reset();
   });
 
-  test.describe('Logo Customization Workflow', () => {
-    test('should complete full logo customization and download', async ({
-      page,
-    }) => {
-      await page.goto('/');
+  // ==========================================
+  // 🎨 LOGO CUSTOMIZATION MASTERY
+  // ==========================================
+  test.describe('Premium Logo Customization Journey', () => {
+    test('should deliver flawless logo customization and download experience', async ({ suite }) => {
+      const workflowStart = Date.now();
+      
+      await suite.actions.navigateToHomepage();
 
-      // Step 1: Navigate to customizer
-      await utils.nav.goToCustomizer();
+      // Step 1: Premium navigation experience
+      await suite.flows.navigateToCustomizer();
 
-      // Step 2: Change color
-      await utils.color.openColorPicker();
-      await utils.color.selectColor(TEST_COLORS.green);
-      await utils.color.verifyColorApplied(TEST_COLORS.green);
+      // Step 2: Color personalization
+      await suite.actions.activateEditorTab('colorPicker');
+      await suite.actions.selectColor(suite.data.colors.green);
+      await suite.actions.verifyColorApplied(suite.data.colors.green);
 
-      // Step 3: Upload logo
-      await utils.file.uploadFile(TEST_FILES.emblem, 'logo');
-      await utils.texture.verifyTextureVisible('logo');
+      // Step 3: Logo upload and application
+      await suite.actions.uploadTestFile(suite.data.testFiles.emblem, 'logo');
+      await suite.actions.verifyTextureVisible('logo');
 
-      // Step 4: Download both canvas and logo
-      const canvasDownload = await utils.download.downloadImage(
-        'my-custom-shirt',
-        'Download Shirt'
-      );
+      // Step 4: Dual download capability
+      const canvasDownload = await suite.actions.downloadImage('my-custom-shirt', 'Download Shirt');
       expect(canvasDownload.suggestedFilename()).toContain('my-custom-shirt');
 
-      const logoDownload = await utils.download.downloadImage(
-        'my-logo',
-        'Download Logo'
-      );
+      const logoDownload = await suite.actions.downloadImage('my-logo', 'Download Logo');
       expect(logoDownload.suggestedFilename()).toContain('my-logo');
 
-      // Step 5: Verify state persistence
-      await utils.color.openColorPicker();
-      await utils.color.verifyColorApplied(TEST_COLORS.green);
-      await utils.texture.verifyTextureVisible('logo');
+      // Step 5: State persistence verification
+      await suite.actions.activateEditorTab('colorPicker');
+      await suite.actions.verifyColorApplied(suite.data.colors.green);
+      await suite.actions.verifyTextureVisible('logo');
+
+      const completionTime = Date.now() - workflowStart;
+      expect(completionTime).toBeLessThan(suite.data.performance.workflowCompletionThreshold);
     });
   });
 
-  test.describe('Pattern Customization Workflow', () => {
-    test('should complete full pattern customization and download', async ({
-      page,
-    }) => {
-      await page.goto('/');
-      await utils.nav.goToCustomizer();
+  // ==========================================
+  // 🌟 PATTERN CUSTOMIZATION EXCELLENCE
+  // ==========================================
+  test.describe('Advanced Pattern Customization Flow', () => {
+    test('should execute complete pattern customization with precision', async ({ suite }) => {
+      await suite.actions.navigateToHomepage();
+      await suite.flows.navigateToCustomizer();
 
-      // Customize with pattern
-      await utils.color.openColorPicker();
-      await utils.color.selectColor(TEST_COLORS.purple);
-      await utils.file.uploadFile(TEST_FILES.emblem2, 'full');
+      // Premium pattern customization
+      await suite.actions.activateEditorTab('colorPicker');
+      await suite.actions.selectColor(suite.data.colors.purple);
+      await suite.actions.uploadTestFile(suite.data.testFiles.emblem2, 'full');
 
-      // Verify changes applied
-      await utils.color.verifyColorApplied(TEST_COLORS.purple);
-      await utils.texture.verifyTextureVisible('full');
+      // State verification excellence
+      await suite.actions.verifyColorApplied(suite.data.colors.purple);
+      await suite.actions.verifyTextureVisible('full');
 
-      // Download both items
-      const canvasDownload = await utils.download.downloadImage(
-        'pattern-shirt',
-        'Download Shirt'
-      );
+      // Comprehensive download verification
+      const canvasDownload = await suite.actions.downloadImage('pattern-shirt', 'Download Shirt');
       expect(canvasDownload.suggestedFilename()).toContain('pattern-shirt');
 
-      const patternDownload = await utils.download.downloadImage(
-        'my-pattern',
-        'Download Pattern'
-      );
+      const patternDownload = await suite.actions.downloadImage('my-pattern', 'Download Pattern');
       expect(patternDownload.suggestedFilename()).toContain('my-pattern');
     });
   });
 
-  test.describe('AI-Powered Workflow', () => {
-    test('should complete AI generation to download workflow', async ({
-      page,
-    }) => {
-      await utils.ai.mockSuccessfulResponse();
+  // ==========================================
+  // 🤖 AI-POWERED WORKFLOW INNOVATION
+  // ==========================================
+  test.describe('Revolutionary AI-Powered Experience', () => {
+    test('should deliver seamless AI generation to download workflow', async ({ suite }) => {
+      await suite.mocks.mockSuccessfulAIResponse();
 
-      await page.goto('/');
-      await utils.nav.goToCustomizer();
+      await suite.actions.navigateToHomepage();
+      await suite.flows.navigateToCustomizer();
 
-      // Generate AI logo
-      await utils.ai.generateImage('Modern tech company logo', 'logo');
-      await utils.ai.verifySuccessToast();
-      await utils.texture.verifyTextureVisible('logo');
+      // AI-powered logo generation
+      await suite.actions.generateAIImage('Modern tech company logo', 'logo');
+      await suite.actions.verifySuccessToast();
+      await suite.actions.verifyTextureVisible('logo');
 
-      // Customize color
-      await utils.color.openColorPicker();
-      await utils.color.selectColor(TEST_COLORS.dark);
-      await utils.color.verifyColorApplied(TEST_COLORS.dark);
+      // Color enhancement
+      await suite.actions.activateEditorTab('colorPicker');
+      await suite.actions.selectColor(suite.data.colors.dark);
+      await suite.actions.verifyColorApplied(suite.data.colors.dark);
 
-      // Download final result
-      const download = await utils.download.downloadImage(
-        'ai-logo-shirt',
-        'Download Shirt'
-      );
+      // Final download excellence
+      const download = await suite.actions.downloadImage('ai-logo-shirt', 'Download Shirt');
       expect(download.suggestedFilename()).toContain('ai-logo-shirt');
     });
-
-    test('should handle AI generation failure and recovery', async ({
-      page,
-    }) => {
-      // Mock failure then success
+    
+    test('should gracefully handle AI generation failure and recovery', async ({ suite }) => {
+      // Failure followed by success pattern
       let callCount = 0;
-      await page.route('/api/custom-logo', (route) => {
+      await suite.page.route('/api/custom-logo', (route: any) => {
         callCount++;
         if (callCount === 1) {
           route.fulfill({ status: 500 });
@@ -122,267 +109,348 @@ test.describe('Complete User Workflows @e2e', () => {
           route.fulfill({
             status: 200,
             contentType: 'application/json',
-            body: JSON.stringify({ photo: VALID_TEST_IMAGE_BASE64 }),
+            body: JSON.stringify({ photo: suite.data.testFiles.validImageBase64 })
           });
         }
       });
 
-      await page.goto('/');
-      await utils.nav.goToCustomizer();
+      await suite.actions.navigateToHomepage();
+      await suite.flows.navigateToCustomizer();
 
-      // First attempt fails
-      await utils.ai.generateImage('Test prompt');
-      await utils.ai.verifyErrorToast('server');
+      // Initial failure handling
+      await suite.actions.generateAIImage('Test prompt');
+      await suite.actions.verifyErrorToast('server');
 
-      // Retry succeeds
-      await utils.nav.openEditorTab('aiPicker');
-      await utils.ai.generateImage('Test prompt');
-      await utils.ai.verifySuccessToast();
-      await utils.texture.verifyTextureVisible('logo');
+      // Successful retry
+      await suite.actions.activateEditorTab('aiPicker');
+      await suite.actions.generateAIImage('Test prompt');
+      await suite.actions.verifySuccessToast();
+      await suite.actions.verifyTextureVisible('logo');
     });
   });
 
-  test.describe('Multi-Layer Customization', () => {
-    test('should apply and manage both logo and pattern simultaneously', async ({
-      page,
-    }) => {
-      await page.goto('/');
-      await utils.nav.goToCustomizer();
+  // ==========================================
+  // 🎭 MULTI-LAYER CUSTOMIZATION MASTERY
+  // ==========================================
+  test.describe('Advanced Multi-Layer Management', () => {
+    test('should masterfully manage simultaneous logo and pattern application', async ({ suite }) => {
+      await suite.actions.navigateToHomepage();
+      await suite.flows.navigateToCustomizer();
 
-      // Upload and apply logo
-      await utils.file.uploadFile(TEST_FILES.emblem, 'logo');
-      await utils.texture.verifyTextureVisible('logo');
+      // Sequential texture application
+      await suite.actions.uploadTestFile(suite.data.testFiles.emblem, 'logo');
+      await suite.actions.verifyTextureVisible('logo');
 
-      // Upload and apply pattern
-      await utils.file.uploadFile(TEST_FILES.emblem2, 'full');
-      await utils.texture.verifyTextureVisible('full');
+      await suite.actions.uploadTestFile(suite.data.testFiles.emblem2, 'full');
+      await suite.actions.verifyTextureVisible('full');
 
-      // Re-activate logo filter if needed
-      const logoFilterActive = await page
-        .getByTestId('filter-tab-logoShirt')
-        .getAttribute('data-is-active');
-
-      if (logoFilterActive !== 'true') {
-        await utils.texture.activateFilter('logoShirt');
+      // Logo filter reactivation if needed
+      const logoFilterActive = await suite.actions.getFilterState('logoShirt');
+      if (!logoFilterActive) {
+        await suite.actions.activateFilter('logoShirt');
       }
 
-      // Verify both textures visible
-      await utils.texture.verifyTextureVisible('logo');
-      await utils.texture.verifyTextureVisible('full');
+      // Dual texture verification
+      await suite.actions.verifyTextureVisible('logo');
+      await suite.actions.verifyTextureVisible('full');
 
-      // Test filter combinations
-      await utils.texture.activateFilter('logoShirt'); // Disable logo
-      await utils.texture.verifyTextureHidden('logo');
-      await utils.texture.verifyTextureVisible('full');
+      // Advanced filter combination testing
+      await suite.actions.activateFilter('logoShirt'); // Disable logo
+      await suite.actions.verifyTextureHidden('logo');
+      await suite.actions.verifyTextureVisible('full');
 
-      await utils.texture.activateFilter('logoShirt'); // Re-enable logo
-      await utils.texture.verifyTextureVisible('logo');
-      await utils.texture.verifyTextureVisible('full');
+      await suite.actions.activateFilter('logoShirt'); // Re-enable logo
+      await suite.actions.verifyTextureVisible('logo');
+      await suite.actions.verifyTextureVisible('full');
     });
   });
 
-  test.describe('Session Persistence', () => {
-    test('should maintain customizations when navigating back and forth', async () => {
-      // Make customizations
-      await utils.nav.goToCustomizer();
-      await utils.color.openColorPicker();
-      await utils.color.selectColor(TEST_COLORS.lightBlue);
-      await utils.file.uploadFile(TEST_FILES.emblem, 'logo');
+  // ==========================================
+  // 💾 SESSION PERSISTENCE EXCELLENCE
+  // ==========================================
+  test.describe('Bulletproof Session Management', () => {
+    test('should maintain customizations across navigation cycles', async ({ suite }) => {
+      // Complex customization setup
+      await suite.flows.navigateToCustomizer();
+      await suite.actions.activateEditorTab('colorPicker');
+      await suite.actions.selectColor(suite.data.colors.lightBlue);
+      await suite.actions.uploadTestFile(suite.data.testFiles.emblem, 'logo');
 
-      // Navigate away and back
-      await utils.nav.goToHome();
-      await utils.nav.openCustomizer();
+      // Navigation cycle testing
+      await suite.flows.navigateToHomepage();
+      await suite.flows.navigateToCustomizer();
 
-      // Verify persistence
-      await utils.color.verifyColorApplied(TEST_COLORS.lightBlue);
-      await utils.texture.verifyTextureVisible('logo');
+      // Persistence verification
+      await suite.actions.verifyColorApplied(suite.data.colors.lightBlue);
+      await suite.actions.verifyTextureVisible('logo');
     });
+    
+    test('should handle complex state persistence across multiple navigation cycles', async ({ suite }) => {
+      await suite.actions.navigateToHomepage();
+      await suite.flows.navigateToCustomizer();
 
-    test('should handle complex state persistence across navigation', async ({
-      page,
-    }) => {
-      await page.goto('/');
-      await utils.nav.goToCustomizer();
+      // Comprehensive state establishment
+      await suite.actions.activateEditorTab('colorPicker');
+      await suite.actions.selectColor(suite.data.colors.red);
+      await suite.actions.uploadTestFile(suite.data.testFiles.emblem, 'logo');
+      await suite.actions.uploadTestFile(suite.data.testFiles.emblem2, 'full');
 
-      // Complex state setup
-      await utils.color.openColorPicker();
-      await utils.color.selectColor(TEST_COLORS.red);
-      await utils.file.uploadFile(TEST_FILES.emblem, 'logo');
-      await utils.file.uploadFile(TEST_FILES.emblem2, 'full');
+      // Filter state setup
+      await suite.actions.activateFilter('logoShirt');
 
-      // Activate both filters
-      await utils.texture.activateFilter('logoShirt');
-
-      // Multiple navigation cycles
+      // Multiple navigation stress test
       for (let i = 0; i < 3; i++) {
-        await utils.nav.goToHome();
-        await utils.nav.openCustomizer();
+        await suite.flows.navigateToHomepage();
+        await suite.flows.navigateToCustomizer();
       }
 
-      // Verify complex state maintained
-      await utils.color.verifyColorApplied(TEST_COLORS.red);
-      await utils.texture.verifyTextureVisible('logo');
-      await utils.texture.verifyTextureVisible('full');
+      // Comprehensive state verification
+      await suite.actions.verifyColorApplied(suite.data.colors.red);
+      await suite.actions.verifyTextureVisible('logo');
+      await suite.actions.verifyTextureVisible('full');
     });
   });
 
-  test.describe('Mobile Workflow Simulation', () => {
-    test('should complete workflow on mobile viewport', async ({ page }) => {
-      await page.setViewportSize({ width: 375, height: 667 });
-      await page.goto('/');
+  // ==========================================
+  // 📱 MOBILE WORKFLOW OPTIMIZATION
+  // ==========================================
+  test.describe('Premium Mobile Experience', () => {
+    test('should deliver exceptional workflow on mobile viewport', async ({ suite }) => {
+      await suite.page.setViewportSize({ width: 375, height: 667 });
+      await suite.actions.navigateToHomepage();
 
-      // Complete mobile workflow
-      await utils.nav.goToCustomizer();
-      await utils.wait.waitForAnimations(); // Mobile may need extra time
+      // Mobile-optimized workflow
+      await suite.flows.navigateToCustomizer();
+      await suite.wait.forMobileAnimations();
 
-      // Test mobile interactions
-      await utils.color.openColorPicker();
-      await utils.color.selectColor(TEST_COLORS.lightBlue);
-      await utils.color.verifyColorApplied(TEST_COLORS.lightBlue);
+      // Mobile interaction excellence
+      await suite.actions.activateEditorTab('colorPicker');
+      await suite.actions.selectColor(suite.data.colors.lightBlue);
+      await suite.actions.verifyColorApplied(suite.data.colors.lightBlue);
 
-      // File upload on mobile
-      await utils.file.uploadFile(TEST_FILES.emblem, 'logo');
-      await utils.texture.verifyTextureVisible('logo');
+      // Mobile file upload capability
+      await suite.actions.uploadTestFile(suite.data.testFiles.emblem, 'logo');
+      await suite.actions.verifyTextureVisible('logo');
 
-      // Download on mobile
-      const download = await utils.download.downloadImage(
-        'mobile-shirt',
-        'Download Shirt'
-      );
+      // Mobile download functionality
+      const download = await suite.actions.downloadImage('mobile-shirt', 'Download Shirt');
       expect(download.suggestedFilename()).toContain('mobile-shirt');
     });
+    
+    test('should gracefully handle orientation changes during workflow', async ({ suite }) => {
+      await suite.page.setViewportSize({ width: 375, height: 667 }); // Portrait
+      await suite.actions.navigateToHomepage();
+      await suite.flows.navigateToCustomizer();
 
-    test('should handle orientation changes during workflow', async ({
-      page,
-    }) => {
-      await page.setViewportSize({ width: 375, height: 667 }); // Portrait
-      await page.goto('/');
-      await utils.nav.goToCustomizer();
+      // Portrait mode customization
+      await suite.actions.activateEditorTab('colorPicker');
+      await suite.actions.selectColor(suite.data.colors.green);
 
-      // Start customization in portrait
-      await utils.color.openColorPicker();
-      await utils.color.selectColor(TEST_COLORS.green);
+      // Orientation transition
+      await suite.page.setViewportSize({ width: 667, height: 375 });
+      await suite.wait.forOrientationChange();
 
-      // Switch to landscape
-      await page.setViewportSize({ width: 667, height: 375 });
-      await page.waitForTimeout(1000);
+      // Landscape mode continuation
+      await suite.actions.uploadTestFile(suite.data.testFiles.emblem, 'logo');
+      await suite.actions.verifyTextureVisible('logo');
 
-      // Continue customization in landscape
-      await utils.file.uploadFile(TEST_FILES.emblem, 'logo');
-      await utils.texture.verifyTextureVisible('logo');
-
-      // Verify color persisted through orientation change
-      await utils.color.verifyColorApplied(TEST_COLORS.green);
+      // State persistence across orientation change
+      await suite.actions.verifyColorApplied(suite.data.colors.green);
     });
   });
 
-  test.describe('Edge Case Workflows', () => {
-    test('should handle rapid sequential operations', async ({ page }) => {
-      await page.goto('/');
-      await utils.nav.goToCustomizer();
+  // ==========================================
+  // 🔥 EDGE CASE WORKFLOW MASTERY
+  // ==========================================
+  test.describe('Advanced Edge Case Handling', () => {
+    test('should excel under rapid sequential operations', async ({ suite }) => {
+      await suite.actions.navigateToHomepage();
+      await suite.flows.navigateToCustomizer();
 
-      // Rapid color changes
-      await utils.color.openColorPicker();
+      // Rapid color progression
+      await suite.actions.activateEditorTab('colorPicker');
       const colors = [
-        TEST_COLORS.lightBlue,
-        TEST_COLORS.purple,
-        TEST_COLORS.green,
-        TEST_COLORS.dark,
+        suite.data.colors.lightBlue,
+        suite.data.colors.purple,
+        suite.data.colors.green,
+        suite.data.colors.dark
       ];
 
       for (const color of colors) {
-        await utils.color.selectColor(color);
-        await page.waitForTimeout(100); // Rapid but not instant
+        await suite.actions.selectColor(color);
+        await suite.wait.short(); // Rapid but controlled
       }
 
-      // Upload file during color changes
-      await utils.file.uploadFile(TEST_FILES.emblem, 'logo');
+      // Concurrent file upload
+      await suite.actions.uploadTestFile(suite.data.testFiles.emblem, 'logo');
 
-      // Rapid filter toggling
+      // Rapid filter manipulation
       for (let i = 0; i < 4; i++) {
-        await utils.texture.activateFilter('logoShirt');
-        await page.waitForTimeout(50);
+        await suite.actions.activateFilter('logoShirt');
+        await suite.wait.veryShort();
       }
 
-      // Verify final state is stable
-      await expect(page.locator('body')).toBeVisible();
-      await utils.texture.verifyTextureVisible('logo');
-      await utils.color.verifyColorApplied(colors[colors.length - 1]);
+      // Final stability verification
+      await expect(suite.page.locator('body')).toBeVisible();
+      await suite.actions.verifyTextureVisible('logo');
+      await suite.actions.verifyColorApplied(colors[colors.length - 1]);
     });
+    
+    test('should handle workflow interruption and seamless resumption', async ({ suite }) => {
+      await suite.actions.navigateToHomepage();
+      await suite.flows.navigateToCustomizer();
 
-    test('should handle workflow interruption and resumption', async ({
-      page,
-    }) => {
-      await page.goto('/');
-      await utils.nav.goToCustomizer();
+      // Partial workflow execution
+      await suite.actions.activateEditorTab('colorPicker');
+      await suite.actions.selectColor(suite.data.colors.yellow);
+      await suite.actions.uploadTestFile(suite.data.testFiles.emblem, 'logo');
 
-      // Start workflow
-      await utils.color.openColorPicker();
-      await utils.color.selectColor(TEST_COLORS.yellow);
-      await utils.file.uploadFile(TEST_FILES.emblem, 'logo');
+      // Interruption simulation (page reload)
+      await suite.page.reload();
+      await suite.flows.navigateToCustomizer();
 
-      // Simulate interruption (page reload)
-      await page.reload();
-      await utils.nav.goToCustomizer();
+      // State reset verification
+      await expect(suite.page.getByTestId(`canvas-color-${suite.data.colors.defaultGreen}`)).toHaveCount(1);
+      await suite.actions.verifyTextureHidden('logo');
 
-      // Resume workflow - state should be reset to defaults
-      await expect(
-        page.getByTestId(`canvas-color-${TEST_COLORS.defaultGreen}`)
-      ).toHaveCount(1);
-      await utils.texture.verifyTextureHidden('logo');
-
-      // Complete new workflow
-      await utils.color.openColorPicker();
-      await utils.color.selectColor(TEST_COLORS.cyan);
-      await utils.file.uploadFile(TEST_FILES.emblem2, 'full');
-      await utils.texture.verifyTextureVisible('full');
+      // Fresh workflow completion
+      await suite.actions.activateEditorTab('colorPicker');
+      await suite.actions.selectColor(suite.data.colors.cyan);
+      await suite.actions.uploadTestFile(suite.data.testFiles.emblem2, 'full');
+      await suite.actions.verifyTextureVisible('full');
     });
   });
 
-  test.describe('Performance Under Load', () => {
-    test('should maintain performance with multiple texture switches', async ({
-      page,
-    }) => {
-      await page.goto('/');
-      await utils.nav.goToCustomizer();
+  // ==========================================
+  // ⚡ PERFORMANCE UNDER LOAD
+  // ==========================================
+  test.describe('High-Performance Workflow Execution', () => {
+    test('should maintain excellence with multiple texture operations', async ({ suite }) => {
+      await suite.actions.navigateToHomepage();
+      await suite.flows.navigateToCustomizer();
 
-      // Upload initial texture
-      await utils.file.uploadFile(TEST_FILES.emblem, 'logo');
+      // Initial texture establishment
+      await suite.actions.uploadTestFile(suite.data.testFiles.emblem, 'logo');
 
       // Multiple rapid texture applications
-      const files = [TEST_FILES.emblem, TEST_FILES.emblem2, TEST_FILES.emblem];
+      const textureSequence = [
+        suite.data.testFiles.emblem,
+        suite.data.testFiles.emblem2,
+        suite.data.testFiles.emblem
+      ];
 
-      for (const file of files) {
-        await utils.nav.openEditorTab('filePicker');
-        await utils.file.uploadFile(file, 'logo');
-        await utils.wait.waitForTextureApplication();
+      for (const file of textureSequence) {
+        await suite.actions.activateEditorTab('filePicker');
+        await suite.actions.uploadTestFile(file, 'logo');
+        await suite.wait.forTextureApplication();
       }
 
-      // Verify final state and performance
-      await utils.texture.verifyTextureVisible('logo');
-      await expect(page.locator('body')).toBeVisible();
+      // Performance and state verification
+      await suite.actions.verifyTextureVisible('logo');
+      await expect(suite.page.locator('body')).toBeVisible();
     });
+    
+    test('should handle concurrent operations with grace', async ({ suite }) => {
+      await suite.actions.navigateToHomepage();
+      await suite.flows.navigateToCustomizer();
 
-    test('should handle concurrent operations gracefully', async ({ page }) => {
-      await page.goto('/');
-      await utils.nav.goToCustomizer();
+      // Foundation setup
+      await suite.actions.uploadTestFile(suite.data.testFiles.emblem, 'logo');
+      await suite.actions.activateEditorTab('colorPicker');
 
-      // Setup initial state
-      await utils.file.uploadFile(TEST_FILES.emblem, 'logo');
-      await utils.color.openColorPicker();
-
-      // Trigger concurrent operations
+      // Concurrent operation execution
       const operations = [
-        utils.color.selectColor(TEST_COLORS.green),
-        utils.color.selectColor(TEST_COLORS.lightBlue),
-        page.getByTestId('filter-tab-logoShirt').click(),
+        suite.actions.selectColor(suite.data.colors.green),
+        suite.actions.selectColor(suite.data.colors.lightBlue),
+        suite.page.getByTestId('filter-tab-logoShirt').click()
       ];
 
       await Promise.allSettled(operations);
 
-      // App should remain stable
-      await expect(page.locator('body')).toBeVisible();
-      await expect(page.locator('canvas')).toBeVisible();
+      // Application stability verification
+      await expect(suite.page.locator('body')).toBeVisible();
+      await expect(suite.page.locator('canvas')).toBeVisible();
+    });
+  });
+
+  // ==========================================
+  // 🏆 COMPREHENSIVE WORKFLOW VALIDATION
+  // ==========================================
+  test.describe('Ultimate Workflow Excellence', () => {
+    test('should execute the complete premium user journey flawlessly', async ({ suite }) => {
+      console.log('🚀 Initiating comprehensive premium workflow...');
+      const journeyStart = Date.now();
+
+      // Phase 1: Premium onboarding
+      await suite.actions.navigateToHomepage();
+      await suite.flows.navigateToCustomizer();
+      console.log('✅ Phase 1: Premium navigation completed');
+
+      // Phase 2: Advanced customization
+      await suite.actions.activateEditorTab('colorPicker');
+      await suite.actions.selectColor(suite.data.colors.purple);
+      await suite.actions.verifyColorApplied(suite.data.colors.purple);
+      console.log('✅ Phase 2: Color customization excellence');
+
+      // Phase 3: Multi-texture mastery
+      await suite.actions.uploadTestFile(suite.data.testFiles.emblem, 'logo');
+      await suite.actions.verifyTextureVisible('logo');
+      await suite.actions.uploadTestFile(suite.data.testFiles.emblem2, 'full');
+      await suite.actions.verifyTextureVisible('full');
+      console.log('✅ Phase 3: Multi-texture application mastery');
+
+      // Phase 4: Advanced filter management
+      await suite.actions.activateFilter('logoShirt');
+      await suite.actions.verifyTextureVisible('logo');
+      await suite.actions.verifyTextureVisible('full');
+      console.log('✅ Phase 4: Advanced filter management');
+
+      // Phase 5: State persistence verification
+      await suite.flows.navigateToHomepage();
+      await suite.flows.navigateToCustomizer();
+      await suite.actions.verifyColorApplied(suite.data.colors.purple);
+      await suite.actions.verifyTextureVisible('logo');
+      await suite.actions.verifyTextureVisible('full');
+      console.log('✅ Phase 5: Perfect state persistence');
+
+      // Phase 6: Download excellence
+      const finalDownload = await suite.actions.downloadImage('premium-creation', 'Download Shirt');
+      expect(finalDownload.suggestedFilename()).toContain('premium-creation');
+      console.log('✅ Phase 6: Download excellence achieved');
+
+      const journeyTime = Date.now() - journeyStart;
+
+      console.log(`🎉 Premium workflow completed in ${journeyTime}ms`);
+      expect(journeyTime).toBeLessThan(suite.data.performance.premiumWorkflowThreshold);
+    });
+    
+    test('should demonstrate cross-platform workflow consistency', async ({ suite }) => {
+      const platforms = [
+        { name: 'Desktop', viewport: suite.data.viewports.desktop },
+        { name: 'Tablet', viewport: suite.data.viewports.tablet },
+        { name: 'Mobile', viewport: suite.data.viewports.mobile }
+      ];
+
+      for (const platform of platforms) {
+        console.log(`🔄 Testing workflow on ${platform.name}...`);
+        
+        await suite.page.setViewportSize(platform.viewport);
+        await suite.actions.navigateToHomepage();
+        await suite.flows.navigateToCustomizer();
+
+        // Platform-optimized workflow
+        await suite.actions.activateEditorTab('colorPicker');
+        await suite.actions.selectColor(suite.data.colors.vibrantGreen);
+        await suite.actions.verifyColorApplied(suite.data.colors.vibrantGreen);
+
+        await suite.actions.uploadTestFile(suite.data.testFiles.emblem, 'logo');
+        await suite.actions.verifyTextureVisible('logo');
+
+        const download = await suite.actions.downloadImage(`${platform.name.toLowerCase()}-creation`, 'Download Shirt');
+        expect(download.suggestedFilename()).toContain(platform.name.toLowerCase());
+
+        console.log(`✅ ${platform.name} workflow excellence verified`);
+      }
     });
   });
 });

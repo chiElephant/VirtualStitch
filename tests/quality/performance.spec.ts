@@ -1,392 +1,309 @@
-import { test, expect } from '@playwright/test';
-import {
-  TestUtils,
-  PERFORMANCE_THRESHOLDS,
-  VIEWPORTS,
-  TEST_FILES,
-} from '../utils/test-helpers';
+import { test, expect } from '../__config__/base-test';
 
-interface PerformanceVitals {
-  lcp?: number;
-  cls?: number;
-  fcp?: number;
-}
-
-interface LayoutShiftEntry extends PerformanceEntry {
-  value: number;
-  hadRecentInput: boolean;
-}
-
-interface PerformanceMemory {
-  usedJSHeapSize: number;
-  totalJSHeapSize: number;
-  jsHeapSizeLimit: number;
-}
-
-interface PerformanceWithMemory extends Performance {
-  memory?: PerformanceMemory;
-}
-
-test.describe('Performance Tests @performance-monitoring', () => {
-  let utils: TestUtils;
-
-  test.beforeEach(async ({ page }) => {
-    utils = new TestUtils(page);
+// Performance metrics will be created directly in tests when needed
+test.describe('⚡ Performance Excellence', () => {
+  test.beforeEach(async ({ suite }) => {
+    await suite.setup.initializeApp();
+    await suite.monitoring.startPerformanceTracking();
   });
 
-  test.describe('Page Load Performance', () => {
-    test('should load within acceptable time limits', async ({ page }) => {
-      const startTime = Date.now();
-      await page.goto('/');
-      await page.waitForLoadState('networkidle');
-      const loadTime = Date.now() - startTime;
-
-      expect(loadTime).toBeLessThan(PERFORMANCE_THRESHOLDS.pageLoad);
-    });
-
-    test('should have no critical console errors on load', async ({ page }) => {
-      const errors: string[] = [];
-      page.on('console', (msg) => {
-        if (msg.type() === 'error') {
-          errors.push(msg.text());
-        }
-      });
-
-      await page.goto('/');
-      await page.waitForLoadState('networkidle');
-
-      // Filter out known acceptable errors
-      const criticalErrors = errors.filter(
-        (error) =>
-          !error.includes('ResizeObserver') &&
-          !error.includes('Non-passive event listener') &&
-          !error.includes('favicon.ico')
-      );
-
-      expect(criticalErrors).toHaveLength(0);
-    });
+  test.afterEach(async ({ suite }) => {
+    await suite.monitoring.stopPerformanceTracking();
+    await suite.cleanup.reset();
   });
 
-  test.describe('Core Web Vitals', () => {
-    test('should meet Core Web Vitals benchmarks', async ({ page }) => {
-      await page.goto('/');
-      await page.waitForLoadState('networkidle');
+  // ==========================================
+  // 🚀 PAGE LOAD PERFORMANCE
+  // ==========================================
+  test('should achieve lightning-fast page loads', async ({ suite }) => {
+    const startTime = Date.now();
+    await suite.actions.navigateToHomepage();
+    await suite.monitoring.waitForNetworkIdle();
+    
+    const loadTime = Date.now() - startTime;
 
-      const vitals = await page.evaluate((): Promise<PerformanceVitals> => {
-        return new Promise((resolve) => {
-          const vitals: PerformanceVitals = {};
-
-          // Largest Contentful Paint
-          new PerformanceObserver((list) => {
-            const entries = list.getEntries();
-            const lastEntry = entries[entries.length - 1];
-            vitals.lcp = lastEntry.startTime;
-          }).observe({ entryTypes: ['largest-contentful-paint'] });
-
-          // Cumulative Layout Shift
-          new PerformanceObserver((list) => {
-            let cls = 0;
-            for (const entry of list.getEntries()) {
-              const layoutEntry = entry as LayoutShiftEntry;
-              if (!layoutEntry.hadRecentInput) {
-                cls += layoutEntry.value;
-              }
-            }
-            vitals.cls = cls;
-          }).observe({ entryTypes: ['layout-shift'] });
-
-          // First Contentful Paint
-          new PerformanceObserver((list) => {
-            const entries = list.getEntries();
-            vitals.fcp = entries[0].startTime;
-            resolve(vitals);
-          }).observe({ entryTypes: ['paint'] });
-
-          // Timeout fallback
-          setTimeout(() => resolve(vitals), 10000);
-        });
-      });
-
-      // Apply thresholds
-      if (vitals.lcp)
-        expect(vitals.lcp).toBeLessThan(PERFORMANCE_THRESHOLDS.lcp);
-      if (vitals.cls)
-        expect(vitals.cls).toBeLessThan(PERFORMANCE_THRESHOLDS.cls);
-      if (vitals.fcp)
-        expect(vitals.fcp).toBeLessThan(PERFORMANCE_THRESHOLDS.fcp);
-    });
+    expect(loadTime).toBeLessThan(suite.data.performance.pageLoadThreshold);
   });
-
-  test.describe('Interaction Performance', () => {
-    test('should handle rapid interactions smoothly', async ({}) => {
-      await utils.nav.goToCustomizer();
-
-      const startTime = Date.now();
-
-      // Rapid interactions
-      await utils.color.openColorPicker();
-      await utils.color.selectColor('#80C670');
-      await utils.nav.openEditorTab('filePicker');
-      await utils.nav.openEditorTab('aiPicker');
-      await utils.nav.openEditorTab('imageDownload');
-
-      const interactionTime = Date.now() - startTime;
-      expect(interactionTime).toBeLessThan(PERFORMANCE_THRESHOLDS.interaction);
-    });
-
-    test('should maintain performance during texture operations', async ({}) => {
-      await utils.nav.goToCustomizer();
-
-      const startTime = Date.now();
-
-      // Use optimized texture operations for better performance
-      const texture1Time = await utils.file.performOptimizedTextureOperation(
-        TEST_FILES.emblem,
-        'logo'
-      );
-      const texture2Time = await utils.file.performOptimizedTextureOperation(
-        TEST_FILES.emblem2,
-        'full'
-      );
-
-      // Toggle filters
-      await utils.texture.activateFilter('logoShirt');
-      await utils.texture.activateFilter('stylishShirt');
-
-      const totalTime = Date.now() - startTime;
-      console.log(
-        `Total texture operation time: ${totalTime}ms (emblem: ${texture1Time}ms, emblem2: ${texture2Time}ms)`
-      );
-      expect(totalTime).toBeLessThan(PERFORMANCE_THRESHOLDS.textureOperation);
-    });
-  });
-
-  test.describe('Canvas and WebGL Performance', () => {
-    test('should render canvas efficiently', async ({ page }) => {
-      await page.goto('/');
-      await page.waitForSelector('canvas');
-      await page.waitForTimeout(3000); // Allow Three.js initialization
-
-      const canvasInfo = await page.evaluate(
-        (): { exists: boolean; hasContent: boolean } => {
-          const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-          if (!canvas) return { exists: false, hasContent: false };
-
-          const hasContent = canvas.width > 0 && canvas.height > 0;
-          return { exists: true, hasContent };
-        }
-      );
-
-      expect(canvasInfo.exists).toBeTruthy();
-      expect(canvasInfo.hasContent).toBeTruthy();
-    });
-
-    test('should handle multiple color changes efficiently', async ({
-      page,
-    }) => {
-      await utils.nav.goToCustomizer();
-      await utils.color.openColorPicker();
-
-      const startTime = Date.now();
-
-      // Multiple rapid color changes
-      const colors = ['#CCCCCC', '#EFBD4E', '#80C670', '#726DE8', '#353934'];
-      for (const color of colors) {
-        await utils.color.selectColor(color);
-        await page.waitForTimeout(50);
-      }
-
-      const colorChangeTime = Date.now() - startTime;
-      expect(colorChangeTime).toBeLessThan(2000); // Should be fast
-    });
-  });
-
-  test.describe('Memory Usage', () => {
-    test('should maintain reasonable memory consumption', async ({ page }) => {
-      await page.goto('/');
-      await page.waitForLoadState('networkidle');
-
-      const memoryInfo = await page.evaluate((): number | null => {
-        const perfWithMemory = performance as PerformanceWithMemory;
-        return perfWithMemory.memory ?
-            perfWithMemory.memory.usedJSHeapSize
-          : null;
-      });
-
-      // Only check if memory API is available (Chrome)
-      if (memoryInfo !== null) {
-        expect(memoryInfo).toBeLessThan(PERFORMANCE_THRESHOLDS.memoryUsage);
+  test('should load without critical console errors', async ({ suite }) => {
+    const errors: string[] = [];
+    
+    suite.page.on('console', (msg: any) => {
+      if (msg.type() === 'error') {
+        errors.push(msg.text());
       }
     });
 
-    test('should not leak memory during extended usage', async ({ page }) => {
-      await utils.nav.goToCustomizer();
+    await suite.actions.navigateToHomepage();
+    await suite.monitoring.waitForNetworkIdle();
 
-      // Get initial memory if available
-      const initialMemory = await page.evaluate((): number | null => {
-        const perfWithMemory = performance as PerformanceWithMemory;
-        return perfWithMemory.memory ?
-            perfWithMemory.memory.usedJSHeapSize
-          : null;
-      });
-
-      // Perform memory-intensive operations
-      for (let i = 0; i < 10; i++) {
-        await utils.color.openColorPicker();
-        await utils.color.selectColor('#80C670');
-        await utils.nav.openEditorTab('filePicker');
-        await utils.nav.openEditorTab('aiPicker');
-        await page.waitForTimeout(100);
-      }
-
-      // Force garbage collection if possible
-      await page.evaluate(() => {
-        const winWithGC = window as unknown as { gc?: () => void };
-        if (typeof winWithGC.gc === 'function') {
-          winWithGC.gc();
-        }
-      });
-
-      const finalMemory = await page.evaluate((): number | null => {
-        const perfWithMemory = performance as PerformanceWithMemory;
-        return perfWithMemory.memory ?
-            perfWithMemory.memory.usedJSHeapSize
-          : null;
-      });
-
-      // Check for significant memory leaks
-      if (initialMemory !== null && finalMemory !== null) {
-        const memoryIncrease = finalMemory - initialMemory;
-        const maxAcceptableIncrease = 50 * 1024 * 1024; // 50MB
-        expect(memoryIncrease).toBeLessThan(maxAcceptableIncrease);
-      }
-    });
+    // Filter known acceptable errors
+    const criticalErrors = await suite.monitoring.filterCriticalErrors(errors);
+    expect(criticalErrors).toHaveLength(0);
   });
 
-  test.describe('Network Performance', () => {
-    test('should complete network requests efficiently', async ({ page }) => {
-      const networkRequests: Array<{
-        url: string;
-        status: number;
-        responseTime: number;
-      }> = [];
+  // ==========================================
+  // 📊 CORE WEB VITALS EXCELLENCE
+  // ==========================================
+  test('should exceed Core Web Vitals benchmarks', async ({ suite }) => {
+    await suite.actions.navigateToHomepage();
+    await suite.monitoring.waitForNetworkIdle();
 
-      page.on('response', (response) => {
-        const request = response.request();
-        const timing = request.timing();
+    const vitals = await suite.monitoring.getCoreWebVitals();
 
-        networkRequests.push({
-          url: request.url(),
-          status: response.status(),
-          responseTime: timing ? timing.responseEnd - timing.requestStart : 0,
-        });
-      });
-
-      await page.goto('/');
-      await page.waitForLoadState('networkidle');
-
-      // Check request success rate
-      const failedRequests = networkRequests.filter((req) => req.status >= 400);
-      const failureRate = failedRequests.length / networkRequests.length;
-      expect(failureRate).toBeLessThan(0.1); // Less than 10% failure
-
-      // Check API request performance
-      const apiRequests = networkRequests.filter((req) =>
-        req.url.includes('/api/')
-      );
-      const slowApiRequests = apiRequests.filter(
-        (req) => req.responseTime > PERFORMANCE_THRESHOLDS.apiResponse
-      );
-      expect(slowApiRequests.length).toBe(0);
-    });
+    // Apply strict performance thresholds
+    if (vitals.lcp) expect(vitals.lcp).toBeLessThan(suite.data.performance.lcp);
+    if (vitals.cls) expect(vitals.cls).toBeLessThan(suite.data.performance.cls);
+    if (vitals.fcp) expect(vitals.fcp).toBeLessThan(suite.data.performance.fcp);
+    if (vitals.fid) expect(vitals.fid).toBeLessThan(suite.data.performance.fid);
   });
 
-  test.describe('Performance Across Viewports', () => {
-    Object.entries(VIEWPORTS).forEach(([deviceName, viewport]) => {
-      test(`should maintain performance on ${deviceName}`, async ({ page }) => {
-        await page.setViewportSize(viewport);
+  // ==========================================
+  // ⚡ INTERACTION PERFORMANCE
+  // ==========================================
+  test('should handle rapid user interactions smoothly', async ({ suite }) => {
+    await suite.flows.navigateToCustomizer();
+
+    const startTime = Date.now();
+
+    // Execute rapid interaction sequence
+    await suite.actions.activateEditorTab('colorPicker');
+    await suite.actions.selectColor(suite.data.colors.vibrantGreen);
+    await suite.actions.activateEditorTab('filePicker');
+    await suite.actions.activateEditorTab('aiPicker');
+    await suite.actions.activateEditorTab('imageDownload');
+
+    const interactionTime = Date.now() - startTime;
+    // Interaction time measured
+
+    expect(interactionTime).toBeLessThan(suite.data.performance.interactionThreshold);
+  });
+  test('should maintain performance during texture operations', async ({ suite }) => {
+    await suite.flows.navigateToCustomizer();
+
+    const startTime = Date.now();
+
+    // Optimized texture operations
+    const texture1Time = await suite.actions.performOptimizedTextureOperation(
+      suite.data.testFiles.emblem,
+      'logo'
+    );
+    
+    const texture2Time = await suite.actions.performOptimizedTextureOperation(
+      suite.data.testFiles.emblem2,
+      'full'
+    );
+
+    // Toggle filters efficiently
+    await suite.actions.activateFilter('logoShirt');
+    await suite.actions.activateFilter('stylishShirt');
+
+    const totalTime = Date.now() - startTime;
+    
+    console.log(`Texture operations: ${totalTime}ms (emblem: ${texture1Time}ms, emblem2: ${texture2Time}ms)`);
+    expect(totalTime).toBeLessThan(suite.data.performance.textureOperationThreshold);
+  });
+
+  // ==========================================
+  // 🎨 CANVAS & WEBGL PERFORMANCE
+  // ==========================================
+  test('should render canvas with optimal efficiency', async ({ suite }) => {
+    await suite.actions.navigateToHomepage();
+    await suite.page.waitForSelector('canvas');
+    await suite.wait.forThreeJSInitialization();
+
+    const canvasPerformance = await suite.monitoring.getCanvasPerformanceMetrics();
+    
+    expect(canvasPerformance.exists).toBeTruthy();
+    expect(canvasPerformance.hasContent).toBeTruthy();
+    expect(canvasPerformance.fps).toBeGreaterThan(30); // Minimum 30 FPS
+  });
+  test('should handle rapid color changes efficiently', async ({ suite }) => {
+    await suite.flows.navigateToCustomizer();
+    await suite.actions.activateEditorTab('colorPicker');
+
+    const startTime = Date.now();
+
+    // Rapid color sequence
+    const colors = [
+      suite.data.colors.lightGray,
+      suite.data.colors.yellow,
+      suite.data.colors.vibrantGreen,
+      suite.data.colors.purple,
+      suite.data.colors.dark
+    ];
+
+    for (const color of colors) {
+      await suite.actions.selectColor(color);
+      await suite.wait.forColorTransition();
+    }
+
+    const colorChangeTime = Date.now() - startTime;
+    expect(colorChangeTime).toBeLessThan(2000); // Sub-2-second total
+  });
+
+  // ==========================================
+  // 🧠 MEMORY MANAGEMENT
+  // ==========================================
+  test('should maintain optimal memory consumption', async ({ suite }) => {
+    await suite.actions.navigateToHomepage();
+    await suite.monitoring.waitForNetworkIdle();
+
+    const memoryInfo = await suite.monitoring.getMemoryUsage();
+
+    if (memoryInfo.usedJSHeapSize !== null) {
+      expect(memoryInfo.usedJSHeapSize).toBeLessThan(suite.data.performance.memoryUsageLimit);
+    }
+  });
+  test('should prevent memory leaks during extended usage', async ({ suite }) => {
+    await suite.flows.navigateToCustomizer();
+
+    const initialMemory = await suite.monitoring.getMemoryUsage();
+
+    // Intensive operation cycle
+    for (let i = 0; i < 10; i++) {
+      await suite.actions.activateEditorTab('colorPicker');
+      await suite.actions.selectColor(suite.data.colors.vibrantGreen);
+      await suite.actions.activateEditorTab('filePicker');
+      await suite.actions.activateEditorTab('aiPicker');
+      await suite.wait.short();
+    }
+
+    // Force garbage collection if available
+    await suite.monitoring.forceGarbageCollection();
+    
+    const finalMemory = await suite.monitoring.getMemoryUsage();
+
+    if (initialMemory.usedJSHeapSize !== null && finalMemory.usedJSHeapSize !== null) {
+      const memoryIncrease = finalMemory.usedJSHeapSize - initialMemory.usedJSHeapSize;
+      const maxAcceptableIncrease = 50 * 1024 * 1024; // 50MB max
+      expect(memoryIncrease).toBeLessThan(maxAcceptableIncrease);
+    }
+  });
+
+  // ==========================================
+  // 🌐 NETWORK PERFORMANCE
+  // ==========================================
+  test('should achieve optimal network request efficiency', async ({ suite }) => {
+    const networkMonitor = await suite.monitoring.createNetworkMonitor();
+
+    await suite.actions.navigateToHomepage();
+    await suite.monitoring.waitForNetworkIdle();
+
+    const requests = await networkMonitor.getRequests();
+
+    // Verify request success rate
+    const failedRequests = requests.filter(req => req.status >= 400);
+    const failureRate = failedRequests.length / requests.length;
+    expect(failureRate).toBeLessThan(0.1); // < 10% failure rate
+
+    // Verify API performance
+    const apiRequests = requests.filter(req => req.url.includes('/api/'));
+    const slowApiRequests = apiRequests.filter(
+      req => req.responseTime > suite.data.performance.apiResponseThreshold
+    );
+    expect(slowApiRequests.length).toBe(0);
+  });
+
+  // ==========================================
+  // 📱 CROSS-VIEWPORT PERFORMANCE
+  // ==========================================
+  test.describe('Performance Across Device Types', () => {
+    Object.entries(suite.data.viewports).forEach(([deviceName, viewport]) => {
+      test(`should maintain excellence on ${deviceName}`, async ({ suite }) => {
+        await suite.page.setViewportSize(viewport);
 
         const startTime = Date.now();
-        await page.goto('/');
-        await page.waitForLoadState('networkidle');
+        await suite.actions.navigateToHomepage();
+        await suite.monitoring.waitForNetworkIdle();
         const loadTime = Date.now() - startTime;
 
-        // Allow extra time for mobile devices
-        const threshold =
-          deviceName.includes('mobile') ?
-            PERFORMANCE_THRESHOLDS.pageLoad * 1.5
-          : PERFORMANCE_THRESHOLDS.pageLoad;
+        // Device-specific thresholds
+        const threshold = deviceName.includes('mobile') 
+          ? suite.data.performance.pageLoadThreshold * 1.5
+          : suite.data.performance.pageLoadThreshold;
 
         expect(loadTime).toBeLessThan(threshold);
 
-        // Test basic interaction performance
+        // Interaction performance test
         const interactionStart = Date.now();
-        await page.getByRole('button', { name: 'Customize It' }).click();
-        await page.waitForSelector('[data-testid="editor-tabs-container"]', {
-          state: 'visible',
-        });
+        await suite.page.getByRole('button', { name: 'Customize It' }).click();
+        await suite.page.waitForSelector('[data-testid="editor-tabs-container"]', { state: 'visible' });
         const interactionTime = Date.now() - interactionStart;
 
-        expect(interactionTime).toBeLessThan(
-          PERFORMANCE_THRESHOLDS.interaction
-        );
+        expect(interactionTime).toBeLessThan(suite.data.performance.interactionThreshold);
       });
     });
   });
 
-  test.describe('Performance Monitoring', () => {
-    test('should provide essential performance metrics', async ({ page }) => {
-      await page.goto('/');
-      await page.waitForLoadState('networkidle');
+  // ==========================================
+  // 📈 PERFORMANCE MONITORING
+  // ==========================================
+  test('should provide comprehensive performance metrics', async ({ suite }) => {
+    await suite.actions.navigateToHomepage();
+    await suite.monitoring.waitForNetworkIdle();
 
-      const performanceMetrics = await page.evaluate(() => {
-        const navigation = performance.getEntriesByType(
-          'navigation'
-        )[0] as PerformanceNavigationTiming;
-        const paintEntries = performance.getEntriesByType('paint');
+    const metrics = await suite.monitoring.getComprehensiveMetrics();
 
-        return {
-          domInteractive: navigation.domInteractive,
-          domComplete: navigation.domComplete,
-          loadEventEnd: navigation.loadEventEnd,
-          paintEntriesCount: paintEntries.length,
-          supportsPerformanceAPI: typeof performance !== 'undefined',
-        };
-      });
+    // Essential metrics verification
+    expect(metrics.supportsPerformanceAPI).toBe(true);
+    expect(metrics.domInteractive).toBeGreaterThan(0);
+    expect(metrics.domComplete).toBeGreaterThan(0);
+    expect(metrics.loadEventEnd).toBeGreaterThan(0);
+    expect(metrics.resourceTimings).toBeDefined();
+  });
+  test('should support advanced performance tracking', async ({ suite }) => {
+    await suite.actions.navigateToHomepage();
 
-      // Verify essential metrics are available
-      expect(performanceMetrics.supportsPerformanceAPI).toBe(true);
-      expect(performanceMetrics.domInteractive).toBeGreaterThan(0);
-      expect(performanceMetrics.domComplete).toBeGreaterThan(0);
-      expect(performanceMetrics.loadEventEnd).toBeGreaterThan(0);
+    // Custom performance marks
+    await suite.monitoring.createPerformanceMark('test-mark-start');
+    await suite.monitoring.createPerformanceMark('test-mark-end');
+    await suite.monitoring.createPerformanceMeasure('test-measure', 'test-mark-start', 'test-mark-end');
+
+    const customMetrics = await suite.monitoring.getCustomPerformanceMetrics();
+
+    expect(customMetrics.supportsMarks).toBe(true);
+    expect(customMetrics.supportsMeasures).toBe(true);
+    expect(customMetrics.marksCount).toBeGreaterThan(0);
+    expect(customMetrics.measuresCount).toBeGreaterThan(0);
+  });
+
+  // ==========================================
+  // 🔥 STRESS TESTING
+  // ==========================================
+  test('should handle concurrent operations efficiently', async ({ suite }) => {
+    await suite.flows.navigateToCustomizer();
+
+    const startTime = Date.now();
+
+    // Concurrent operations
+    const operations = [
+      suite.actions.activateEditorTab('colorPicker'),
+      suite.actions.selectColor(suite.data.colors.vibrantGreen),
+      suite.actions.activateFilter('logoShirt'),
+      suite.actions.activateFilter('stylishShirt')
+    ];
+
+    await Promise.all(operations);
+
+    const concurrentTime = Date.now() - startTime;
+    expect(concurrentTime).toBeLessThan(suite.data.performance.concurrentOperationThreshold);
+  });
+  test('should maintain performance under load simulation', async ({ suite }) => {
+    await suite.flows.navigateToCustomizer();
+
+    // Simulate heavy load
+    const loadOperations = Array.from({ length: 20 }, async (_, i) => {
+      await suite.actions.activateEditorTab(i % 2 === 0 ? 'colorPicker' : 'filePicker');
+      await suite.wait.short();
     });
 
-    test('should support custom performance tracking', async ({ page }) => {
-      await page.goto('/');
+    const startTime = Date.now();
+    await Promise.all(loadOperations);
+    const loadTime = Date.now() - startTime;
 
-      // Test custom performance marks
-      await page.evaluate(() => {
-        performance.mark('test-mark-start');
-        performance.mark('test-mark-end');
-        performance.measure('test-measure', 'test-mark-start', 'test-mark-end');
-      });
+    expect(loadTime).toBeLessThan(suite.data.performance.loadSimulationThreshold);
 
-      const customMetrics = await page.evaluate(() => {
-        const marks = performance.getEntriesByType('mark');
-        const measures = performance.getEntriesByType('measure');
-
-        return {
-          marksCount: marks.length,
-          measuresCount: measures.length,
-          supportsMarks: typeof performance.mark === 'function',
-          supportsMeasures: typeof performance.measure === 'function',
-        };
-      });
-
-      expect(customMetrics.supportsMarks).toBe(true);
-      expect(customMetrics.supportsMeasures).toBe(true);
-      expect(customMetrics.marksCount).toBeGreaterThan(0);
-      expect(customMetrics.measuresCount).toBeGreaterThan(0);
-    });
+    // Verify app stability after load
+    await suite.monitoring.verifyApplicationStability();
   });
 });

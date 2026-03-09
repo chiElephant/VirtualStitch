@@ -17,6 +17,14 @@ export const TestData = {
     invalidFile: './tests/fixtures/sample.txt',
   },
   
+  // Add testFiles alias for backward compatibility
+  testFiles: {
+    emblem: './tests/fixtures/emblem.png',
+    emblem2: './tests/fixtures/emblem2.png',
+    invalidFile: './tests/fixtures/sample.txt',
+    validImageBase64: VALID_TEST_IMAGE_BASE64,
+  },
+  
   colors: {
     default: '#007938',
     lightBlue: '#2CCCE4',
@@ -27,6 +35,8 @@ export const TestData = {
     yellow: '#EFBD4E',
     cyan: '#C9FFE5',
     lightGray: '#CCCCCC',
+    vibrantGreen: '#00FF00',
+    defaultGreen: '#007938',
   },
   
   prompts: {
@@ -146,6 +156,82 @@ export const TestData = {
     ultraWide: { width: 2560, height: 1440 },
     tiny: { width: 320, height: 568 },
   },
+  
+  // Add viewports alias for backward compatibility
+  viewports: {
+    mobile: { width: 375, height: 667 },
+    tablet: { width: 768, height: 1024 },
+    desktop: { width: 1920, height: 1080 },
+    smallDesktop: { width: 1024, height: 768 },
+    largeMobile: { width: 414, height: 896 },
+    ultraWide: { width: 2560, height: 1440 },
+    tiny: { width: 320, height: 568 },
+  },
+
+  performance: {
+    maxLoadTime: 5000,
+    maxInteractionTime: 3000,
+    maxTextureOperation: 8000,
+    maxFileOperation: 6000,
+    maxMemoryUsage: 150 * 1024 * 1024, // 150MB
+    maxLCP: 4000,
+    maxCLS: 0.25,
+    maxFCP: 2000,
+    apiResponseThreshold: 2000,
+    stateUpdateThreshold: 5000,
+    highFrequencyThreshold: 10000,
+    workflowCompletionThreshold: 15000,
+    premiumWorkflowThreshold: 20000,
+    pageLoadThreshold: 5000,
+    interactionThreshold: 3000,
+    textureOperationThreshold: 8000,
+    memoryUsageLimit: 150 * 1024 * 1024,
+    concurrentOperationThreshold: 5000,
+    loadSimulationThreshold: 10000,
+    lcp: 4000,
+    cls: 0.25,
+    fcp: 2000,
+    fid: 100,
+  },
+
+  delays: {
+    minimal: 50,
+    brief: 100,
+    short: 300,
+    medium: 500,
+    long: 1000,
+    veryLong: 2000,
+  },
+
+  // Add security test data
+  security: {
+    xssPayloads: [
+      '<script>alert("xss")</script>',
+      'javascript:alert("xss")',
+      '"><img src=x onerror=alert("xss")>',
+      '<svg onload=alert("xss")>',
+      '${alert("xss")}',
+      '{{alert("xss")}}',
+    ],
+    maliciousFilenames: [
+      '<script>alert("xss")</script>',
+      'file"name.png',
+      "file'name.png",
+      'file<n>.png',
+      '../../../etc/passwd',
+      'con.png',
+      'aux.png',
+    ],
+    longInput: 'A'.repeat(10000),
+  },
+  
+  // Add URLs for security testing
+  urls: {
+    base: 'http://localhost:3000',
+  },
+
+  // Add VALID_TEST_IMAGE_BASE64 to TestData for easier access
+  VALID_TEST_IMAGE_BASE64,
 } as const;
 
 // Legacy exports for backward compatibility

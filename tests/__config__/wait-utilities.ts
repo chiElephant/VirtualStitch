@@ -83,6 +83,93 @@ export class StandardWaitUtils {
   }
 
   /**
+   * ⚡ ALIAS: Wait for texture operations (backward compatibility)
+   */
+  async forTextureApplication(): Promise<void> {
+    await this.waitForTextureApplication();
+  }
+
+  /**
+   * ⚡ STANDARDIZED: Wait for WebGL context recovery
+   */
+  async forWebGLRecovery(): Promise<void> {
+    await this.waitStandard(2000); // Wait for WebGL context recovery
+  }
+
+  /**
+   * ⚡ STANDARDIZED: Wait for state stabilization
+   */
+  async forStateStabilization(): Promise<void> {
+    await this.waitStandard(TestConfig.delays.medium);
+  }
+
+  /**
+   * ⚡ SHORT WAIT: Brief pause
+   */
+  async short(): Promise<void> {
+    await this.waitStandard(TestConfig.delays.short);
+  }
+
+  /**
+   * ⚡ MINIMAL WAIT: Very short pause
+   */
+  async minimal(): Promise<void> {
+    await this.waitStandard(TestConfig.delays.minimal);
+  }
+
+  /**
+   * ⚡ VERY SHORT WAIT: Ultra brief pause
+   */
+  async veryShort(): Promise<void> {
+    await this.waitStandard(TestConfig.delays.brief);
+  }
+
+  /**
+   * ⚡ STANDARDIZED: Wait for network idle
+   */
+  async waitForNetworkIdle(): Promise<void> {
+    await this.page.waitForLoadState('networkidle');
+  }
+
+  /**
+   * ⚡ STANDARDIZED: Wait for toast to disappear (alias)
+   */
+  async waitForToastToDisappear(text: string | RegExp): Promise<void> {
+    await this.waitForToastsToDisappear(text);
+  }
+
+  /**
+   * ⚡ ADDITIONAL WAIT METHODS: Missing wait utilities
+   */
+  async forMobileAnimations(): Promise<void> {
+    await this.waitStandard(500); // Wait for mobile-specific animations
+  }
+
+  async forOrientationChange(): Promise<void> {
+    await this.waitStandard(1000); // Wait for orientation change animations
+  }
+
+  async forThreeJSInitialization(): Promise<void> {
+    await this.waitStandard(2000); // Wait for Three.js initialization
+  }
+
+  async forColorTransition(): Promise<void> {
+    await this.waitStandard(300); // Wait for color transition animations
+  }
+
+  async forLayoutStabilization(): Promise<void> {
+    await this.waitStandard(500); // Wait for layout stabilization
+  }
+
+  async forTextureLoad(): Promise<void> {
+    await this.waitStandard(1000); // Wait for texture loading
+  }
+
+  async custom(ms: number): Promise<void> {
+    await this.waitStandard(ms); // Custom wait time
+  }
+
+  /**
    * ⚡ STANDARDIZED: Wait for animations to complete
    */
   async waitForAnimations(): Promise<void> {
@@ -150,14 +237,14 @@ export class StandardWaitUtils {
    * ⚡ STANDARDIZED: Wait for file validation to complete
    */
   async waitForFileValidation(): Promise<void> {
-    await this.waitStandard(TestConfig.timeouts.short);
+    await this.waitStandard(TestConfig.timeouts.fileValidation);
   }
 
   /**
    * ⚡ STANDARDIZED: Wait for route mock to be registered
    */
   async waitForRouteMockRegistration(): Promise<void> {
-    await this.waitStandard(50); // Very brief wait for route registration
+    await this.waitStandard(TestConfig.timeouts.routeMockRegistration);
   }
 
   /**

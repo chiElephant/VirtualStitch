@@ -3,11 +3,11 @@ import { chromium, FullConfig } from '@playwright/test';
 async function globalSetup(config: FullConfig) {
   const { baseURL } = config.projects[0].use;
 
-  console.log('🚀 Starting global setup for enhanced test suite...');
+  console.log('🚀 Starting VirtualStitch test suite global setup...');
 
-  // Verify base URL is accessible
+  // Environment verification
   if (baseURL) {
-    console.log(`🔍 Verifying base URL: ${baseURL}`);
+    console.log(`🔍 Verifying application availability: ${baseURL}`);
 
     const browser = await chromium.launch();
     const page = await browser.newPage();
@@ -15,44 +15,50 @@ async function globalSetup(config: FullConfig) {
     try {
       const response = await page.goto(baseURL, {
         waitUntil: 'networkidle',
-        timeout: 30000,
+        timeout: 30000
       });
 
       if (response?.status() === 200) {
-        console.log('✅ Base URL is accessible');
+        console.log('✅ Application is accessible and responding');
       } else {
-        console.warn(`⚠️ Base URL returned status: ${response?.status()}`);
+        console.warn(`⚠️ Application returned status: ${response?.status()}`);
       }
 
-      // Check for essential elements
+      // Critical component verification
       try {
         await page.waitForSelector('body', { timeout: 5000 });
-        console.log('✅ Page body loaded successfully');
+        console.log('✅ Page structure loaded successfully');
 
-        // Check for canvas (Three.js)
+        // Three.js canvas verification
         const hasCanvas = (await page.locator('canvas').count()) > 0;
         if (hasCanvas) {
-          console.log('✅ 3D canvas detected');
+          console.log('✅ 3D rendering canvas detected');
         } else {
-          console.warn(
-            '⚠️ No canvas element found - 3D functionality may not be available'
-          );
+          console.warn('⚠️ Canvas element not found - 3D functionality may be unavailable');
         }
 
-        // Check for main navigation
-        const hasCustomizeButton =
-          (await page.getByRole('button', { name: 'Customize It' }).count()) >
-          0;
+        // Main navigation verification
+        const hasCustomizeButton = (await page.getByRole('button', { name: 'Customize It' }).count()) > 0;
         if (hasCustomizeButton) {
-          console.log('✅ Main navigation detected');
+          console.log('✅ Primary navigation elements detected');
         } else {
           console.warn('⚠️ Main customize button not found');
         }
+
+        // Quick functionality test
+        try {
+          await page.getByRole('button', { name: 'Customize It' }).click();
+          await page.waitForSelector('[data-testid="editor-tabs-container"]', { timeout: 5000 });
+          console.log('✅ Core navigation functionality verified');
+        } catch {
+          console.warn('⚠️ Core navigation test failed - proceeding with caution');
+        }
+
       } catch (error) {
-        console.warn('⚠️ Essential elements check failed:', error);
+        console.warn('⚠️ Component verification failed:', error);
       }
     } catch (error) {
-      console.error('❌ Failed to access base URL:', error);
+      console.error('❌ Application accessibility check failed:', error);
       throw new Error(`Global setup failed: Unable to access ${baseURL}`);
     } finally {
       await page.close();
@@ -60,19 +66,30 @@ async function globalSetup(config: FullConfig) {
     }
   }
 
-  // Set up test environment variables
-  process.env.PLAYWRIGHT_GLOBAL_SETUP_COMPLETE = 'true';
+  // Test environment configuration
+  process.env.VIRTUALSTITCH_TEST_SUITE_ACTIVE = 'true';
+  process.env.TEST_FRAMEWORK_VERSION = '2.0.0';
 
-  // Log test structure information
-  console.log('📁 Test structure:');
-  console.log('   🔥 Smoke tests: Critical path validation');
-  console.log('   🧪 Core tests: Component functionality');
-  console.log('   🔄 Integration tests: User workflows');
-  console.log('   🛡️ Quality tests: Accessibility, performance, security');
-  console.log('   🌐 API tests: Health checks and integration');
-  console.log('   🚀 Deployment tests: Production validation');
+  // Test suite architecture overview
+  console.log('🏗️  VirtualStitch Test Suite Architecture:');
+  console.log('   💨 Smoke Tests: Critical path validation & deployment verification');
+  console.log('   🧪 Core Tests: Component functionality & interaction validation');
+  console.log('   🔄 Integration Tests: State management & complete user workflows');
+  console.log('   🛡️  Quality Tests: Accessibility, performance, security & responsive design');
+  console.log('   🌐 API Tests: Health checks, integration & endpoint validation');
+  console.log('   🚀 Deployment Tests: Production validation & environment verification');
 
-  console.log('✅ Global setup completed successfully');
+  // Feature coverage summary
+  console.log('🎯 Coverage Areas:');
+  console.log('   🎨 Color Picker: Advanced color selection & application');
+  console.log('   📁 File Upload: Multi-format texture upload & processing');
+  console.log('   🤖 AI Integration: DALL-E API integration & error handling');
+  console.log('   💾 State Management: Valtio state synchronization & persistence');
+  console.log('   📱 Responsive Design: Cross-device compatibility & touch optimization');
+  console.log('   ♿ Accessibility: WCAG compliance & screen reader support');
+  console.log('   ⚡ Performance: Core Web Vitals & resource optimization');
+
+  console.log('✅ VirtualStitch test suite global setup completed successfully');
 }
 
 export default globalSetup;

@@ -1,505 +1,328 @@
-import { test, expect } from '@playwright/test';
-import {
-  TestUtils,
-  MALICIOUS_INPUTS,
-  VALID_TEST_IMAGE_BASE64,
-} from '../utils/test-helpers';
+/**
+ * 🤖 AI PICKER TEST SUITE
+ * Comprehensive testing of AI generation functionality
+ * ⚡ Uses standardized VirtualStitchTestSuite framework
+ */
 
-test.describe('AI Picker', () => {
-  let utils: TestUtils;
+import { test, expect } from '../__config__/base-test';
 
-  test.beforeEach(async ({ page }) => {
-    // Clean up any existing route mocks first
-    await page.unrouteAll();
+test.describe('🤖 AI Picker', () => {
+  // ====================================================================
+  // 🔧 SETUP & TEARDOWN
+  // ====================================================================
 
-    // Set up default route mock BEFORE navigation to prevent race conditions
-    await page.route('/api/custom-logo', (route) => {
-      // Default mock that will be overridden by specific tests
-      route.fulfill({
-        status: 400,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          error: 'Default test mock - should be overridden',
-        }),
-      });
+  test.beforeEach(async ({ suite }) => {
+    // Clean setup with AI-specific mock routing
+    await suite.setup({
+      navigateToCustomizer: true,
+      openEditorTab: 'aiPicker',
+      mockRoutes: true,
+      mockScenario: 'success',
     });
-
-    // Wait for route to be registered
-    await page.waitForTimeout(50);
-
-    utils = new TestUtils(page);
-    await utils.nav.goToCustomizer();
-
-    // Ensure AI picker tab is open and ready
-    await utils.nav.openEditorTab('aiPicker');
-
-    // Wait for AI picker to be fully loaded
-    await expect(page.getByTestId('ai-picker')).toBeVisible();
-    await expect(page.getByTestId('ai-prompt-input')).toBeVisible();
   });
 
-  test.afterEach(async ({ page }) => {
-    // Clean up route mocks - but do it safely for parallel execution
-    try {
-      await page.unroute('/api/custom-logo');
-    } catch {
-      // Ignore errors during cleanup
-    }
-
-    // Clear any remaining input state - but only if modal is still open
-    try {
-      const input = page.getByTestId('ai-prompt-input');
-      if (await input.isVisible()) {
-        await input.fill('');
-      }
-    } catch {
-      // Ignore if input not accessible (modal might be closed)
-    }
-  });
-
-  // Helper function to ensure AI picker is available
-  async function ensureAIPickerAvailable(
-    page: import('@playwright/test').Page,
-    utils: TestUtils
-  ) {
-    try {
-      // Check if AI picker is visible
-      const isVisible = await page.getByTestId('ai-picker').isVisible();
-      if (!isVisible) {
-        // Reopen AI picker
-        await utils.nav.openEditorTab('aiPicker');
-        await expect(page.getByTestId('ai-picker')).toBeVisible();
-      }
-
-      // Ensure input is available
-      await expect(page.getByTestId('ai-prompt-input')).toBeVisible();
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  // Helper function to wait for toasts to clear
-  async function waitForToastsToClear(page: import('@playwright/test').Page) {
-    try {
-      // Wait for any existing success toasts to disappear
-      await page.waitForFunction(
-        () => {
-          const toasts = document.querySelectorAll('.Toastify__toast--success');
-          return toasts.length === 0;
-        },
-        { timeout: 10000 }
-      );
-    } catch {
-      // If timeout, continue anyway
-      console.log('ℹ️ Toasts may still be visible, continuing');
-    }
-  }
+  // ====================================================================
+  // 🎨 UI COMPONENTS
+  // ====================================================================
 
   test.describe('UI Components', () => {
-    test('should display AI picker interface', async ({ page }) => {
-      await expect(page.getByTestId('ai-picker')).toBeVisible();
+    test('should display complete AI picker interface', async ({ page, suite }) => {
+      await suite.assert.verifyPickerOpen('aiPicker');
+      await suite.assert.verifyComponentVisible('aiPicker');
+      
+      // Verify all essential UI elements
       await expect(page.getByTestId('ai-prompt-input')).toBeVisible();
       await expect(page.getByTestId('ai-logo-button')).toBeVisible();
       await expect(page.getByTestId('ai-full-button')).toBeVisible();
     });
 
-    test('should accept and display prompt text', async ({ page }) => {
-      const testPrompt = 'Generate a modern logo';
-      await page.getByTestId('ai-prompt-input').fill(testPrompt);
+    test('should accept and display prompt text correctly', async ({ page, suite }) => {
+      const testPrompt = suite.data.prompts.valid[0];
+      
+      await suite.safeFill('[data-testid="ai-prompt-input"]', testPrompt);
       await expect(page.getByTestId('ai-prompt-input')).toHaveValue(testPrompt);
     });
   });
 
+  // ====================================================================
+  // ✅ SUCCESSFUL AI GENERATION
+  // ====================================================================
+
   test.describe('Successful AI Generation', () => {
-    test('should generate and apply logo successfully', async ({ page }) => {
-      // Set up success mock BEFORE any interaction
-      await page.route('/api/custom-logo', (route) => {
-        route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({ photo: VALID_TEST_IMAGE_BASE64 }),
-        });
-      });
-
-      await utils.ai.generateImage('Modern tech logo', 'logo');
-      await utils.ai.verifySuccessToast();
-      await utils.texture.verifyTextureVisible('logo');
+    test('should generate and apply logo texture successfully', async ({ suite }) => {
+      await suite.generateAndVerifyAIImage(suite.data.prompts.valid[0], 'logo');
     });
 
-    test('should generate and apply full texture successfully', async ({
-      page,
-    }) => {
-      // Set up success mock BEFORE any interaction
-      await page.route('/api/custom-logo', (route) => {
-        route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({ photo: VALID_TEST_IMAGE_BASE64 }),
-        });
-      });
-
-      await utils.ai.generateImage('Abstract pattern', 'full');
-      await utils.ai.verifySuccessToast();
-      await utils.texture.verifyTextureVisible('full');
+    test('should generate and apply full texture successfully', async ({ suite }) => {
+      await suite.generateAndVerifyAIImage(suite.data.prompts.valid[1], 'full');
     });
 
-    test('should close AI picker after successful generation', async ({
-      page,
-    }) => {
-      // Set up success mock BEFORE any interaction
-      await page.route('/api/custom-logo', (route) => {
-        route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({ photo: VALID_TEST_IMAGE_BASE64 }),
-        });
-      });
+    test('should close AI picker after successful generation', async ({ page, suite }) => {
+      await suite.routeMocks.mockAISuccess();
+      await suite.generateAIImage(suite.data.prompts.valid[2], 'logo');
+      
+      await suite.assert.verifySuccessToast();
+      await suite.assert.verifyPickerClosed('aiPicker');
+    });
 
-      await utils.ai.generateImage('Test prompt', 'logo');
-      await utils.ai.verifySuccessToast();
-
-      await expect(page.getByTestId('ai-picker')).not.toBeVisible();
+    test('should handle multiple valid prompts sequentially', async ({ suite }) => {
+      for (const prompt of suite.data.prompts.valid.slice(0, 3)) {
+        // Reopen AI picker for each iteration
+        await suite.openEditorTab('aiPicker');
+        await suite.generateAndVerifyAIImage(prompt, 'logo');
+        
+        // Brief pause between generations
+        await suite.wait.waitStandard(200);
+      }
     });
   });
+
+  // ====================================================================
+  // ⚠️ ERROR HANDLING
+  // ====================================================================
 
   test.describe('Error Handling', () => {
-    test('should show warning for empty prompt', async ({ page }) => {
-      // No API call for empty prompt - frontend validation
+    test('should show validation warning for empty prompt', async ({ page, suite }) => {
       await page.getByTestId('ai-logo-button').click();
-      await expect(page.getByText(/please enter a prompt/i)).toBeVisible();
+      await suite.assert.verifyErrorToast('validation');
     });
 
-    test('should handle rate limiting (429)', async ({ page }) => {
-      // Set up rate limit mock BEFORE any interaction
-      await page.route('/api/custom-logo', (route) => {
-        route.fulfill({
-          status: 429,
-          contentType: 'application/json',
-          body: JSON.stringify({ error: 'Rate limited' }),
-        });
-      });
-
-      await utils.ai.generateImage('Test rate limit');
-      await utils.ai.verifyErrorToast('rate-limit');
+    test('should handle rate limiting gracefully', async ({ suite }) => {
+      await suite.routeMocks.mockAIRateLimit();
+      await suite.generateAIImage('Test rate limit');
+      await suite.assert.verifyErrorToast('rate-limit');
     });
 
-    test('should handle server errors (500)', async ({ page }) => {
-      // Set up server error mock BEFORE any interaction
-      await page.route('/api/custom-logo', (route) => {
-        route.fulfill({
-          status: 500,
-          contentType: 'application/json',
-          body: JSON.stringify({ error: 'Server error' }),
-        });
-      });
-
-      await utils.ai.generateImage('Test server error');
-      await utils.ai.verifyErrorToast('server');
+    test('should handle server errors gracefully', async ({ suite }) => {
+      await suite.routeMocks.mockAIServerError();
+      await suite.generateAIImage('Test server error');
+      await suite.assert.verifyErrorToast('server');
     });
 
-    test('should handle unexpected errors', async ({ page }) => {
-      // Set up unexpected error mock BEFORE any interaction
-      await page.route('/api/custom-logo', (route) => {
-        route.fulfill({
-          status: 418,
-          contentType: 'application/json',
-          body: JSON.stringify({ error: 'I am a teapot' }),
-        });
-      });
+    test('should handle validation errors appropriately', async ({ suite }) => {
+      await suite.routeMocks.mockAIValidationError();
+      await suite.generateAIImage('Test validation error');
+      await suite.assert.verifyErrorToast('validation');
+    });
 
-      await utils.ai.generateImage('Test unexpected error');
-      await utils.ai.verifyErrorToast('unexpected');
+    test('should handle network disconnection', async ({ suite }) => {
+      await suite.routeMocks.mockNetworkDisconnection();
+      await suite.generateAIImage('Test network error');
+      await suite.assert.verifyErrorToast('network');
     });
   });
+
+  // ====================================================================
+  // ⏳ LOADING STATES
+  // ====================================================================
 
   test.describe('Loading States', () => {
-    test('should show loading state during generation', async ({ page }) => {
-      let resolveResponse: () => void;
-      const responsePromise = new Promise<void>((resolve) => {
-        resolveResponse = resolve;
-      });
-
-      // Set up delayed mock BEFORE any interaction
-      await page.route('/api/custom-logo', async (route) => {
-        await responsePromise;
-        route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({ photo: VALID_TEST_IMAGE_BASE64 }),
-        });
-      });
-
-      await utils.ai.generateImage('Test loading');
-
-      await expect(
-        page.getByRole('button', { name: 'Asking AI...' })
-      ).toBeVisible();
+    test('should display loading state during generation', async ({ page, suite }) => {
+      // Setup delayed response
+      const resolveResponse = await suite.routeMocks.mockAIDelayed(2000);
+      
+      // Start generation
+      await suite.generateAIImage('Test loading state');
+      
+      // Verify loading state
+      await suite.assert.verifyLoadingState('Asking AI...');
       await expect(page.getByTestId('ai-logo-button')).not.toBeVisible();
       await expect(page.getByTestId('ai-full-button')).not.toBeVisible();
+      
+      // Resolve the delayed response
+      resolveResponse();
+      
+      // Verify loading completes
+      await suite.assert.verifyLoadingComplete();
+    });
 
-      resolveResponse!();
+    test('should disable inputs during generation', async ({ page, suite }) => {
+      const resolveResponse = await suite.routeMocks.mockAIDelayed(1500);
+      
+      await suite.generateAIImage('Test input disabled');
+      
+      // Input should be disabled during loading
+      await expect(page.getByTestId('ai-prompt-input')).toBeDisabled();
+      
+      resolveResponse();
+      
+      // Input should be re-enabled after completion
+      await suite.wait.waitStandard(500);
+      await expect(page.getByTestId('ai-prompt-input')).toBeEnabled();
     });
   });
 
+  // ====================================================================
+  // 🛡️ INPUT VALIDATION AND SECURITY
+  // ====================================================================
+
   test.describe('Input Validation and Security', () => {
-    test('should reject malicious XSS prompts', async ({ page }) => {
+    test('should reject malicious XSS prompts comprehensively', async ({ suite }) => {
       console.log('🛡️ Testing XSS protection...');
-
-      // Set up rejection mock for ALL malicious inputs BEFORE starting tests
-      await page.route('/api/custom-logo', (route) => {
-        const requestBody = route.request().postDataJSON();
-        const prompt = requestBody?.prompt || '';
-
-        // Mock the server's XSS detection for known patterns
-        const hasXSS = MALICIOUS_INPUTS.xss.some(
-          (pattern) =>
-            prompt.includes(pattern) ||
-            prompt.includes('<script') ||
-            prompt.includes('javascript:') ||
-            prompt.includes('onerror=')
-        );
-
-        if (hasXSS) {
-          route.fulfill({
-            status: 400,
-            contentType: 'application/json',
-            body: JSON.stringify({ error: 'Malicious content detected' }),
-          });
-        } else {
-          route.fulfill({
-            status: 200,
-            contentType: 'application/json',
-            body: JSON.stringify({ photo: VALID_TEST_IMAGE_BASE64 }),
-          });
-        }
-      });
-
-      // Use the existing MALICIOUS_INPUTS.xss array
-      for (const maliciousPrompt of MALICIOUS_INPUTS.xss) {
-        console.log(`Testing XSS: ${maliciousPrompt}`);
-
-        // Ensure AI picker is available before each iteration
-        const available = await ensureAIPickerAvailable(page, utils);
-        if (!available) {
-          console.log(
-            `⚠️ Could not ensure AI picker availability for: ${maliciousPrompt}`
-          );
-          continue; // Skip this iteration rather than fail
-        }
-
-        await page.getByTestId('ai-prompt-input').fill(maliciousPrompt);
-        await page.getByTestId('ai-logo-button').click();
-
-        // Wait for response
-        await page.waitForTimeout(1500);
-
-        // Should NOT show success - malicious prompts should be rejected
-        const successToast = await page
-          .getByText(/image applied successfully/i)
-          .isVisible();
-        expect(successToast).toBe(false);
-
-        console.log(
-          `✅ Rejected XSS: "${maliciousPrompt.substring(0, 30)}..."`
-        );
-
-        // Clear for next test - but safely check if modal is still open
-        try {
-          if (await page.getByTestId('ai-prompt-input').isVisible()) {
-            await page.getByTestId('ai-prompt-input').fill('');
-          }
-        } catch {
-          // Modal might have closed, we'll reopen it in the next iteration
-          console.log('ℹ️ Modal closed, will reopen for next test');
-        }
-        await page.waitForTimeout(300);
+      
+      await suite.routeMocks.mockXSSProtection();
+      
+      for (const maliciousPrompt of suite.data.prompts.invalid) {
+        console.log(`Testing XSS: ${maliciousPrompt.substring(0, 30)}...`);
+        
+        await suite.testMaliciousInput(maliciousPrompt, 'prompt', 'reject');
+        
+        // Ensure AI picker is available for next iteration
+        await suite.openEditorTab('aiPicker');
+        await suite.wait.waitStandard(suite.data.delays.brief);
       }
+      
+      console.log('✅ All XSS attacks successfully blocked');
     });
 
-    test('should handle edge cases properly', async ({ page }) => {
+    test('should handle edge cases properly', async ({ page, suite }) => {
       console.log('🧪 Testing edge cases...');
-
-      const edgeCases = [
-        { name: 'Empty prompt', value: '', expectsFrontendValidation: true },
-        {
-          name: 'Whitespace only',
-          value: '   \n\t   ',
-          expectsFrontendValidation: true,
-        },
-        {
-          name: 'Single character',
-          value: 'a',
-          expectsFrontendValidation: false,
-        },
-        {
-          name: 'Normal request',
-          value: 'Create a beautiful sunset',
-          expectsFrontendValidation: false,
-        },
-      ];
-
-      // Set up mock for non-frontend-validation cases
-      await page.route('/api/custom-logo', (route) => {
-        route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({ photo: VALID_TEST_IMAGE_BASE64 }),
-        });
-      });
-
-      for (const testCase of edgeCases) {
-        console.log(`Testing edge case: ${testCase.name}`);
-
-        // Ensure AI picker is available before each iteration
-        const available = await ensureAIPickerAvailable(page, utils);
-        if (!available) {
-          console.log(
-            `⚠️ Could not ensure AI picker availability for: ${testCase.name}`
-          );
-          continue; // Skip this iteration rather than fail
-        }
-
-        // Wait for any previous toasts to clear
-        await waitForToastsToClear(page);
-
-        await page.getByTestId('ai-prompt-input').fill(testCase.value);
+      
+      await suite.routeMocks.mockAISuccess();
+      
+      for (const edgeCase of suite.data.prompts.edgeCases) {
+        console.log(`Testing: ${edgeCase.name}`);
+        
+        await suite.openEditorTab('aiPicker');
+        
+        await page.getByTestId('ai-prompt-input').fill(edgeCase.value);
         await page.getByTestId('ai-logo-button').click();
-
-        if (testCase.expectsFrontendValidation) {
-          // Should show frontend validation message
-          await expect(page.getByText(/please enter a prompt/i)).toBeVisible({
-            timeout: 3000,
-          });
-          console.log(
-            `✅ ${testCase.name}: Frontend validation caught empty prompt`
-          );
+        
+        if (edgeCase.expectsValidation) {
+          await suite.assert.verifyErrorToast('validation');
+          console.log(`✅ ${edgeCase.name}: Validation correctly triggered`);
         } else {
-          // Should show success for valid prompts - use .first() to handle multiple toasts
-          await expect(
-            page.getByText(/image applied successfully/i).first()
-          ).toBeVisible({ timeout: 5000 });
-          console.log(`✅ ${testCase.name}: Properly accepted`);
-
-          // After success, modal will close - this is expected behavior
-          console.log(
-            'ℹ️ Modal closed after success, will reopen for next test if needed'
-          );
-
-          // Wait for the success toast to disappear before continuing
-          await waitForToastsToClear(page);
+          await suite.assert.verifySuccessToast();
+          console.log(`✅ ${edgeCase.name}: Properly accepted`);
         }
-
-        // Brief pause between iterations
-        await page.waitForTimeout(500);
+        
+        await suite.wait.waitStandard(suite.data.delays.brief);
       }
     });
 
-    test('should handle rapid sequential attempts', async ({ page }) => {
+    test('should handle rapid sequential attempts safely', async ({ suite }) => {
       console.log('⚡ Testing rapid attack mitigation...');
-
-      // Set up mock that rejects malicious content
-      await page.route('/api/custom-logo', (route) => {
-        const requestBody = route.request().postDataJSON();
-        const prompt = requestBody?.prompt || '';
-
-        if (prompt.includes('<script') || prompt.includes('javascript:')) {
-          route.fulfill({
-            status: 400,
-            contentType: 'application/json',
-            body: JSON.stringify({ error: 'Malicious content detected' }),
-          });
-        } else {
-          route.fulfill({
-            status: 200,
-            contentType: 'application/json',
-            body: JSON.stringify({ photo: VALID_TEST_IMAGE_BASE64 }),
-          });
-        }
-      });
-
-      const rapidAttacks = ['<script>alert(1)</script>', 'javascript:alert(2)'];
-
+      
+      await suite.routeMocks.mockXSSProtection();
+      
+      const rapidAttacks = suite.data.prompts.invalid.slice(0, 3);
+      
       for (let i = 0; i < rapidAttacks.length; i++) {
         const attack = rapidAttacks[i];
-        console.log(`Rapid attack ${i + 1}: ${attack}`);
-
-        // Ensure AI picker is available before each iteration
-        const available = await ensureAIPickerAvailable(page, utils);
-        if (!available) {
-          console.log(
-            `⚠️ Could not ensure AI picker availability for rapid attack ${i + 1}`
-          );
-          continue; // Skip this iteration rather than fail
-        }
-
-        await page.getByTestId('ai-prompt-input').fill(attack);
-        await page.getByTestId('ai-logo-button').click();
-        await page.waitForTimeout(1000);
-
-        // Should be rejected - no success toast
-        const successToast = await page
-          .getByText(/image applied successfully/i)
-          .isVisible();
-        expect(successToast).toBe(false);
-
+        console.log(`Rapid attack ${i + 1}: ${attack.substring(0, 20)}...`);
+        
+        await suite.openEditorTab('aiPicker');
+        await suite.testMaliciousInput(attack, 'prompt', 'reject');
+        
         console.log(`✅ Rapid attack ${i + 1} blocked`);
-
-        // Clear for next test - but safely
-        try {
-          if (await page.getByTestId('ai-prompt-input').isVisible()) {
-            await page.getByTestId('ai-prompt-input').fill('');
-          }
-        } catch {
-          console.log(
-            'ℹ️ Modal state changed, will reopen for next test if needed'
-          );
-        }
-        await page.waitForTimeout(200);
+        await suite.wait.waitStandard(100);
       }
-
+      
       console.log('✅ All rapid attacks successfully blocked');
     });
 
-    test('should validate unicode and special characters', async ({ page }) => {
+    test('should validate unicode and special characters', async ({ page, suite }) => {
       console.log('🌍 Testing special character handling...');
-
-      // Set up success mock for valid unicode content
-      await page.route('/api/custom-logo', (route) => {
-        route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({ photo: VALID_TEST_IMAGE_BASE64 }),
-        });
-      });
-
-      const testCase = {
-        name: 'Mixed languages',
-        value: 'Create красивый sunset with 美しい colors',
-      };
-
-      console.log(`Testing: ${testCase.name}`);
-
-      await page.getByTestId('ai-prompt-input').fill(testCase.value);
-      await page.getByTestId('ai-logo-button').click();
-
-      // Use .first() to handle potential multiple toasts
-      await expect(
-        page.getByText(/image applied successfully/i).first()
-      ).toBeVisible({ timeout: 5000 });
-      console.log(`✅ ${testCase.name}: Properly accepted`);
+      
+      await suite.routeMocks.mockAISuccess();
+      
+      const unicodePrompt = 'Create красивый sunset with 美しい colors';
+      await suite.generateAndVerifyAIImage(unicodePrompt, 'logo');
+      
+      console.log('✅ Unicode characters properly handled');
     });
   });
 
+  // ====================================================================
+  // 💾 STATE PERSISTENCE
+  // ====================================================================
+
   test.describe('State Persistence', () => {
-    test('should preserve prompt when switching tabs', async ({ page }) => {
-      const testPrompt = 'Preserve this prompt';
+    test('should preserve prompt when switching tabs', async ({ page, suite }) => {
+      const testPrompt = 'Preserve this prompt text';
+      
       await page.getByTestId('ai-prompt-input').fill(testPrompt);
-
-      await page.getByTestId('editor-tab-colorPicker').click();
-      await utils.nav.openEditorTab('aiPicker');
-
+      
+      // Switch to color picker and back
+      await suite.openEditorTab('colorPicker');
+      await suite.openEditorTab('aiPicker');
+      
+      // Verify prompt is preserved
       await expect(page.getByTestId('ai-prompt-input')).toHaveValue(testPrompt);
+    });
+
+    test('should maintain state after successful generation', async ({ page, suite }) => {
+      const testPrompt = 'Maintain state test';
+      
+      await suite.generateAndVerifyAIImage(testPrompt, 'logo');
+      
+      // Reopen AI picker
+      await suite.openEditorTab('aiPicker');
+      
+      // Prompt should be preserved
+      await expect(page.getByTestId('ai-prompt-input')).toHaveValue(testPrompt);
+    });
+
+    test('should clear input after explicit user action', async ({ page, suite }) => {
+      const testPrompt = 'Clear this prompt';
+      
+      await page.getByTestId('ai-prompt-input').fill(testPrompt);
+      await page.getByTestId('ai-prompt-input').fill('');
+      
+      await suite.assert.verifyInputEmpty('ai-prompt-input');
+    });
+  });
+
+  // ====================================================================
+  // 🚀 PERFORMANCE AND RELIABILITY
+  // ====================================================================
+
+  test.describe('Performance and Reliability', () => {
+    test('should complete AI generation within performance threshold', async ({ suite }) => {
+      const { duration } = await suite.measureOperation(
+        async () => {
+          await suite.generateAndVerifyAIImage('Performance test', 'logo');
+        },
+        'AI Generation Workflow',
+        suite.data.performance.maxTextureOperation
+      );
+      
+      expect(duration).toBeLessThanOrEqual(suite.data.performance.maxTextureOperation);
+    });
+
+    test('should maintain application stability during errors', async ({ suite }) => {
+      // Test multiple error scenarios
+      const errorScenarios = ['rateLimit', 'serverError', 'validation'] as const;
+      
+      for (const scenario of errorScenarios) {
+        await suite.routeMocks.setupMockScenario(scenario);
+        await suite.openEditorTab('aiPicker');
+        await suite.generateAIImage(`Test ${scenario}`);
+        
+        // Verify app remains stable
+        await suite.assert.verifyApplicationStable();
+        
+        console.log(`✅ App stable during ${scenario} error`);
+      }
+    });
+
+    test('should handle concurrent operations gracefully', async ({ suite }) => {
+      await suite.routeMocks.mockAISuccess();
+      
+      // Test rapid tab switching during AI generation
+      const resolveResponse = await suite.routeMocks.mockAIDelayed(1000);
+      
+      await suite.generateAIImage('Concurrent test');
+      
+      // Switch tabs during generation
+      await suite.openEditorTab('colorPicker');
+      await suite.openEditorTab('filePicker');
+      await suite.openEditorTab('aiPicker');
+      
+      resolveResponse();
+      
+      // Verify operation completes successfully
+      await suite.assert.verifyApplicationStable();
     });
   });
 });

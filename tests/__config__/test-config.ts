@@ -1,26 +1,32 @@
 /**
- * Centralized Test Configuration
- * All timeouts, thresholds, and test settings in one place
+ * 🎯 ENHANCED CENTRALIZED TEST CONFIGURATION
+ * All timeouts, thresholds, and test settings optimized for reliability and speed
  */
 
 export const TestConfig = {
   timeouts: {
+    instant: 500,
     short: 2000,
     medium: 5000,
     long: 10000,
     veryLong: 30000,
-    animation: 1500,
-    textureApplication: 500,
-    apiResponse: 120000, // 2 minutes for AI generation
+    animation: 1000,          // Reduced from 1500 for faster tests
+    textureApplication: 800,   // Increased from 500 for stability
+    apiResponse: 120000,       // 2 minutes for AI generation
+    fileValidation: 3000,      // Specific timeout for file validation
+    routeMockRegistration: 100, // Brief wait for route mock setup
   },
   
   retries: {
     stable: 0,
     flaky: 2,
     network: 3,
+    fileOperations: 1,  // File operations may need retry
+    aiOperations: 1,    // AI operations may need retry
   },
   
   delays: {
+    minimal: 50,
     brief: 100,
     short: 300,
     medium: 500,
@@ -30,8 +36,9 @@ export const TestConfig = {
   
   performance: {
     maxLoadTime: 5000,
-    maxInteractionTime: 5000,
+    maxInteractionTime: 3000,     // Reduced for better feedback
     maxTextureOperation: 8000,
+    maxFileOperation: 6000,       // Specific threshold for file ops
     maxMemoryUsage: 150 * 1024 * 1024, // 150MB
     maxLCP: 4000,
     maxCLS: 0.25,

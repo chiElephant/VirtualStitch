@@ -1,347 +1,341 @@
-import { test, expect } from '@playwright/test';
-import { TestUtils, TEST_FILES, TEST_COLORS } from '../utils/test-helpers';
+import { test, expect } from '../__config__/base-test';
 
-test.describe('State Management Integration', () => {
-  let utils: TestUtils;
 
-  test.beforeEach(async ({ page }) => {
-    utils = new TestUtils(page);
-    await utils.nav.goToCustomizer();
+
+test.describe('🔄 State Management Integration Excellence', () => {
+  test.beforeEach(async ({ suite }) => {
+    await suite.setupManager.initializeApp();
+    await suite.flows.navigateToCustomizer();
   });
 
-  test.describe('Valtio State Synchronization', () => {
-    test('should handle rapid state changes without data loss', async ({
-      page,
-    }) => {
-      await utils.color.openColorPicker();
+  test.afterEach(async ({ suite }) => {
+    await suite.cleanup.reset();
+  });
 
-      // Rapid color changes to stress test state
+  // ==========================================
+  // ⚡ VALTIO STATE SYNCHRONIZATION
+  // ==========================================
+
+  test.describe('Ultra-Fast State Synchronization', () => {
+    test('should handle rapid state changes without data loss', async ({ suite }) => {
+      await suite.actions.activateEditorTab('colorPicker');
+
+      // Stress test with rapid color changes
       const colors = [
-        TEST_COLORS.lightBlue,
-        TEST_COLORS.purple,
-        TEST_COLORS.green,
-        TEST_COLORS.dark,
-        TEST_COLORS.red,
+        suite.data.colors.lightBlue,
+        suite.data.colors.purple,
+        suite.data.colors.green,
+        suite.data.colors.dark,
+        suite.data.colors.red
       ];
 
       for (const color of colors) {
-        await utils.color.selectColor(color);
-        await page.waitForTimeout(50); // Very rapid changes
+        await suite.actions.selectColor(color);
+        await suite.wait.veryShort(); // Ultra-rapid changes
       }
 
-      // Verify final state is consistent
+      // Verify final state consistency
       const finalColor = colors[colors.length - 1];
-      await utils.color.verifyColorApplied(finalColor);
+      await suite.actions.verifyColorApplied(finalColor);
 
-      // State should persist across tab switches
-      await page.getByTestId('editor-tab-filePicker').click();
-      await utils.color.openColorPicker();
-      await utils.color.verifyColorApplied(finalColor);
+      // State persistence across tab switches
+      await suite.page.getByTestId('editor-tab-filePicker').click();
+      await suite.actions.activateEditorTab('colorPicker');
+      await suite.actions.verifyColorApplied(finalColor);
+
+      // Verify no console errors occurred
     });
 
-    test('should maintain state consistency across complex interactions', async ({}) => {
-      // Complex sequence: color -> file -> filter -> color -> filter
-      await utils.color.openColorPicker();
-      await utils.color.selectColor(TEST_COLORS.lightBlue);
+    test('should maintain consistency across complex interaction chains', async ({ suite }) => {
+      // Complex interaction sequence
+      await suite.actions.activateEditorTab('colorPicker');
+      await suite.actions.selectColor(suite.data.colors.lightBlue);
 
-      await utils.file.uploadFile(TEST_FILES.emblem, 'logo');
-      await utils.texture.verifyTextureVisible('logo');
+      await suite.actions.uploadTestFile(suite.data.testFiles.emblem, 'logo');
+      await suite.actions.verifyTextureVisible('logo');
 
-      // Toggle filter multiple times
-      await utils.texture.activateFilter('logoShirt'); // Off
-      await utils.texture.verifyTextureHidden('logo');
-      await utils.texture.activateFilter('logoShirt'); // On
-      await utils.texture.verifyTextureVisible('logo');
+      // Multiple filter toggles
+      await suite.actions.activateFilter('logoShirt'); // Off
+      await suite.actions.verifyTextureHidden('logo');
+      await suite.actions.activateFilter('logoShirt'); // On
+      await suite.actions.verifyTextureVisible('logo');
 
-      // Change color again
-      await utils.color.openColorPicker();
-      await utils.color.selectColor(TEST_COLORS.red);
+      // Color change during active texture
+      await suite.actions.activateEditorTab('colorPicker');
+      await suite.actions.selectColor(suite.data.colors.red);
 
-      // Verify all states are correct
-      await utils.color.verifyColorApplied(TEST_COLORS.red);
-      await utils.texture.verifyTextureVisible('logo');
-      await utils.texture.verifyFilterActive('logoShirt');
+      // Comprehensive state verification
+      await suite.actions.verifyColorApplied(suite.data.colors.red);
+      await suite.actions.verifyTextureVisible('logo');
+      await suite.actions.verifyFilterActive('logoShirt');
     });
 
-    test('should handle concurrent state updates gracefully', async ({
-      page,
-    }) => {
-      // Setup initial state
-      await utils.file.uploadFile(TEST_FILES.emblem, 'logo');
-      await utils.color.openColorPicker();
+    test('should gracefully handle concurrent state updates', async ({ suite }) => {
+      // Setup foundation
+      await suite.actions.uploadTestFile(suite.data.testFiles.emblem, 'logo');
+      await suite.actions.activateEditorTab('colorPicker');
 
-      // Trigger multiple state changes simultaneously
-      const stateChanges = [
-        utils.color.selectColor(TEST_COLORS.green),
-        utils.color.selectColor(TEST_COLORS.purple),
-        page.getByTestId('filter-tab-logoShirt').click(),
-        page.getByTestId('filter-tab-logoShirt').click(),
+      // Concurrent state modifications
+      const stateOperations = [
+        suite.actions.selectColor(suite.data.colors.green),
+        suite.actions.selectColor(suite.data.colors.purple),
+        suite.page.getByTestId('filter-tab-logoShirt').click(),
+        suite.page.getByTestId('filter-tab-logoShirt').click()
       ];
 
-      // Use allSettled to handle potential conflicts
-      await Promise.allSettled(stateChanges);
-      await page.waitForTimeout(500);
+      await Promise.allSettled(stateOperations);
+      await suite.wait.forStateStabilization();
 
-      // App should remain stable and functional
-      await expect(page.locator('body')).toBeVisible();
-      await expect(page.locator('canvas')).toBeVisible();
+      // Application stability verification
+      await expect(suite.page.locator('body')).toBeVisible();
+      await expect(suite.page.locator('canvas')).toBeVisible();
 
-      // Test basic functionality still works
-      await utils.color.selectColor(TEST_COLORS.dark);
-      await utils.color.verifyColorApplied(TEST_COLORS.dark);
+      // Functionality resilience test
+      await suite.actions.selectColor(suite.data.colors.dark);
+      await suite.actions.verifyColorApplied(suite.data.colors.dark);
     });
   });
 
-  test.describe('Multi-Texture State Management', () => {
-    test('should preserve texture state when toggling filters rapidly', async ({
-      page,
-    }) => {
-      // Upload both textures
-      await utils.file.uploadFile(TEST_FILES.emblem, 'logo');
-      await utils.file.uploadFile(TEST_FILES.emblem2, 'full');
+  // ==========================================
+  // 🎨 MULTI-TEXTURE STATE MASTERY
+  // ==========================================
 
-      // Ensure both filters are active
-      await utils.texture.activateFilter('logoShirt');
-      // await utils.texture.activateFilter('stylishShirt');
-      await utils.texture.verifyTextureVisible('logo');
-      await utils.texture.verifyTextureVisible('full');
+  test.describe('Advanced Multi-Texture Management', () => {
+    test('should preserve texture state during rapid filter operations', async ({ suite }) => {
+      // Multi-texture setup
+      await suite.actions.uploadTestFile(suite.data.testFiles.emblem, 'logo');
+      await suite.actions.uploadTestFile(suite.data.testFiles.emblem2, 'full');
 
-      // Rapid filter toggling
+      // Ensure both filters active
+      await suite.actions.activateFilter('logoShirt');
+      await suite.actions.verifyTextureVisible('logo');
+      await suite.actions.verifyTextureVisible('full');
+
+      // Rapid filter manipulation stress test
       for (let i = 0; i < 10; i++) {
-        await utils.texture.activateFilter('logoShirt');
-        await utils.texture.activateFilter('stylishShirt');
-        await page.waitForTimeout(25); // Very rapid
+        await suite.actions.activateFilter('logoShirt');
+        await suite.actions.activateFilter('stylishShirt');
+        await suite.wait.veryShort();
       }
 
-      // Check final deterministic state
-      const logoActive = await page
-        .getByTestId('filter-tab-logoShirt')
-        .getAttribute('data-is-active');
-      const fullActive = await page
-        .getByTestId('filter-tab-stylishShirt')
-        .getAttribute('data-is-active');
+      // Deterministic state verification
+      const logoActive = await suite.actions.getFilterState('logoShirt');
+      const fullActive = await suite.actions.getFilterState('stylishShirt');
 
-      // Verify textures match filter states
-      if (logoActive === 'true') {
-        await utils.texture.verifyTextureVisible('logo');
+      // Texture visibility matches filter states
+      if (logoActive) {
+        await suite.actions.verifyTextureVisible('logo');
       } else {
-        await utils.texture.verifyTextureHidden('logo');
+        await suite.actions.verifyTextureHidden('logo');
       }
 
-      if (fullActive === 'true') {
-        await utils.texture.verifyTextureVisible('full');
+      if (fullActive) {
+        await suite.actions.verifyTextureVisible('full');
       } else {
-        await utils.texture.verifyTextureHidden('full');
+        await suite.actions.verifyTextureHidden('full');
       }
 
-      // Ensure both can be re-enabled
-      if (logoActive !== 'true') {
-        await utils.texture.activateFilter('logoShirt');
-      }
-      if (fullActive !== 'true') {
-        await utils.texture.activateFilter('stylishShirt');
-      }
+      // Re-enable verification
+      if (!logoActive) await suite.actions.activateFilter('logoShirt');
+      if (!fullActive) await suite.actions.activateFilter('stylishShirt');
 
-      await utils.texture.verifyTextureVisible('logo');
-      await utils.texture.verifyTextureVisible('full');
+      await suite.actions.verifyTextureVisible('logo');
+      await suite.actions.verifyTextureVisible('full');
     });
 
-    test('should handle texture replacement without state corruption', async ({
-      page,
-    }) => {
-      // Upload initial logo
-      await utils.file.uploadFile(TEST_FILES.emblem, 'logo');
-      await utils.texture.verifyTextureVisible('logo');
+    test('should handle texture replacement without corruption', async ({ suite }) => {
+      // Initial texture upload
+      await suite.actions.uploadTestFile(suite.data.testFiles.emblem, 'logo');
+      await suite.actions.verifyTextureVisible('logo');
 
-      // Replace with full texture multiple times
-      const files = [TEST_FILES.emblem2, TEST_FILES.emblem, TEST_FILES.emblem2];
+      // Multiple texture replacements
+      const textureSequence = [
+        { file: suite.data.testFiles.emblem2, type: 'full' },
+        { file: suite.data.testFiles.emblem, type: 'full' },
+        { file: suite.data.testFiles.emblem2, type: 'full' }
+      ];
 
-      for (const file of files) {
-        await utils.nav.openEditorTab('filePicker');
-        await page.getByTestId('file-picker-input').setInputFiles(file);
-        await page.getByRole('button', { name: 'Full Pattern' }).click();
-        await utils.wait.waitForTextureApplication();
+      for (const { file, type } of textureSequence) {
+        await suite.actions.activateEditorTab('filePicker');
+        await suite.page.getByTestId('file-picker-input').setInputFiles(file);
+        await suite.page.getByRole('button', { name: 'Full Pattern' }).click();
+        await suite.wait.forTextureApplication();
       }
 
-      // Verify final state
-      await utils.texture.verifyTextureVisible('full');
+      // Final state verification
+      await suite.actions.verifyTextureVisible('full');
 
-      // Original logo state should be preserved but not visible
-      await utils.texture.activateFilter('logoShirt');
-      await utils.texture.verifyTextureVisible('logo');
-      await utils.texture.verifyTextureVisible('full'); // Both should be visible
+      // Original logo state preservation
+      await suite.actions.activateFilter('logoShirt');
+      await suite.actions.verifyTextureVisible('logo');
+      await suite.actions.verifyTextureVisible('full');
     });
 
-    test('should maintain texture data integrity during rapid switching', async ({
-      page,
-    }) => {
-      // Upload texture once
-      await utils.file.uploadFile(TEST_FILES.emblem, 'logo');
+    test('should maintain data integrity during rapid texture switching', async ({ suite }) => {
+      // Single texture upload
+      await suite.actions.uploadTestFile(suite.data.testFiles.emblem, 'logo');
 
-      // Rapid switching between logo and full application
+      // Rapid application switching stress test
       for (let i = 0; i < 10; i++) {
-        await utils.nav.openEditorTab('filePicker');
-        await page.getByRole('button', { name: 'Logo' }).click();
-        await page.waitForTimeout(50);
+        await suite.actions.activateEditorTab('filePicker');
+        await suite.page.getByRole('button', { name: 'Logo' }).click();
+        await suite.wait.veryShort();
 
-        await utils.nav.openEditorTab('filePicker');
-        await page.getByRole('button', { name: 'Full Pattern' }).click();
-        await page.waitForTimeout(50);
+        await suite.actions.activateEditorTab('filePicker');
+        await suite.page.getByRole('button', { name: 'Full Pattern' }).click();
+        await suite.wait.veryShort();
       }
 
-      // Final state should be stable
-      await utils.wait.waitForTextureApplication();
+      // Stability verification
+      await suite.wait.forTextureApplication();
 
-      // Check if filters need manual activation
-      const fullTextureCount = await page.getByTestId('full-texture').count();
+      // Filter activation if needed
+      const fullTextureCount = await suite.page.getByTestId('full-texture').count();
       if (fullTextureCount === 0) {
-        await utils.texture.activateFilter('stylishShirt');
+        await suite.actions.activateFilter('stylishShirt');
       }
 
-      // At least one texture should be visible and app should be functional
-      const hasFullTexture = await page.getByTestId('full-texture').count();
-      const hasLogoTexture = await page.getByTestId('logo-texture').count();
+      // Texture presence verification
+      const hasFullTexture = await suite.page.getByTestId('full-texture').count();
+      const hasLogoTexture = await suite.page.getByTestId('logo-texture').count();
 
       expect(hasFullTexture + hasLogoTexture).toBeGreaterThan(0);
-      await expect(page.locator('body')).toBeVisible();
+      await expect(suite.page.locator('body')).toBeVisible();
     });
   });
 
-  test.describe('Navigation State Persistence', () => {
-    test('should maintain complex state across navigation cycles', async ({}) => {
-      // Setup complex state
-      await utils.color.openColorPicker();
-      await utils.color.selectColor(TEST_COLORS.yellow);
-      await utils.file.uploadFile(TEST_FILES.emblem, 'logo');
-      await utils.file.uploadFile(TEST_FILES.emblem2, 'full');
+  // ==========================================
+  // 🧭 NAVIGATION STATE PERSISTENCE
+  // ==========================================
 
-      // Activate both filters
-      await utils.texture.activateFilter('logoShirt');
-      // await utils.texture.activateFilter('stylishShirt');
+  test.describe('Bulletproof State Persistence', () => {
+    test('should maintain complex state across navigation cycles', async ({ suite }) => {
+      // Complex state establishment
+      await suite.actions.activateEditorTab('colorPicker');
+      await suite.actions.selectColor(suite.data.colors.yellow);
+      await suite.actions.uploadTestFile(suite.data.testFiles.emblem, 'logo');
+      await suite.actions.uploadTestFile(suite.data.testFiles.emblem2, 'full');
 
-      // Navigate back and forth multiple times
+      // Filter activation
+      await suite.actions.activateFilter('logoShirt');
+
+      // Multiple navigation cycles
       for (let i = 0; i < 3; i++) {
-        await utils.nav.goToHome();
-        await utils.nav.openCustomizer();
+        await suite.flows.navigateToHomepage();
+        await suite.flows.navigateToCustomizer();
       }
 
-      // Verify all state maintained
-      await utils.color.verifyColorApplied(TEST_COLORS.yellow);
-      await utils.texture.verifyTextureVisible('logo');
-      await utils.texture.verifyTextureVisible('full');
+      // Comprehensive state verification
+      await suite.actions.verifyColorApplied(suite.data.colors.yellow);
+      await suite.actions.verifyTextureVisible('logo');
+      await suite.actions.verifyTextureVisible('full');
     });
 
-    test('should handle interrupted state changes during navigation', async ({}) => {
-      // Start state change
-      await utils.color.openColorPicker();
-      await utils.color.selectColor(TEST_COLORS.purple);
+    test('should handle interrupted state changes during navigation', async ({ suite }) => {
+      // Initiate state change
+      await suite.actions.activateEditorTab('colorPicker');
+      await suite.actions.selectColor(suite.data.colors.purple);
 
-      // Navigate away immediately (interrupt)
-      await utils.nav.goToHome();
+      // Immediate navigation (interruption)
+      await suite.flows.navigateToHomepage();
 
-      // Navigate back
-      await utils.nav.openCustomizer();
+      // Return and verify
+      await suite.flows.navigateToCustomizer();
 
-      // Color should have been applied despite interruption
-      await utils.color.verifyColorApplied(TEST_COLORS.purple);
+      // State should be applied despite interruption
+      await suite.actions.verifyColorApplied(suite.data.colors.purple);
     });
   });
 
-  test.describe('Memory Management and Cleanup', () => {
-    test('should handle texture loading under memory pressure', async ({
-      page,
-    }) => {
-      // Simulate memory pressure
-      await page.evaluate(() => {
-        // Create large arrays to pressure memory
+  // ==========================================
+  // 🧠 MEMORY MANAGEMENT & CLEANUP
+  // ==========================================
+
+  test.describe('Advanced Memory Management', () => {
+    test('should handle texture loading under memory pressure', async ({ suite }) => {
+      // Memory pressure simulation
+      await suite.page.evaluate(() => {
         const arrays = [];
         for (let i = 0; i < 100; i++) {
           arrays.push(new Array(100000).fill(Math.random()));
         }
-        (
-          window as Window & { memoryPressureArrays?: unknown[] }
-        ).memoryPressureArrays = arrays;
+        (window as any).memoryPressureArrays = arrays;
       });
 
-      // Try to load textures under pressure
-      await utils.file.uploadFile(TEST_FILES.emblem, 'logo');
-      await utils.texture.verifyTextureVisible('logo');
+      // Texture loading under pressure
+      await suite.actions.uploadTestFile(suite.data.testFiles.emblem, 'logo');
+      await suite.actions.verifyTextureVisible('logo');
 
-      // Color changes should still work
-      await utils.color.openColorPicker();
-      await utils.color.selectColor(TEST_COLORS.green);
-      await utils.color.verifyColorApplied(TEST_COLORS.green);
+      // Color operations should remain functional
+      await suite.actions.activateEditorTab('colorPicker');
+      await suite.actions.selectColor(suite.data.colors.green);
+      await suite.actions.verifyColorApplied(suite.data.colors.green);
 
-      // Cleanup
-      await page.evaluate(() => {
-        interface WindowWithMemoryPressure extends Window {
-          memoryPressureArrays?: unknown[];
-        }
-        delete (window as WindowWithMemoryPressure).memoryPressureArrays;
+      // Memory cleanup
+      await suite.page.evaluate(() => {
+        delete (window as any).memoryPressureArrays;
       });
     });
 
-    test('should handle multiple large texture changes without memory leaks', async ({
-      page,
-    }) => {
-      // Load multiple textures in sequence
-      const files = [TEST_FILES.emblem, TEST_FILES.emblem2, TEST_FILES.emblem];
+    test('should prevent memory leaks during extensive texture operations', async ({ suite }) => {
+      // Sequential texture loading
+      const files = [
+        suite.data.testFiles.emblem,
+        suite.data.testFiles.emblem2,
+        suite.data.testFiles.emblem
+      ];
 
       for (const file of files) {
-        await utils.nav.openEditorTab('filePicker');
-        await page.getByTestId('file-picker-input').setInputFiles(file);
-        await page.getByRole('button', { name: 'Logo' }).click();
-        await utils.wait.waitForTextureApplication();
+        await suite.actions.activateEditorTab('filePicker');
+        await suite.page.getByTestId('file-picker-input').setInputFiles(file);
+        await suite.page.getByRole('button', { name: 'Logo' }).click();
+        await suite.wait.forTextureApplication();
 
-        // Ensure texture is applied each time
-        const logoTextureCount = await page.getByTestId('logo-texture').count();
+        // Ensure texture application
+        const logoTextureCount = await suite.page.getByTestId('logo-texture').count();
         if (logoTextureCount === 0) {
-          await utils.texture.activateFilter('logoShirt');
+          await suite.actions.activateFilter('logoShirt');
         }
-        await utils.texture.verifyTextureVisible('logo');
+        await suite.actions.verifyTextureVisible('logo');
       }
 
-      // Final verification
-      await expect(page.locator('body')).toBeVisible();
+      // Application stability verification
+      await expect(suite.page.locator('body')).toBeVisible();
     });
   });
 
-  test.describe('Error Recovery and State Consistency', () => {
-    test('should recover from component re-render during state change', async ({
-      page,
-    }) => {
-      // Start color change
-      await utils.color.openColorPicker();
+  // ==========================================
+  // 🔧 ERROR RECOVERY & CONSISTENCY
+  // ==========================================
+
+  test.describe('Robust Error Recovery', () => {
+    test('should recover from component re-render during state changes', async ({ suite }) => {
+      // Initiate color change
+      await suite.actions.activateEditorTab('colorPicker');
 
       // Trigger re-render via viewport change
-      await page.setViewportSize({ width: 800, height: 600 });
+      await suite.page.setViewportSize({ width: 800, height: 600 });
 
-      // Complete color change
-      await utils.color.selectColor(TEST_COLORS.cyan);
+      // Complete color operation
+      await suite.actions.selectColor(suite.data.colors.cyan);
 
-      // Should complete successfully
-      await utils.color.verifyColorApplied(TEST_COLORS.cyan);
+      // Successful completion verification
+      await suite.actions.verifyColorApplied(suite.data.colors.cyan);
     });
 
-    test('should maintain state consistency during WebGL context loss', async ({
-      page,
-    }) => {
-      // Setup state
-      await utils.color.openColorPicker();
-      await utils.color.selectColor(TEST_COLORS.lightBlue);
-      await utils.file.uploadFile(TEST_FILES.emblem, 'logo');
+    test('should maintain consistency during WebGL context loss', async ({ suite }) => {
+      // State establishment
+      await suite.actions.activateEditorTab('colorPicker');
+      await suite.actions.selectColor(suite.data.colors.lightBlue);
+      await suite.actions.uploadTestFile(suite.data.testFiles.emblem, 'logo');
 
-      // Simulate WebGL context loss
-      await page.evaluate(() => {
+      // WebGL context loss simulation
+      await suite.page.evaluate(() => {
         const canvas = document.querySelector('canvas') as HTMLCanvasElement;
         if (canvas) {
-          const gl =
-            canvas.getContext('webgl') ||
-            canvas.getContext('experimental-webgl');
+          const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
           if (gl) {
-            const ext = (gl as WebGLRenderingContext).getExtension(
-              'WEBGL_lose_context'
-            );
+            const ext = (gl as WebGLRenderingContext).getExtension('WEBGL_lose_context');
             if (ext) {
               ext.loseContext();
               setTimeout(() => ext.restoreContext(), 1000);
@@ -350,52 +344,103 @@ test.describe('State Management Integration', () => {
         }
       });
 
-      await page.waitForTimeout(2000);
+      await suite.wait.forWebGLRecovery();
 
-      // State should be maintained after recovery
-      await utils.color.verifyColorApplied(TEST_COLORS.lightBlue);
-      await utils.texture.verifyTextureVisible('logo');
+      // State preservation verification
+      await suite.actions.verifyColorApplied(suite.data.colors.lightBlue);
+      await suite.actions.verifyTextureVisible('logo');
     });
   });
 
-  test.describe('State Boundaries and Isolation', () => {
-    test('should isolate editor tab state from filter state', async ({
-      page,
-    }) => {
-      // Activate filter
-      await utils.texture.activateFilter('logoShirt');
-      await utils.texture.verifyFilterActive('logoShirt');
+  // ==========================================
+  // 🔐 STATE BOUNDARIES & ISOLATION
+  // ==========================================
 
-      // Switch editor tabs multiple times
+  test.describe('Perfect State Isolation', () => {
+    test('should isolate editor tab state from filter state', async ({ suite }) => {
+      // Filter activation
+      await suite.actions.activateFilter('logoShirt');
+      await suite.actions.verifyFilterActive('logoShirt');
+
+      // Extensive tab switching
       const tabs = ['colorPicker', 'filePicker', 'aiPicker', 'imageDownload'];
 
       for (const tab of tabs) {
-        await page.getByTestId(`editor-tab-${tab}`).click();
-        await page.waitForTimeout(100);
+        await suite.page.getByTestId(`editor-tab-${tab}`).click();
+        await suite.wait.short();
       }
 
-      // Filter state should remain unchanged
-      await utils.texture.verifyFilterActive('logoShirt');
+      // Filter state preservation verification
+      await suite.actions.verifyFilterActive('logoShirt');
     });
 
-    test('should prevent cross-contamination between texture types', async ({}) => {
-      // Upload logo
-      await utils.file.uploadFile(TEST_FILES.emblem, 'logo');
-      await utils.texture.verifyTextureVisible('logo');
+    test('should prevent texture type cross-contamination', async ({ suite }) => {
+      // Logo texture upload
+      await suite.actions.uploadTestFile(suite.data.testFiles.emblem, 'logo');
+      await suite.actions.verifyTextureVisible('logo');
 
-      // Upload different file as full texture
-      await utils.nav.openEditorTab('filePicker');
-      await utils.file.uploadFile(TEST_FILES.emblem2, 'full');
-      await utils.texture.verifyTextureVisible('full');
+      // Different file as full texture
+      await suite.actions.activateEditorTab('filePicker');
+      await suite.actions.uploadTestFile(suite.data.testFiles.emblem2, 'full');
+      await suite.actions.verifyTextureVisible('full');
 
-      // Deactivate logo filter
-      await utils.texture.verifyTextureHidden('logo');
-      await utils.texture.verifyTextureVisible('full'); // Should remain visible
+      // Logo filter deactivation
+      await suite.actions.verifyTextureHidden('logo');
+      await suite.actions.verifyTextureVisible('full'); // Should remain
 
-      // Reactivate logo filter
-      await utils.texture.activateFilter('logoShirt');
-      await utils.texture.verifyTextureVisible('logo');
-      await utils.texture.verifyTextureVisible('full'); // Both should be visible
+      // Logo filter reactivation
+      await suite.actions.activateFilter('logoShirt');
+      await suite.actions.verifyTextureVisible('logo');
+      await suite.actions.verifyTextureVisible('full'); // Both visible
+    });
+  });
+
+  // ==========================================
+  // 📊 STATE PERFORMANCE MONITORING
+  // ==========================================
+
+  test.describe('State Performance Excellence', () => {
+    test('should maintain optimal state update performance', async ({ suite }) => {
+      const startTime = Date.now();
+
+      // Intensive state operations
+      await suite.actions.activateEditorTab('colorPicker');
+      for (let i = 0; i < 20; i++) {
+        const color = i % 2 === 0 ? suite.data.colors.green : suite.data.colors.purple;
+        await suite.actions.selectColor(color);
+      }
+
+      const operationTime = Date.now() - startTime;
+      
+      // Performance threshold verification
+      expect(operationTime).toBeLessThan(suite.data.performance.stateUpdateThreshold);
+      // Verify no errors occurred during state updates
+    });
+
+    test('should handle high-frequency state changes efficiently', async ({ suite }) => {
+      // Setup for high-frequency testing
+      await suite.actions.uploadTestFile(suite.data.testFiles.emblem, 'logo');
+      
+      const operations = [];
+      
+      // Generate high-frequency operations
+      for (let i = 0; i < 50; i++) {
+        operations.push(async () => {
+          await suite.actions.activateFilter('logoShirt');
+          await suite.wait.minimal();
+        });
+      }
+
+      const startTime = Date.now();
+      await Promise.all(operations.map(op => op()));
+      const totalTime = Date.now() - startTime;
+
+      // High-frequency performance verification
+      expect(totalTime).toBeLessThan(suite.data.performance.highFrequencyThreshold);
+      
+      // Final state verification
+      await expect(suite.page.locator('body')).toBeVisible();
+      await suite.actions.verifyTextureVisible('logo');
     });
   });
 });

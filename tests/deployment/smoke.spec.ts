@@ -1,442 +1,437 @@
-import { test, expect } from '@playwright/test';
-import { TestUtils } from '../utils/test-helpers';
+import { test, expect } from '../__config__/base-test';
 
-test.describe('Smoke Tests @smoke', () => {
-  let utils: TestUtils;
-
-  test.beforeEach(async ({ page }) => {
-    utils = new TestUtils(page);
+test.describe('💨 Smoke Tests - Critical Path Verification', () => {
+  test.beforeEach(async ({ suite }) => {
+    await suite.setup.initializeApp();
   });
 
-  test.describe('Critical Path Verification', () => {
-    test('should load homepage successfully', async ({ page }) => {
-      await page.goto('/');
+  test.afterEach(async ({ suite }) => {
+    await suite.cleanup.reset();
+  });
 
-      // Verify page title and basic structure
-      await expect(page).toHaveTitle(/Virtual Stitch/);
-      await expect(
-        page.getByRole('heading', { name: /LET'S DO IT\./ })
-      ).toBeVisible();
-      await expect(page.locator('canvas')).toBeVisible();
-      await expect(
-        page.getByRole('button', { name: 'Customize It' })
-      ).toBeVisible();
-    });
+  // ==========================================
+  // 🎯 CRITICAL PATH VERIFICATION
+  // ==========================================
 
-    test('should navigate to customizer successfully', async ({ page }) => {
-      await page.goto('/');
-      await page.getByRole('button', { name: 'Customize It' }).click();
+  test('should load homepage successfully', async ({ suite }) => {
+    await suite.actions.navigateToHomepage();
 
-      // Wait for animations to complete
-      await page.waitForTimeout(1500);
+    // Essential page verification
+    await expect(suite.page).toHaveTitle(/Virtual Stitch/);
+    await expect(suite.page.getByRole('heading', { name: /LET'S DO IT\./ })).toBeVisible();
+    await expect(suite.page.locator('canvas')).toBeVisible();
+    await expect(suite.page.getByRole('button', { name: 'Customize It' })).toBeVisible();
+  });
 
-      // Verify customizer is loaded and functional
-      await expect(page.getByTestId('editor-tabs-container')).toBeVisible();
-      await expect(page.getByTestId('filter-tabs-container')).toBeVisible();
-      await expect(page.getByRole('button', { name: 'Go Back' })).toBeVisible();
-    });
+  test('should navigate to customizer successfully', async ({ suite }) => {
+    await suite.actions.navigateToHomepage();
+    await suite.page.getByRole('button', { name: 'Customize It' }).click();
 
-    test('should display all essential UI components', async ({ page }) => {
-      await utils.nav.goToCustomizer();
+    // Wait for customizer load
+    await suite.wait.forAnimations();
 
-      // Verify all editor tabs are present
-      const editorTabs = [
-        'colorPicker',
-        'filePicker',
-        'aiPicker',
-        'imageDownload',
-      ];
-      for (const tab of editorTabs) {
-        await expect(page.getByRole('img', { name: tab })).toBeVisible();
+    // Core customizer verification
+    await expect(suite.page.getByTestId('editor-tabs-container')).toBeVisible();
+    await expect(suite.page.getByTestId('filter-tabs-container')).toBeVisible();
+    await expect(suite.page.getByRole('button', { name: 'Go Back' })).toBeVisible();
+  });
+
+  test('should display all essential UI components', async ({ suite }) => {
+    await suite.flows.navigateToCustomizer();
+
+    // Editor tabs verification
+    const editorTabs = ['colorPicker', 'filePicker', 'aiPicker', 'imageDownload'];
+    for (const tab of editorTabs) {
+      await expect(suite.page.getByRole('img', { name: tab })).toBeVisible();
+    }
+
+    // Filter tabs verification
+    await expect(suite.page.getByTestId('filter-tab-logoShirt')).toBeVisible();
+    await expect(suite.page.getByTestId('filter-tab-stylishShirt')).toBeVisible();
+  });
+
+  // ==========================================
+  // ⚙️ CORE FUNCTIONALITY VERIFICATION
+  // ==========================================
+
+  test('should open and interact with color picker', async ({ suite }) => {
+    await suite.flows.navigateToCustomizer();
+
+    await suite.page.getByTestId('editor-tab-colorPicker').click();
+    await expect(suite.page.getByTestId('color-picker')).toBeVisible();
+
+    // Color selection verification
+    await suite.page.getByTitle(suite.data.colors.vibrantGreen).click();
+    await expect(suite.page.getByTestId(`canvas-color-${suite.data.colors.vibrantGreen}`)).toHaveCount(1);
+  });
+
+  test('should open and interact with file picker', async ({ suite }) => {
+    await suite.flows.navigateToCustomizer();
+
+    await suite.page.getByTestId('editor-tab-filePicker').click();
+    await expect(suite.page.getByTestId('file-picker')).toBeVisible();
+    await expect(suite.page.getByText('No file selected')).toBeVisible();
+
+    // Action buttons verification
+    await expect(suite.page.getByRole('button', { name: 'Logo' })).toBeVisible();
+    await expect(suite.page.getByRole('button', { name: 'Full Pattern' })).toBeVisible();
+  });
+
+  test('should open and interact with AI picker', async ({ suite }) => {
+    await suite.flows.navigateToCustomizer();
+
+    await suite.page.getByTestId('editor-tab-aiPicker').click();
+    await expect(suite.page.getByTestId('ai-picker')).toBeVisible();
+    await expect(suite.page.getByTestId('ai-prompt-input')).toBeVisible();
+    await expect(suite.page.getByTestId('ai-logo-button')).toBeVisible();
+    await expect(suite.page.getByTestId('ai-full-button')).toBeVisible();
+  });
+
+  test('should open and interact with image download', async ({ suite }) => {
+    await suite.flows.navigateToCustomizer();
+
+    await suite.page.getByTestId('editor-tab-imageDownload').click();
+    await expect(suite.page.getByTestId('image-download')).toBeVisible();
+    await expect(suite.page.getByPlaceholder('e.g., my-shirt')).toBeVisible();
+  });
+
+  // ==========================================
+  // 🎛️ FILTER FUNCTIONALITY VERIFICATION
+  // ==========================================
+
+  test('should activate and deactivate logo filter', async ({ suite }) => {
+    await suite.flows.navigateToCustomizer();
+
+    // Initial state verification
+    await expect(suite.page.getByTestId('logo-texture')).toHaveCount(0);
+
+    // Logo filter activation
+    await suite.page.getByTestId('filter-tab-logoShirt').click();
+    await expect(suite.page.getByTestId('logo-texture')).toHaveCount(1);
+
+    // Logo filter deactivation
+    await suite.page.getByTestId('filter-tab-logoShirt').click();
+    await expect(suite.page.getByTestId('logo-texture')).toHaveCount(0);
+  });
+
+  test('should activate and deactivate full texture filter', async ({ suite }) => {
+    await suite.flows.navigateToCustomizer();
+
+    // Initial state verification
+    await expect(suite.page.getByTestId('full-texture')).toHaveCount(0);
+
+    // Full texture filter activation
+    await suite.page.getByTestId('filter-tab-stylishShirt').click();
+    await expect(suite.page.getByTestId('full-texture')).toHaveCount(1);
+
+    // Full texture filter deactivation
+    await suite.page.getByTestId('filter-tab-stylishShirt').click();
+    await expect(suite.page.getByTestId('full-texture')).toHaveCount(0);
+  });
+
+  // ==========================================
+  // 🎨 CANVAS RENDERING VERIFICATION
+  // ==========================================
+
+  test('should render 3D canvas correctly', async ({ suite }) => {
+    await suite.actions.navigateToHomepage();
+
+    // Three.js initialization wait
+    await suite.wait.forThreeJSInitialization();
+
+    const canvasInfo = await suite.monitoring.getCanvasRenderingInfo();
+
+    expect(canvasInfo.exists).toBeTruthy();
+    expect(canvasInfo.hasContent).toBeTruthy();
+  });
+
+  test('should respond to color changes', async ({ suite }) => {
+    await suite.flows.navigateToCustomizer();
+
+    // Default color verification
+    await expect(suite.page.getByTestId(`canvas-color-${suite.data.colors.defaultGreen}`)).toHaveCount(1);
+
+    // Color change verification
+    await suite.page.getByTestId('editor-tab-colorPicker').click();
+    await suite.page.getByTitle(suite.data.colors.cyan).click();
+    await expect(suite.page.getByTestId(`canvas-color-${suite.data.colors.cyan}`)).toHaveCount(1);
+    await expect(suite.page.getByTestId(`canvas-color-${suite.data.colors.defaultGreen}`)).toHaveCount(0);
+  });
+
+  // ==========================================
+  // 🧭 NAVIGATION & STATE VERIFICATION
+  // ==========================================
+
+  test('should maintain state during navigation', async ({ suite }) => {
+    await suite.actions.navigateToHomepage();
+
+    // Setup state in customizer
+    await suite.page.getByRole('button', { name: 'Customize It' }).click();
+    await suite.wait.forAnimations();
+
+    await suite.page.getByTestId('editor-tab-colorPicker').click();
+    await suite.page.getByTitle(suite.data.colors.vibrantGreen).click();
+
+    // Navigate back and verify homepage
+    await suite.page.getByRole('button', { name: 'Go Back' }).click();
+    await expect(suite.page.getByRole('heading', { name: "LET'S DO IT." })).toBeVisible();
+
+    // Return to customizer and verify state persistence
+    await suite.page.getByRole('button', { name: 'Customize It' }).click();
+    await suite.wait.forAnimations();
+
+    await expect(suite.page.getByTestId(`canvas-color-${suite.data.colors.vibrantGreen}`)).toHaveCount(1);
+  });
+
+  test('should handle tab switching correctly', async ({ suite }) => {
+    await suite.flows.navigateToCustomizer();
+
+    const tabs = ['colorPicker', 'filePicker', 'aiPicker', 'imageDownload'];
+
+    for (const tab of tabs) {
+      await suite.page.getByTestId(`editor-tab-${tab}`).click();
+      await expect(suite.page.getByTestId(`editor-tab-${tab}`)).toBeVisible();
+
+      // Exclusive tab visibility verification
+      const otherTabs = tabs.filter(t => t !== tab);
+      for (const otherTab of otherTabs) {
+        await expect(suite.page.getByTestId(otherTab)).toHaveCount(0);
       }
-
-      // Verify filter tabs are present
-      await expect(page.getByTestId('filter-tab-logoShirt')).toBeVisible();
-      await expect(page.getByTestId('filter-tab-stylishShirt')).toBeVisible();
-    });
+    }
   });
 
-  test.describe('Core Functionality Verification', () => {
-    test('should open and interact with color picker', async ({ page }) => {
-      await utils.nav.goToCustomizer();
+  // ==========================================
+  // ⚠️ ERROR HANDLING VERIFICATION
+  // ==========================================
 
-      await page.getByTestId('editor-tab-colorPicker').click();
-      await expect(page.getByTestId('color-picker')).toBeVisible();
+  test('should handle missing resources gracefully', async ({ suite }) => {
+    // Block test resources
+    await suite.page.route('**/icons/emblem.png', (route) => route.abort());
 
-      // Test basic color selection
-      await page.getByTitle('#80C670').click();
-      await expect(page.getByTestId('canvas-color-#80C670')).toHaveCount(1);
-    });
+    await suite.actions.navigateToHomepage();
 
-    test('should open and interact with file picker', async ({ page }) => {
-      await utils.nav.goToCustomizer();
-
-      await page.getByTestId('editor-tab-filePicker').click();
-      await expect(page.getByTestId('file-picker')).toBeVisible();
-      await expect(page.getByText('No file selected')).toBeVisible();
-
-      // Verify action buttons are present
-      await expect(page.getByRole('button', { name: 'Logo' })).toBeVisible();
-      await expect(page.getByRole('button', { name: 'Full Pattern' })).toBeVisible();
-    });
-
-    test('should open and interact with AI picker', async ({ page }) => {
-      await utils.nav.goToCustomizer();
-
-      await page.getByTestId('editor-tab-aiPicker').click();
-      await expect(page.getByTestId('ai-picker')).toBeVisible();
-      await expect(page.getByTestId('ai-prompt-input')).toBeVisible();
-      await expect(page.getByTestId('ai-logo-button')).toBeVisible();
-      await expect(page.getByTestId('ai-full-button')).toBeVisible();
-    });
-
-    test('should open and interact with image download', async ({ page }) => {
-      await utils.nav.goToCustomizer();
-
-      await page.getByTestId('editor-tab-imageDownload').click();
-      await expect(page.getByTestId('image-download')).toBeVisible();
-      await expect(page.getByPlaceholder('e.g., my-shirt')).toBeVisible();
-    });
+    // Graceful degradation verification
+    await expect(suite.page.getByRole('heading', { name: "LET'S DO IT." })).toBeVisible();
+    await expect(suite.page.getByRole('button', { name: 'Customize It' })).toBeVisible();
   });
 
-  test.describe('Filter Functionality Verification', () => {
-    test('should activate and deactivate logo filter', async ({ page }) => {
-      await utils.nav.goToCustomizer();
+  test('should display appropriate error messages', async ({ suite }) => {
+    await suite.flows.navigateToCustomizer();
+    await suite.page.getByTestId('editor-tab-aiPicker').click();
 
-      // Initially no textures should be visible
-      await expect(page.getByTestId('logo-texture')).toHaveCount(0);
-
-      // Activate logo filter
-      await page.getByTestId('filter-tab-logoShirt').click();
-      await expect(page.getByTestId('logo-texture')).toHaveCount(1);
-
-      // Deactivate logo filter
-      await page.getByTestId('filter-tab-logoShirt').click();
-      await expect(page.getByTestId('logo-texture')).toHaveCount(0);
-    });
-
-    test('should activate and deactivate full texture filter', async ({
-      page,
-    }) => {
-      await utils.nav.goToCustomizer();
-
-      // Initially no textures should be visible
-      await expect(page.getByTestId('full-texture')).toHaveCount(0);
-
-      // Activate full texture filter
-      await page.getByTestId('filter-tab-stylishShirt').click();
-      await expect(page.getByTestId('full-texture')).toHaveCount(1);
-
-      // Deactivate full texture filter
-      await page.getByTestId('filter-tab-stylishShirt').click();
-      await expect(page.getByTestId('full-texture')).toHaveCount(0);
-    });
+    // Empty prompt error verification
+    await suite.page.getByTestId('ai-logo-button').click();
+    await expect(suite.page.getByText(/please enter a prompt/i)).toBeVisible();
   });
 
-  test.describe('Canvas Rendering Verification', () => {
-    test('should render 3D canvas correctly', async ({ page }) => {
-      await page.goto('/');
-
-      // Wait for Three.js to initialize
-      await page.waitForTimeout(3000);
-
-      const canvasInfo = await page.evaluate(
-        (): { exists: boolean; hasContent: boolean } => {
-          const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-          if (!canvas) return { exists: false, hasContent: false };
-
-          const hasContent = canvas.width > 0 && canvas.height > 0;
-          return { exists: true, hasContent };
-        }
-      );
-
-      expect(canvasInfo.exists).toBeTruthy();
-      expect(canvasInfo.hasContent).toBeTruthy();
+  test('should handle JavaScript errors gracefully', async ({ suite }) => {
+    const errors: string[] = [];
+    suite.page.on('pageerror', (error) => {
+      errors.push(error.message);
     });
 
-    test('should respond to color changes', async ({ page }) => {
-      await utils.nav.goToCustomizer();
+    await suite.actions.navigateToHomepage();
+    await suite.flows.navigateToCustomizer();
 
-      // Default color should be applied
-      await expect(page.getByTestId('canvas-color-#007938')).toHaveCount(1);
+    // Basic interaction without errors
+    await suite.page.getByTestId('editor-tab-colorPicker').click();
+    await suite.page.getByTitle(suite.data.colors.purple).click();
 
-      // Change color and verify update
-      await page.getByTestId('editor-tab-colorPicker').click();
-      await page.getByTitle('#2CCCE4').click();
-      await expect(page.getByTestId('canvas-color-#2CCCE4')).toHaveCount(1);
-      await expect(page.getByTestId('canvas-color-#007938')).toHaveCount(0);
-    });
+    // Filter acceptable errors
+    const criticalErrors = await suite.monitoring.filterCriticalErrors(errors);
+    expect(criticalErrors.length).toBe(0);
   });
 
-  test.describe('Navigation and State Verification', () => {
-    test('should maintain state when navigating back and forth', async ({
-      page,
-    }) => {
-      await page.goto('/');
+  // ==========================================
+  // ⚡ PERFORMANCE VERIFICATION
+  // ==========================================
 
-      // Navigate to customizer and make changes
-      await page.getByRole('button', { name: 'Customize It' }).click();
-      await page.waitForTimeout(1500);
+  test('should load within acceptable time limits', async ({ suite }) => {
+    const startTime = Date.now();
 
-      await page.getByTestId('editor-tab-colorPicker').click();
-      await page.getByTitle('#80C670').click();
+    await suite.page.goto('/');
+    await suite.page.waitForLoadState('networkidle');
 
-      // Navigate back to home
-      await page.getByRole('button', { name: 'Go Back' }).click();
-      await expect(
-        page.getByRole('heading', { name: "LET'S DO IT." })
-      ).toBeVisible();
+    const loadTime = Date.now() - startTime;
 
-      // Navigate back to customizer
-      await page.getByRole('button', { name: 'Customize It' }).click();
-      await page.waitForTimeout(1500);
-
-      // Verify state persisted
-      await expect(page.getByTestId('canvas-color-#80C670')).toHaveCount(1);
-    });
-
-    test('should handle tab switching correctly', async ({ page }) => {
-      await utils.nav.goToCustomizer();
-
-      // Test switching between multiple tabs
-      const tabs = ['colorPicker', 'filePicker', 'aiPicker', 'imageDownload'];
-
-      for (const tab of tabs) {
-        await page.getByTestId(`editor-tab-${tab}`).click();
-        await expect(page.getByTestId(`editor-tab-${tab}`)).toBeVisible();
-
-        // Only one tab should be visible at a time
-        const otherTabs = tabs.filter((t) => t !== tab);
-        for (const otherTab of otherTabs) {
-          await expect(page.getByTestId(otherTab)).toHaveCount(0);
-        }
-      }
-    });
+    // Generous smoke test threshold
+    expect(loadTime).toBeLessThan(10000);
   });
 
-  test.describe('Error Handling Verification', () => {
-    test('should handle missing resources gracefully', async ({ page }) => {
-      // Block some resources to test graceful degradation
-      await page.route('**/icons/emblem.png', (route) => route.abort());
+  test('should handle basic interactions responsively', async ({ suite }) => {
+    await suite.flows.navigateToCustomizer();
 
-      await page.goto('/');
+    const startTime = Date.now();
 
-      // Page should still load despite missing resources
-      await expect(
-        page.getByRole('heading', { name: "LET'S DO IT." })
-      ).toBeVisible();
-      await expect(
-        page.getByRole('button', { name: 'Customize It' })
-      ).toBeVisible();
-    });
+    // Basic interaction sequence
+    await suite.page.getByTestId('editor-tab-colorPicker').click();
+    await suite.page.getByTitle(suite.data.colors.yellow).click();
+    await suite.page.getByTestId('filter-tab-logoShirt').click();
 
-    test('should display appropriate error messages', async ({ page }) => {
-      await utils.nav.goToCustomizer();
-      await page.getByTestId('editor-tab-aiPicker').click();
+    const interactionTime = Date.now() - startTime;
 
-      // Test empty prompt error
-      await page.getByTestId('ai-logo-button').click();
-      await expect(page.getByText(/please enter a prompt/i)).toBeVisible();
-    });
+    // Responsive interaction threshold
+    expect(interactionTime).toBeLessThan(5000);
+  });
 
-    test('should handle JavaScript errors gracefully', async ({ page }) => {
-      // Monitor for unhandled errors
-      const errors: string[] = [];
-      page.on('pageerror', (error) => {
-        errors.push(error.message);
+  // ==========================================
+  // ♿ ACCESSIBILITY VERIFICATION
+  // ==========================================
+
+  test('should have accessible main navigation', async ({ suite }) => {
+    await suite.actions.navigateToHomepage();
+
+    // Keyboard navigation verification
+    await suite.page.keyboard.press('Tab');
+    const focusedElement = suite.page.locator(':focus');
+    await expect(focusedElement).toBeVisible();
+
+    // Enter key activation
+    await suite.page.keyboard.press('Enter');
+    await expect(suite.page.getByTestId('editor-tabs-container')).toBeVisible();
+  });
+
+  test('should have proper ARIA labels on key elements', async ({ suite }) => {
+    await suite.actions.navigateToHomepage();
+
+    const customizeButton = suite.page.getByRole('button', { name: 'Customize It' });
+    await expect(customizeButton).toHaveAttribute('aria-label', 'Customize It');
+
+    await customizeButton.click();
+    await suite.wait.forAnimations();
+
+    const backButton = suite.page.getByRole('button', { name: 'Go Back' });
+    await expect(backButton).toHaveAttribute('aria-label', 'Go Back');
+  });
+
+  // ==========================================
+  // 📱 MOBILE COMPATIBILITY VERIFICATION
+  // ==========================================
+
+  test('should work on mobile viewport', async ({ suite }) => {
+    await suite.page.setViewportSize({ width: 375, height: 667 });
+    await suite.actions.navigateToHomepage();
+
+    // Mobile essential elements
+    await expect(suite.page.getByRole('heading', { name: "LET'S DO IT." })).toBeVisible();
+    await expect(suite.page.locator('canvas')).toBeVisible();
+    await expect(suite.page.getByRole('button', { name: 'Customize It' })).toBeVisible();
+
+    // Mobile navigation verification
+    await suite.page.getByRole('button', { name: 'Customize It' }).click();
+    await suite.wait.forMobileAnimations();
+
+    await expect(suite.page.getByTestId('editor-tabs-container')).toBeVisible();
+  });
+
+  test('should handle touch interactions', async ({ suite }) => {
+    await suite.page.setViewportSize({ width: 375, height: 667 });
+    await suite.flows.navigateToCustomizer();
+
+    // Touch interaction verification
+    await suite.page.getByTestId('editor-tab-colorPicker').click();
+    await suite.page.getByTitle(suite.data.colors.lightGreen).click();
+    await expect(suite.page.getByTestId(`canvas-color-${suite.data.colors.lightGreen}`)).toHaveCount(1);
+  });
+
+  // ==========================================
+  // 📄 CONTENT VERIFICATION
+  // ==========================================
+
+  test('should display correct branding and text', async ({ suite }) => {
+    await suite.actions.navigateToHomepage();
+
+    // Key content verification
+    await expect(suite.page.getByRole('heading', { name: "LET'S DO IT." })).toBeVisible();
+    await expect(suite.page.getByText(/Create your unique and exclusive shirt/i)).toBeVisible();
+    await expect(suite.page.getByText(/Unleash your Imagination/i)).toBeVisible();
+  });
+
+  test('should have working logo and branding elements', async ({ suite }) => {
+    await suite.actions.navigateToHomepage();
+
+    // Logo and branding verification
+    await expect(suite.page.getByRole('img', { name: 'logo' })).toBeVisible();
+    await expect(suite.page).toHaveTitle(/Virtual Stitch/);
+  });
+
+  // ==========================================
+  // 🔗 INTEGRATION POINTS VERIFICATION
+  // ==========================================
+
+  test('should have accessible API endpoints', async ({ suite }) => {
+    await suite.actions.navigateToHomepage();
+
+    try {
+      const response = await suite.page.request.post('/api/custom-logo', {
+        data: { prompt: 'smoke test' },
+        failOnStatusCode: false,
+        timeout: 30000
       });
 
-      await page.goto('/');
-      await utils.nav.goToCustomizer();
-
-      // Basic interactions should not cause JavaScript errors
-      await page.getByTestId('editor-tab-colorPicker').click();
-      await page.getByTitle('#726DE8').click();
-
-      // Filter out known acceptable errors
-      const criticalErrors = errors.filter(
-        (error) =>
-          !error.includes('ResizeObserver') &&
-          !error.includes('Non-passive event listener')
-      );
-
-      expect(criticalErrors).toHaveLength(0);
-    });
-  });
-
-  test.describe('Performance Verification', () => {
-    test('should load within acceptable time limits', async ({ page }) => {
-      const startTime = Date.now();
-
-      await page.goto('/');
-      await page.waitForLoadState('networkidle');
-
-      const loadTime = Date.now() - startTime;
-
-      // Should load within 10 seconds (generous for smoke test)
-      expect(loadTime).toBeLessThan(10000);
-    });
-
-    test('should handle basic interactions responsively', async ({ page }) => {
-      await utils.nav.goToCustomizer();
-
-      const startTime = Date.now();
-
-      // Perform basic interactions
-      await page.getByTestId('editor-tab-colorPicker').click();
-      await page.getByTitle('#EFBD4E').click();
-      await page.getByTestId('filter-tab-logoShirt').click();
-
-      const interactionTime = Date.now() - startTime;
-
-      // Should respond within 5 seconds
-      expect(interactionTime).toBeLessThan(5000);
-    });
-  });
-
-  test.describe('Accessibility Verification', () => {
-    test('should have accessible main navigation', async ({ page }) => {
-      await page.goto('/');
-
-      // Test keyboard navigation to main button
-      await page.keyboard.press('Tab');
-      const focusedElement = page.locator(':focus');
-      await expect(focusedElement).toBeVisible();
-
-      // Should be able to activate with Enter
-      await page.keyboard.press('Enter');
-      await expect(page.getByTestId('editor-tabs-container')).toBeVisible();
-    });
-
-    test('should have proper ARIA labels on key elements', async ({ page }) => {
-      await page.goto('/');
-
-      const customizeButton = page.getByRole('button', {
-        name: 'Customize It',
-      });
-      await expect(customizeButton).toHaveAttribute(
-        'aria-label',
-        'Customize It'
-      );
-
-      await customizeButton.click();
-      await page.waitForTimeout(1500);
-
-      const backButton = page.getByRole('button', { name: 'Go Back' });
-      await expect(backButton).toHaveAttribute('aria-label', 'Go Back');
-    });
-  });
-
-  test.describe('Mobile Compatibility Verification', () => {
-    test('should work on mobile viewport', async ({ page }) => {
-      await page.setViewportSize({ width: 375, height: 667 });
-      await page.goto('/');
-
-      // Essential elements should be visible and functional
-      await expect(
-        page.getByRole('heading', { name: "LET'S DO IT." })
-      ).toBeVisible();
-      await expect(page.locator('canvas')).toBeVisible();
-      await expect(
-        page.getByRole('button', { name: 'Customize It' })
-      ).toBeVisible();
-
-      // Navigation should work
-      await page.getByRole('button', { name: 'Customize It' }).click();
-      await page.waitForTimeout(2000); // Extra time for mobile
-
-      await expect(page.getByTestId('editor-tabs-container')).toBeVisible();
-    });
-
-    test('should handle touch interactions', async ({ page }) => {
-      await page.setViewportSize({ width: 375, height: 667 });
-      await utils.nav.goToCustomizer();
-
-      // Touch interactions should work
-      await page.getByTestId('editor-tab-colorPicker').click();
-      await page.getByTitle('#C9FFE5').click();
-      await expect(page.getByTestId('canvas-color-#C9FFE5')).toHaveCount(1);
-    });
-  });
-
-  test.describe('Content Verification', () => {
-    test('should display correct branding and text', async ({ page }) => {
-      await page.goto('/');
-
-      // Verify key text content
-      await expect(
-        page.getByRole('heading', { name: "LET'S DO IT." })
-      ).toBeVisible();
-      await expect(
-        page.getByText(/Create your unique and exclusive shirt/i)
-      ).toBeVisible();
-      await expect(page.getByText(/Unleash your Imagination/i)).toBeVisible();
-    });
-
-    test('should have working logo and branding elements', async ({ page }) => {
-      await page.goto('/');
-
-      // Logo should be visible
-      await expect(page.getByRole('img', { name: 'logo' })).toBeVisible();
-
-      // Page title should be correct
-      await expect(page).toHaveTitle(/Virtual Stitch/);
-    });
-  });
-
-  test.describe('Integration Points Verification', () => {
-    test('should have accessible API endpoints', async ({ page, request }) => {
-      // Test that API endpoint responds (even if with error)
-      await page.goto('/');
-
-      try {
-        const response = await request.post('/api/custom-logo', {
-          data: { prompt: 'smoke test' },
-          failOnStatusCode: false,
-          timeout: 30000, // 30 second timeout for DALL-E API
-        });
-
-        // Should get some response, not timeout
-        expect([200, 400, 429, 500].includes(response.status())).toBeTruthy();
-        console.log(
-          `✅ API endpoint responded with status: ${response.status()}`
-        );
-      } catch (error) {
-        // If API is not available, that's acceptable for smoke test
-        // Just log it and mark as expected behavior
-        if (
-          typeof error === 'object' &&
-          error !== null &&
-          'message' in error &&
-          typeof (error as { message: unknown }).message === 'string' &&
-          ((error as { message: string }).message.includes('timeout') ||
-            (error as { message: string }).message.includes('ECONNREFUSED'))
-        ) {
-          console.log(
-            '⚠️ API endpoint not available (expected in some environments)'
-          );
-          expect(true).toBeTruthy(); // Pass the test - API unavailability is acceptable
-        } else {
-          throw error; // Re-throw unexpected errors
-        }
+      // API responsiveness verification
+      expect([200, 400, 429, 500].includes(response.status())).toBeTruthy();
+      console.log(`✅ API endpoint responded with status: ${response.status()}`);
+    } catch (error) {
+      // API unavailability is acceptable for smoke tests
+      if (suite.monitoring.isAcceptableAPIError(error)) {
+        console.log('⚠️ API endpoint not available (expected in some environments)');
+        expect(true).toBeTruthy();
+      } else {
+        throw error;
       }
-    });
+    }
+  });
 
-    test('should handle API failures gracefully', async ({ page }) => {
-      await utils.nav.goToCustomizer();
-      await page.getByTestId('editor-tab-aiPicker').click();
+  test('should handle API failures gracefully', async ({ suite }) => {
+    await suite.flows.navigateToCustomizer();
+    await suite.page.getByTestId('editor-tab-aiPicker').click();
 
-      // Mock API failure
-      await page.route('/api/custom-logo', (route) => {
-        route.fulfill({ status: 500 });
-      });
+    // Mock API failure
+    await suite.mocks.mockServerError();
 
-      await page.getByTestId('ai-prompt-input').fill('Smoke test failure');
-      await page.getByTestId('ai-logo-button').click();
+    await suite.page.getByTestId('ai-prompt-input').fill('Smoke test failure');
+    await suite.page.getByTestId('ai-logo-button').click();
 
-      // Should show error message, not crash
-      await expect(page.getByText(/server error/i)).toBeVisible();
-      await expect(page.locator('body')).toBeVisible();
-    });
+    // Graceful error handling verification
+    await expect(suite.page.getByText(/server error/i)).toBeVisible();
+    await expect(suite.page.locator('body')).toBeVisible();
+  });
+
+  // ==========================================
+  // 🎊 SMOKE TEST SUMMARY
+  // ==========================================
+
+  test('should complete comprehensive smoke test workflow', async ({ suite }) => {
+    console.log('🚀 Starting comprehensive smoke test workflow...');
+
+    // Homepage verification
+    await suite.actions.navigateToHomepage();
+    await expect(suite.page.getByRole('heading', { name: "LET'S DO IT." })).toBeVisible();
+    console.log('✅ Homepage loaded successfully');
+
+    // Customizer navigation
+    await suite.flows.navigateToCustomizer();
+    await expect(suite.page.getByTestId('editor-tabs-container')).toBeVisible();
+    console.log('✅ Customizer navigation successful');
+
+    // Color picker functionality
+    await suite.actions.activateEditorTab('colorPicker');
+    await suite.actions.selectColor(suite.data.colors.vibrantGreen);
+    await suite.actions.verifyColorApplied(suite.data.colors.vibrantGreen);
+    console.log('✅ Color picker functionality verified');
+
+    // Filter functionality
+    await suite.actions.activateFilter('logoShirt');
+    await suite.actions.verifyFilterActive('logoShirt');
+    console.log('✅ Filter functionality verified');
+
+    // Navigation state persistence
+    await suite.flows.navigateToHomepage();
+    await suite.flows.navigateToCustomizer();
+    await suite.actions.verifyColorApplied(suite.data.colors.vibrantGreen);
+    console.log('✅ State persistence verified');
+
+    console.log('🎉 Comprehensive smoke test workflow completed successfully!');
   });
 });
